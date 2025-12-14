@@ -130,18 +130,40 @@ export function ClientDocumentRequests({ caseId, profileId, onDocumentUploaded }
 
       if (updateError) throw updateError;
 
-      // Notify the agent about the upload
-      try {
-        await supabase.functions.invoke('send-document-upload-notification', {
-          body: {
-            case_id: caseId,
-            document_name: documentName,
-            client_profile_id: profileId,
-          },
-        });
-      } catch (notifyError) {
-        console.error('Failed to send notification:', notifyError);
-        // Don't throw - upload was successful
+      // Check current case status before updating
+      const { data: caseData } = await supabase
+        .from('cases')
+        .select('status')
+        .eq('id', caseId)
+        .maybeSingle();
+
+      const previousStatus = caseData?.status;
+      const shouldNotifyAgent = previousStatus === 'client_action';
+
+      // Automatically update case status to 'agent_action'
+      const { error: statusError } = await supabase
+        .from('cases')
+        .update({ status: 'agent_action' })
+        .eq('id', caseId);
+
+      if (statusError) {
+        console.error('Failed to update case status:', statusError);
+      }
+
+      // Only notify agent if status was 'client_action' (waiting on client)
+      if (shouldNotifyAgent) {
+        try {
+          await supabase.functions.invoke('send-document-upload-notification', {
+            body: {
+              case_id: caseId,
+              document_name: documentName,
+              client_profile_id: profileId,
+            },
+          });
+        } catch (notifyError) {
+          console.error('Failed to send notification:', notifyError);
+          // Don't throw - upload was successful
+        }
       }
 
       toast({
