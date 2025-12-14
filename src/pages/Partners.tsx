@@ -125,39 +125,118 @@ export default function Partners() {
           </div>
         </div>
 
-        {/* How It Works */}
+        {/* Seamless Integration Section */}
         <div className="mt-32">
           <div className="text-center mb-14">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Simple Integration
+              Fits Into Your Existing Workflow
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Get started in minutes, not months.
+              No new software to learn. Just a simple checkbox at checkout.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-4 gap-6">
-            {[
-              { step: '1', title: 'Sign Up', desc: 'Complete our brief partner application' },
-              { step: '2', title: 'Get Materials', desc: 'Receive branded collateral and training' },
-              { step: '3', title: 'Offer Protection', desc: 'Present to clients at filing time' },
-              { step: '4', title: 'Earn Revenue', desc: 'Get paid on every sale automatically' },
-            ].map((item, i) => (
-              <div 
-                key={i} 
-                className="relative text-center animate-fade-in"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                <div className="w-14 h-14 rounded-full bg-primary text-primary-foreground font-display text-xl font-bold flex items-center justify-center mx-auto mb-4">
-                  {item.step}
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Mock UI Visual */}
+            <div className="relative animate-fade-in order-2 lg:order-1">
+              <div className="bg-card rounded-2xl border border-border shadow-xl overflow-hidden">
+                {/* Mock Header */}
+                <div className="bg-muted/50 px-6 py-4 border-b border-border flex items-center gap-3">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-400" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                    <div className="w-3 h-3 rounded-full bg-green-400" />
+                  </div>
+                  <span className="text-sm text-muted-foreground font-medium">TaxPro Software - Checkout</span>
                 </div>
-                <h3 className="font-display text-lg font-semibold text-foreground mb-2">{item.title}</h3>
-                <p className="text-sm text-muted-foreground">{item.desc}</p>
-                {i < 3 && (
-                  <div className="hidden md:block absolute top-7 left-[60%] w-[80%] h-0.5 bg-border" />
-                )}
+                
+                {/* Mock Content */}
+                <div className="p-8 space-y-6">
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Client: John Smith</p>
+                    <p className="text-sm text-muted-foreground">Return Type: 1040 Individual</p>
+                  </div>
+                  
+                  <div className="border-t border-border pt-6 space-y-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-foreground">Tax Preparation Fee</span>
+                      <span className="font-medium text-foreground">$299.00</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-foreground">State Filing</span>
+                      <span className="font-medium text-foreground">$49.00</span>
+                    </div>
+                  </div>
+                  
+                  {/* The Checkbox - Highlighted */}
+                  <div className="bg-primary/5 border-2 border-primary rounded-xl p-4 relative">
+                    <div className="absolute -top-3 -right-3 bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-full">
+                      NEW
+                    </div>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <div className="mt-0.5 w-5 h-5 rounded border-2 border-primary bg-primary flex items-center justify-center">
+                        <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div>
+                        <span className="font-medium text-foreground">Add Audit Protection for $59</span>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Full IRS & State defense if audited. Powered by Return Shield.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                  
+                  <div className="border-t border-border pt-4">
+                    <div className="flex justify-between font-semibold">
+                      <span className="text-foreground">Total</span>
+                      <span className="text-foreground">$407.00</span>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-primary text-primary-foreground rounded-lg py-3 text-center font-medium">
+                    Complete Payment
+                  </div>
+                </div>
               </div>
-            ))}
+              <div className="absolute -z-10 -bottom-4 -right-4 w-full h-full rounded-2xl bg-primary/10" />
+            </div>
+
+            {/* Steps */}
+            <div className="space-y-8 order-1 lg:order-2">
+              {[
+                {
+                  step: '1',
+                  title: 'Offer',
+                  description: 'Add the checkbox to your filing process. One click for your client, instant protection.',
+                },
+                {
+                  step: '2',
+                  title: 'Connect',
+                  description: 'Client receives instant access to the Return Shield portal with your branding.',
+                },
+                {
+                  step: '3',
+                  title: 'Earn',
+                  description: 'We send you monthly revenue share payouts. No invoicing, no chasing payments.',
+                },
+              ].map((item, i) => (
+                <div 
+                  key={i}
+                  className="flex gap-5 animate-fade-in"
+                  style={{ animationDelay: `${i * 100}ms` }}
+                >
+                  <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground font-display text-lg font-bold flex items-center justify-center flex-shrink-0">
+                    {item.step}
+                  </div>
+                  <div>
+                    <h3 className="font-display text-xl font-semibold text-foreground mb-2">{item.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{item.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
