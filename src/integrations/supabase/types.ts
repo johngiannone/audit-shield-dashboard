@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliates: {
+        Row: {
+          commission_rate: number
+          created_at: string
+          id: string
+          referral_code: string
+          stripe_connect_id: string | null
+          total_earnings: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          referral_code: string
+          stripe_connect_id?: string | null
+          total_earnings?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          commission_rate?: number
+          created_at?: string
+          id?: string
+          referral_code?: string
+          stripe_connect_id?: string | null
+          total_earnings?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_plans: {
         Row: {
           covered_years: number[]
@@ -400,6 +433,30 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      referral_visits: {
+        Row: {
+          converted: boolean
+          created_at: string
+          id: string
+          referral_code: string
+          visitor_ip_hash: string
+        }
+        Insert: {
+          converted?: boolean
+          created_at?: string
+          id?: string
+          referral_code: string
+          visitor_ip_hash: string
+        }
+        Update: {
+          converted?: boolean
+          created_at?: string
+          id?: string
+          referral_code?: string
+          visitor_ip_hash?: string
         }
         Relationships: []
       }
