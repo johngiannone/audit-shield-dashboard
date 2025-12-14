@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, FileText, Plus, Download, File, CheckCircle, Clock } from 'lucide-react';
+import { Loader2, FileText, Plus, Download, File, CheckCircle, Clock, Check, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Document {
@@ -22,6 +22,7 @@ interface DocumentRequest {
   document_name: string;
   description: string | null;
   status: string;
+  file_url: string | null;
   created_at: string;
 }
 
@@ -40,6 +41,7 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
   const [requestDescription, setRequestDescription] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -89,7 +91,7 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
   const fetchRequests = async () => {
     const { data } = await supabase
       .from('document_requests')
-      .select('id, document_name, description, status, created_at')
+      .select('id, document_name, description, status, file_url, created_at')
       .eq('case_id', caseId)
       .order('created_at', { ascending: false });
     setRequests(data || []);
@@ -110,7 +112,6 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
 
     setSending(true);
     try {
-      // Save request to database
       const { error: insertError } = await supabase
         .from('document_requests')
         .insert({
@@ -122,7 +123,6 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
 
       if (insertError) throw insertError;
 
-      // Send email notification
       const { error: emailError } = await supabase.functions.invoke('send-document-request', {
         body: {
           case_id: caseId,
@@ -156,6 +156,35 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
     }
   };
 
+  const approveDocument = async (requestId: string) => {
+    setApprovingId(requestId);
+    try {
+      const { error } = await supabase
+        .from('document_requests')
+        .update({ status: 'approved' })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Document Approved',
+        description: 'The document has been approved.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to approve document',
+        variant: 'destructive',
+      });
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const pendingRequests = requests.filter(r => r.status === 'pending');
+  const uploadedRequests = requests.filter(r => r.status === 'uploaded');
+  const approvedRequests = requests.filter(r => r.status === 'approved');
+
   return (
     <Card className="border-0 shadow-md h-full flex flex-col">
       <CardHeader className="pb-3">
@@ -178,7 +207,7 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
               <div className="space-y-4 pt-4">
                 <div>
                   <Input
-                    placeholder="Document name (e.g., W-2 for 2023)"
+                    placeholder="Document name (e.g., 2023 1040 Schedule C)"
                     value={requestName}
                     onChange={(e) => setRequestName(e.target.value)}
                   />
@@ -213,11 +242,65 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
           </div>
         ) : (
           <>
-            {/* Pending Requests */}
-            {requests.filter(r => r.status === 'pending').length > 0 && (
+            {/* Uploaded - Needs Review */}
+            {uploadedRequests.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pending Requests</p>
-                {requests.filter(r => r.status === 'pending').map((request) => (
+                <p className="text-xs font-medium text-info uppercase tracking-wide">Needs Review ({uploadedRequests.length})</p>
+                {uploadedRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="p-3 rounded-lg bg-info/5 border border-info/20"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center">
+                          <Upload className="h-4 w-4 text-info" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{request.document_name}</p>
+                          <p className="text-xs text-muted-foreground">Client uploaded</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="bg-info/10 text-info border-info/20">
+                        Uploaded
+                      </Badge>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      {request.file_url && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => downloadDocument(request.file_url!)}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => approveDocument(request.id)}
+                        disabled={approvingId === request.id}
+                      >
+                        {approvingId === request.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-1" />
+                        )}
+                        Approve
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Pending Requests */}
+            {pendingRequests.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Awaiting Client ({pendingRequests.length})</p>
+                {pendingRequests.map((request) => (
                   <div
                     key={request.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-warning/5 border border-warning/20"
@@ -241,9 +324,41 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
               </div>
             )}
 
-            {/* Received Documents */}
+            {/* Approved Documents */}
+            {approvedRequests.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-success uppercase tracking-wide">Approved ({approvedRequests.length})</p>
+                {approvedRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-success/5 border border-success/20"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+                        <CheckCircle className="h-4 w-4 text-success" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{request.document_name}</p>
+                        <p className="text-xs text-muted-foreground">Approved</p>
+                      </div>
+                    </div>
+                    {request.file_url && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => downloadDocument(request.file_url!)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Original Notice & Other Documents */}
             <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Received</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Case Documents</p>
               
               {noticeUrl && (
                 <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
@@ -269,11 +384,11 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
               {documents.map((doc) => (
                 <div
                   key={doc.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-success/5 border border-success/20"
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border/50"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
-                      <CheckCircle className="h-4 w-4 text-success" />
+                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                      <File className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="text-sm font-medium truncate max-w-[140px]">{doc.file_name}</p>
@@ -292,7 +407,7 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
                 </div>
               ))}
 
-              {!noticeUrl && documents.length === 0 && (
+              {!noticeUrl && documents.length === 0 && requests.length === 0 && (
                 <div className="text-center py-6 text-muted-foreground">
                   <File className="h-10 w-10 mx-auto mb-3 opacity-50" />
                   <p className="text-sm">No documents yet</p>

@@ -280,6 +280,7 @@ export type Database = {
           created_at: string
           description: string | null
           document_name: string
+          file_url: string | null
           fulfilled_at: string | null
           id: string
           requested_by: string
@@ -290,6 +291,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           document_name: string
+          file_url?: string | null
           fulfilled_at?: string | null
           id?: string
           requested_by: string
@@ -300,6 +302,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           document_name?: string
+          file_url?: string | null
           fulfilled_at?: string | null
           id?: string
           requested_by?: string
