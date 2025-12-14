@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { Briefcase, Loader2, AlertTriangle, CheckCircle, Clock, Eye } from 'lucide-react';
+import { Briefcase, Loader2, AlertTriangle, CheckCircle, Clock, Eye, Zap, Hourglass, Archive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Case {
@@ -20,6 +20,7 @@ interface Case {
   summary: string | null;
   created_at: string;
   assigned_agent_id: string | null;
+  client_name?: string | null;
 }
 
 export default function MyCaseload() {
@@ -50,7 +51,6 @@ export default function MyCaseload() {
   const fetchMyCases = async () => {
     setDataLoading(true);
     try {
-      // Get agent's profile ID
       const { data: profile } = await supabase
         .from('profiles')
         .select('id')
@@ -64,7 +64,6 @@ export default function MyCaseload() {
 
       setProfileId(profile.id);
 
-      // Fetch assigned cases
       const { data, error } = await supabase
         .from('cases')
         .select('*')
@@ -72,7 +71,22 @@ export default function MyCaseload() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setCases(data || []);
+
+      // Fetch client names
+      const clientIds = [...new Set((data || []).map(c => c.client_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', clientIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+      
+      const casesWithNames = (data || []).map(c => ({
+        ...c,
+        client_name: profileMap.get(c.client_id) || null,
+      }));
+
+      setCases(casesWithNames);
     } catch (error) {
       toast({
         title: 'Error',
@@ -97,7 +111,6 @@ export default function MyCaseload() {
 
       if (error) throw error;
 
-      // Log status history
       await supabase
         .from('case_status_history')
         .insert({
@@ -107,7 +120,6 @@ export default function MyCaseload() {
           changed_by: profileId,
         });
 
-      // Send status update email to client
       try {
         const { error: emailError } = await supabase.functions.invoke('send-status-update', {
           body: {
@@ -126,7 +138,7 @@ export default function MyCaseload() {
 
       toast({
         title: 'Status Updated',
-        description: `Case status changed to ${newStatus.replace('_', ' ')}. Client has been notified.`,
+        description: `Case status changed to ${newStatus.replace('_', ' ')}.`,
       });
 
       setCases(cases.map(c => 
@@ -143,21 +155,6 @@ export default function MyCaseload() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'triage':
-        return <AlertTriangle className="h-4 w-4 text-info" />;
-      case 'agent_action':
-        return <Clock className="h-4 w-4 text-warning" />;
-      case 'client_action':
-        return <AlertTriangle className="h-4 w-4 text-accent-foreground" />;
-      case 'resolved':
-        return <CheckCircle className="h-4 w-4 text-success" />;
-      default:
-        return null;
-    }
-  };
-
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       triage: 'bg-info/10 text-info border-info/20',
@@ -168,6 +165,13 @@ export default function MyCaseload() {
     return styles[status] || styles.triage;
   };
 
+  // Filter cases by status
+  const actionRequiredCases = cases.filter(c => c.status === 'agent_action');
+  const waitingOnClientCases = cases
+    .filter(c => c.status === 'client_action')
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()); // Oldest first
+  const resolvedCases = cases.filter(c => c.status === 'resolved');
+
   if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -176,121 +180,212 @@ export default function MyCaseload() {
     );
   }
 
-  return (
-    <DashboardLayout>
-      <div className="space-y-8 animate-fade-in">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">My Caseload</h1>
-          <p className="text-muted-foreground mt-1">
-            Cases assigned to you
+  const CaseCard = ({ caseItem, isInactive = false }: { caseItem: Case; isInactive?: boolean }) => (
+    <div 
+      className={`p-4 rounded-lg border transition-all ${
+        isInactive 
+          ? 'bg-muted/30 border-border/50 opacity-70' 
+          : 'bg-card border-border hover:shadow-md hover:border-primary/20'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Badge variant="outline" className="font-medium text-xs">
+              {caseItem.notice_agency}
+            </Badge>
+            <span className="text-sm font-medium text-foreground truncate">
+              {caseItem.notice_type}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span>{caseItem.client_name || 'Unknown Client'}</span>
+            <span>•</span>
+            <span>Tax Year {caseItem.tax_year}</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Assigned {new Date(caseItem.created_at).toLocaleDateString()}
           </p>
         </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/agent/cases/${caseItem.id}`)}
+          >
+            <Eye className="h-4 w-4 mr-1" />
+            View
+          </Button>
+          <Select
+            value={caseItem.status}
+            onValueChange={(value) => updateStatus(caseItem.id, value)}
+            disabled={updating === caseItem.id}
+          >
+            <SelectTrigger className="w-[130px]">
+              {updating === caseItem.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Badge variant="outline" className={`${getStatusBadge(caseItem.status)} text-xs`}>
+                  {caseItem.status.replace('_', ' ')}
+                </Badge>
+              )}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="triage">Triage</SelectItem>
+              <SelectItem value="agent_action">Agent Action</SelectItem>
+              <SelectItem value="client_action">Client Action</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
 
-        <Card className="border-0 shadow-md">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Briefcase className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle>Your Cases</CardTitle>
-                <CardDescription>
-                  {cases.length} case{cases.length !== 1 ? 's' : ''} assigned to you
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {dataLoading ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : cases.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <Briefcase className="h-16 w-16 text-muted-foreground/50 mb-4" />
-                <h3 className="text-xl font-semibold text-foreground mb-2">No Assigned Cases</h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  You don't have any cases assigned yet.
-                </p>
-                <Button variant="outline" onClick={() => navigate('/queue')}>
+  const EmptyState = ({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) => (
+    <div className="flex flex-col items-center justify-center py-16">
+      <Icon className="h-16 w-16 text-muted-foreground/30 mb-4" />
+      <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+      <p className="text-muted-foreground text-center text-sm">{description}</p>
+    </div>
+  );
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl font-bold text-foreground">My Caseload</h1>
+            <p className="text-muted-foreground mt-1">
+              {cases.length} total case{cases.length !== 1 ? 's' : ''} assigned to you
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => navigate('/queue')}>
+            View Case Queue
+          </Button>
+        </div>
+
+        {dataLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : cases.length === 0 ? (
+          <Card className="border-0 shadow-md">
+            <CardContent className="py-16">
+              <EmptyState
+                icon={Briefcase}
+                title="No Assigned Cases"
+                description="You don't have any cases assigned yet. Visit the Case Queue to claim new cases."
+              />
+              <div className="flex justify-center mt-4">
+                <Button onClick={() => navigate('/queue')}>
                   View Case Queue
                 </Button>
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Agency</TableHead>
-                      <TableHead>Notice Type</TableHead>
-                      <TableHead>Tax Year</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Assigned</TableHead>
-                      <TableHead className="text-right">Update Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {cases.map((caseItem) => (
-                      <TableRow key={caseItem.id} className="cursor-pointer hover:bg-muted/50">
-                        <TableCell>
-                          <Badge variant="outline" className="font-medium">
-                            {caseItem.notice_agency}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {getStatusIcon(caseItem.status)}
-                            {caseItem.notice_type}
-                          </div>
-                        </TableCell>
-                        <TableCell>{caseItem.tax_year}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={getStatusBadge(caseItem.status)}>
-                            {caseItem.status.replace('_', ' ')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(caseItem.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => navigate(`/agent/cases/${caseItem.id}`)}
-                                            >
-                                              <Eye className="h-4 w-4 mr-1" />
-                                              View
-                                            </Button>
-                            <Select
-                              value={caseItem.status}
-                              onValueChange={(value) => updateStatus(caseItem.id, value)}
-                              disabled={updating === caseItem.id}
-                            >
-                              <SelectTrigger className="w-[140px]">
-                                {updating === caseItem.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <SelectValue />
-                                )}
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="triage">Triage</SelectItem>
-                                <SelectItem value="agent_action">Agent Action</SelectItem>
-                                <SelectItem value="client_action">Client Action</SelectItem>
-                                <SelectItem value="resolved">Resolved</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <Tabs defaultValue="action-required" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="action-required" className="flex items-center gap-2">
+                <Zap className="h-4 w-4" />
+                Action Required
+                {actionRequiredCases.length > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
+                    {actionRequiredCases.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="waiting-client" className="flex items-center gap-2">
+                <Hourglass className="h-4 w-4" />
+                Waiting on Client
+                {waitingOnClientCases.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
+                    {waitingOnClientCases.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="resolved" className="flex items-center gap-2">
+                <Archive className="h-4 w-4" />
+                Resolved
+                {resolvedCases.length > 0 && (
+                  <Badge variant="outline" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
+                    {resolvedCases.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="action-required" className="mt-0">
+              <Card className="border-0 shadow-md">
+                <CardContent className="p-6">
+                  {actionRequiredCases.length === 0 ? (
+                    <EmptyState
+                      icon={CheckCircle}
+                      title="All Caught Up!"
+                      description="You have no cases requiring your immediate action. Great work!"
+                    />
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        These cases require your attention. Work to clear this queue.
+                      </p>
+                      {actionRequiredCases.map((caseItem) => (
+                        <CaseCard key={caseItem.id} caseItem={caseItem} />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="waiting-client" className="mt-0">
+              <Card className="border-0 shadow-md">
+                <CardContent className="p-6">
+                  {waitingOnClientCases.length === 0 ? (
+                    <EmptyState
+                      icon={Hourglass}
+                      title="No Pending Client Actions"
+                      description="No cases are currently waiting on client response."
+                    />
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        These cases are waiting on client action. Sorted by oldest first.
+                      </p>
+                      {waitingOnClientCases.map((caseItem) => (
+                        <CaseCard key={caseItem.id} caseItem={caseItem} isInactive />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="resolved" className="mt-0">
+              <Card className="border-0 shadow-md">
+                <CardContent className="p-6">
+                  {resolvedCases.length === 0 ? (
+                    <EmptyState
+                      icon={Archive}
+                      title="No Resolved Cases"
+                      description="Completed cases will appear here."
+                    />
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Archive of completed cases.
+                      </p>
+                      {resolvedCases.map((caseItem) => (
+                        <CaseCard key={caseItem.id} caseItem={caseItem} isInactive />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </DashboardLayout>
   );
