@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Shield, ArrowRight, CheckCircle, Users, FileText, Loader2, Lock, Award, BadgeCheck, ShieldCheck } from 'lucide-react';
+import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Brain, Gavel } from 'lucide-react';
 import heroAgent from '@/assets/hero-agent.jpg';
 
 export default function Index() {
@@ -99,6 +99,10 @@ export default function Index() {
                 <ShieldCheck className="h-5 w-5 text-green-600" />
                 <span className="text-sm font-semibold text-foreground">Verified Secure</span>
               </div>
+            </div>
+            {/* Decorative elements */}
+            <div className="absolute -z-10 -top-4 -right-4 w-full h-full rounded-2xl bg-primary/10" />
+          </div>
         </div>
 
         {/* Trust Strip */}
@@ -128,81 +132,68 @@ export default function Index() {
                 Average Response Time
               </div>
             </div>
+          </div>
         </div>
 
-        {/* How it Works */}
+        {/* How it Works Timeline */}
         <div className="mt-24 max-w-5xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-16">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              How it Works
+              From Notice to Resolution in 3 Steps
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              From notice to resolution in three simple steps
+              Our streamlined process makes audit defense simple and stress-free
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 relative">
-            {/* Connector Line */}
-            <div className="hidden md:block absolute top-16 left-1/6 right-1/6 h-0.5 bg-gradient-to-r from-primary/20 via-primary to-primary/20" style={{ left: '16%', right: '16%' }} />
-
-            {[
-              { 
-                step: '01', 
-                title: 'Submit Your Notice', 
-                desc: 'Upload your IRS or state notice. Our AI instantly analyzes it and extracts key details.',
-                icon: FileText
-              },
-              { 
-                step: '02', 
-                title: 'Get Matched', 
-                desc: 'An Enrolled Agent reviews your case and reaches out within hours to introduce themselves.',
-                icon: Users
-              },
-              { 
-                step: '03', 
-                title: 'We Handle It', 
-                desc: 'Sit back while we manage all correspondence, deadlines, and negotiations on your behalf.',
-                icon: Shield
-              },
-            ].map((item, i) => (
-              <div key={i} className="relative animate-fade-in" style={{ animationDelay: `${i * 150}ms` }}>
-                {/* Step Number Circle */}
-                <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-display font-bold text-lg mx-auto mb-6 relative z-10 shadow-lg">
-                  {item.step}
-                </div>
-                
-                <div className="bg-card rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-shadow border border-border/50">
-                  <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                    <item.icon className="h-7 w-7 text-primary" />
-                  </div>
-                  <h3 className="font-display text-xl font-semibold text-foreground mb-3">{item.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        </div>
-            {/* Decorative elements */}
-            <div className="absolute -z-10 -top-4 -right-4 w-full h-full rounded-2xl bg-primary/10" />
-          </div>
-        </div>
-
-        {/* Features */}
-        <div className="grid md:grid-cols-3 gap-8 mt-24 max-w-5xl mx-auto">
-          {[
-            { icon: FileText, title: 'Plan Coverage', desc: 'Protection for multiple tax years with comprehensive audit defense plans.' },
-            { icon: Users, title: 'Expert Agents', desc: 'Experienced professionals assigned to handle your case personally.' },
-            { icon: CheckCircle, title: 'Full Resolution', desc: 'We manage your case from the first notice to complete resolution.' },
-          ].map((f, i) => (
-            <div key={i} className="bg-card rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <f.icon className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-display text-lg font-semibold text-foreground mb-2">{f.title}</h3>
-              <p className="text-muted-foreground">{f.desc}</p>
+          <div className="relative">
+            {/* Horizontal Connector Line */}
+            <div className="hidden md:block absolute top-20 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent">
+              <div className="absolute left-1/6 right-1/6 h-full bg-primary/40" style={{ left: '10%', right: '10%' }} />
             </div>
-          ))}
+
+            <div className="grid md:grid-cols-3 gap-10">
+              {[
+                { 
+                  step: '1', 
+                  title: 'Upload Notice', 
+                  desc: 'Snap a photo of your IRS or State letter.',
+                  icon: CloudUpload
+                },
+                { 
+                  step: '2', 
+                  title: 'AI Analysis & Assignment', 
+                  desc: 'Our system analyzes the threat and assigns a dedicated Enrolled Agent.',
+                  icon: Brain
+                },
+                { 
+                  step: '3', 
+                  title: 'Defense & Resolution', 
+                  desc: 'We communicate with the agency directly to resolve your case.',
+                  icon: Gavel
+                },
+              ].map((item, i) => (
+                <div 
+                  key={i} 
+                  className="relative animate-fade-in" 
+                  style={{ animationDelay: `${i * 200}ms` }}
+                >
+                  {/* Step Number Circle */}
+                  <div className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-display font-bold text-2xl mx-auto mb-8 relative z-10 shadow-xl ring-4 ring-background">
+                    {item.step}
+                  </div>
+                  
+                  <div className="bg-card rounded-xl p-8 text-center shadow-lg hover:shadow-xl transition-all duration-300 border border-border/50 hover:-translate-y-1">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
+                      <item.icon className="h-8 w-8 text-primary" />
+                    </div>
+                    <h3 className="font-display text-xl font-semibold text-foreground mb-3">{item.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </main>
     </div>
