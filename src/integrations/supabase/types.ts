@@ -228,6 +228,7 @@ export type Database = {
           notice_type: string
           status: string
           summary: string | null
+          tax_return_path: string | null
           tax_year: number
           updated_at: string
         }
@@ -241,6 +242,7 @@ export type Database = {
           notice_type: string
           status?: string
           summary?: string | null
+          tax_return_path?: string | null
           tax_year: number
           updated_at?: string
         }
@@ -254,6 +256,7 @@ export type Database = {
           notice_type?: string
           status?: string
           summary?: string | null
+          tax_return_path?: string | null
           tax_year?: number
           updated_at?: string
         }
