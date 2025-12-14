@@ -1,4 +1,4 @@
-import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 
 const clientNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
+  { title: 'My Cases', url: '/my-cases', icon: FolderOpen },
   { title: 'My Plans', url: '/plans', icon: FileText },
   { title: 'Report a Notice', url: '/report', icon: AlertTriangle },
 ];
