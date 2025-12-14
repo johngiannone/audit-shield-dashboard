@@ -91,7 +91,7 @@ serve(async (req: Request): Promise<Response> => {
       : message_preview;
 
     const emailResponse = await resend.emails.send({
-      from: "Audit Defense <onboarding@resend.dev>",
+      from: "Return Shield <onboarding@resend.dev>",
       to: [recipientUser.email],
       subject: `New Message: ${caseData.notice_type} Case`,
       html: `
@@ -119,7 +119,7 @@ serve(async (req: Request): Promise<Response> => {
           
           <p style="font-size: 16px; line-height: 1.6; color: #333;">
             Best regards,<br>
-            <strong>Audit Defense Team</strong>
+            <strong>Return Shield Team</strong>
           </p>
           
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #e0e0e0;">

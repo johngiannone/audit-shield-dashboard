@@ -30,7 +30,7 @@ export default function Index() {
           <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center shadow-md">
             <Shield className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-display text-xl font-semibold text-foreground">AuditShield</span>
+          <span className="font-display text-xl font-semibold text-foreground">Return Shield</span>
         </div>
         <Link to="/auth">
           <Button variant="outline">Sign In</Button>
