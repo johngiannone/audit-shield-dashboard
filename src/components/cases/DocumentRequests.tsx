@@ -141,6 +141,24 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
 
       if (insertError) throw insertError;
 
+      // Automatically update case status to 'client_action'
+      const { error: statusError } = await supabase
+        .from('cases')
+        .update({ status: 'client_action' })
+        .eq('id', caseId);
+
+      if (statusError) {
+        console.error('Failed to update case status:', statusError);
+      }
+
+      // Log status change
+      await supabase.from('case_status_history').insert({
+        case_id: caseId,
+        old_status: null, // We don't know the previous status here
+        new_status: 'client_action',
+        changed_by: agentId,
+      });
+
       const { error: emailError } = await supabase.functions.invoke('send-document-request', {
         body: {
           case_id: caseId,
@@ -156,7 +174,7 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
 
       toast({
         title: 'Document Requested',
-        description: 'The client has been notified via email.',
+        description: 'Case status updated to Client Action. The client has been notified.',
       });
 
       setRequestName('');
@@ -238,6 +256,24 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
 
       if (error) throw error;
 
+      // Automatically update case status to 'client_action' since we need client to re-upload
+      const { error: statusError } = await supabase
+        .from('cases')
+        .update({ status: 'client_action' })
+        .eq('id', caseId);
+
+      if (statusError) {
+        console.error('Failed to update case status:', statusError);
+      }
+
+      // Log status change
+      await supabase.from('case_status_history').insert({
+        case_id: caseId,
+        old_status: 'agent_action',
+        new_status: 'client_action',
+        changed_by: agentId,
+      });
+
       // Send rejection notification email
       const { error: emailError } = await supabase.functions.invoke('send-document-rejection', {
         body: {
@@ -254,7 +290,7 @@ export function DocumentRequests({ caseId, agentId, noticeUrl }: DocumentRequest
 
       toast({
         title: 'Document Rejected',
-        description: 'The client has been notified and asked to re-upload.',
+        description: 'Case status updated to Client Action. The client has been notified.',
       });
       
       setRejectDialogOpen(false);
