@@ -94,9 +94,26 @@ export default function MyCaseload() {
 
       if (error) throw error;
 
+      // Send status update email to client
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-status-update', {
+          body: {
+            case_id: caseId,
+            new_status: newStatus,
+            agent_profile_id: profileId,
+          },
+        });
+
+        if (emailError) {
+          console.error('Failed to send status update email:', emailError);
+        }
+      } catch (emailErr) {
+        console.error('Email function error:', emailErr);
+      }
+
       toast({
         title: 'Status Updated',
-        description: `Case status changed to ${newStatus.replace('_', ' ')}.`,
+        description: `Case status changed to ${newStatus.replace('_', ' ')}. Client has been notified.`,
       });
 
       setCases(cases.map(c => 
@@ -119,6 +136,8 @@ export default function MyCaseload() {
         return <AlertTriangle className="h-4 w-4 text-info" />;
       case 'in_progress':
         return <Clock className="h-4 w-4 text-warning" />;
+      case 'pending_info':
+        return <AlertTriangle className="h-4 w-4 text-accent-foreground" />;
       case 'resolved':
         return <CheckCircle className="h-4 w-4 text-success" />;
       default:
@@ -127,12 +146,13 @@ export default function MyCaseload() {
   };
 
   const getStatusBadge = (status: string) => {
-    const styles = {
+    const styles: Record<string, string> = {
       new: 'bg-info/10 text-info border-info/20',
       in_progress: 'bg-warning/10 text-warning border-warning/20',
+      pending_info: 'bg-accent/10 text-accent-foreground border-accent/20',
       resolved: 'bg-success/10 text-success border-success/20',
     };
-    return styles[status as keyof typeof styles] || styles.new;
+    return styles[status] || styles.new;
   };
 
   if (loading || !user) {
@@ -235,6 +255,7 @@ export default function MyCaseload() {
                             <SelectContent>
                               <SelectItem value="new">New</SelectItem>
                               <SelectItem value="in_progress">In Progress</SelectItem>
+                              <SelectItem value="pending_info">Pending Info</SelectItem>
                               <SelectItem value="resolved">Resolved</SelectItem>
                             </SelectContent>
                           </Select>

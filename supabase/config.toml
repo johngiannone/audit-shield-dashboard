@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.send-intro-email]
 verify_jwt = true
+
+[functions.send-status-update]
+verify_jwt = true
