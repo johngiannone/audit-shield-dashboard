@@ -16,29 +16,38 @@ export type Database = {
     Tables: {
       audit_plans: {
         Row: {
+          covered_years: number[]
           created_at: string
           id: string
           plan_level: string
           profile_id: string
           status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           tax_year: number
           updated_at: string
         }
         Insert: {
+          covered_years?: number[]
           created_at?: string
           id?: string
           plan_level?: string
           profile_id: string
           status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           tax_year: number
           updated_at?: string
         }
         Update: {
+          covered_years?: number[]
           created_at?: string
           id?: string
           plan_level?: string
           profile_id?: string
           status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           tax_year?: number
           updated_at?: string
         }
