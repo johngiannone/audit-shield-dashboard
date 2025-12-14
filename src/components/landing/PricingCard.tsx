@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Shield, Briefcase, CheckCircle, ArrowRight, Info } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Shield, Briefcase, CheckCircle, ArrowRight, Info, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface PricingCardProps {
   type: 'individual' | 'business';
@@ -20,6 +23,9 @@ const RETROACTIVE_YEARS = [
 
 export function PricingCard({ type }: PricingCardProps) {
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const isIndividual = type === 'individual';
   const basePrice = isIndividual ? 49 : 199;
@@ -32,6 +38,34 @@ export function PricingCard({ type }: PricingCardProps) {
         ? prev.filter(y => y !== year)
         : [...prev, year]
     );
+  };
+
+  const handleCheckout = async () => {
+    if (!user) {
+      // Redirect to auth with return URL
+      navigate('/auth?redirect=pricing');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          planType: type,
+          retroactiveYears: selectedYears,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast.error('Failed to start checkout. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const config = isIndividual ? {
@@ -130,14 +164,21 @@ export function PricingCard({ type }: PricingCardProps) {
 
         {/* Dynamic Total Button */}
         <div className="mt-6 pt-4 border-t border-border">
-          <Link to="/auth">
-            <Button className="w-full" size="lg">
+          <Button 
+            className="w-full" 
+            size="lg" 
+            onClick={handleCheckout}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
               <span className="flex items-center gap-2">
                 Total Due: ${totalPrice}
                 <ArrowRight className="h-4 w-4" />
               </span>
-            </Button>
-          </Link>
+            )}
+          </Button>
           {addonTotal > 0 && (
             <p className="text-xs text-muted-foreground text-center mt-2">
               Base ${basePrice} + ${addonTotal} retroactive coverage
