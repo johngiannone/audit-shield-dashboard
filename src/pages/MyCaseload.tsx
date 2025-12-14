@@ -86,6 +86,9 @@ export default function MyCaseload() {
 
   const updateStatus = async (caseId: string, newStatus: string) => {
     setUpdating(caseId);
+    const currentCase = cases.find(c => c.id === caseId);
+    const oldStatus = currentCase?.status || null;
+
     try {
       const { error } = await supabase
         .from('cases')
@@ -93,6 +96,16 @@ export default function MyCaseload() {
         .eq('id', caseId);
 
       if (error) throw error;
+
+      // Log status history
+      await supabase
+        .from('case_status_history')
+        .insert({
+          case_id: caseId,
+          old_status: oldStatus,
+          new_status: newStatus,
+          changed_by: profileId,
+        });
 
       // Send status update email to client
       try {
