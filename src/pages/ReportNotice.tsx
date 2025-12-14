@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -6,33 +6,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { AlertTriangle, Loader2, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Loader2, CheckCircle, Upload, FileText, X, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { z } from 'zod';
 
-const reportSchema = z.object({
-  notice_agency: z.enum(['IRS', 'State'], { required_error: 'Please select an agency' }),
-  notice_type: z.string().min(2, 'Notice type is required').max(200, 'Notice type is too long'),
-  tax_year: z.number().min(2000, 'Invalid tax year').max(new Date().getFullYear(), 'Tax year cannot be in the future'),
-  summary: z.string().max(2000, 'Summary is too long').optional(),
-});
+interface AnalysisResult {
+  agency: string | null;
+  notice_type: string | null;
+  tax_year: number | null;
+  client_name_on_notice: string | null;
+  summary: string | null;
+}
 
 export default function ReportNotice() {
   const navigate = useNavigate();
   const { user, role, loading } = useAuth();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [taxYear, setTaxYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({
-    notice_agency: '' as 'IRS' | 'State' | '',
-    notice_type: '',
-    tax_year: new Date().getFullYear(),
-    summary: '',
-  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -43,64 +43,171 @@ export default function ReportNotice() {
     }
   }, [user, loading, role, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+      if (!validTypes.includes(file.type)) {
+        toast({
+          title: 'Invalid file type',
+          description: 'Please upload a PDF or image file (PNG, JPG)',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: 'File too large',
+          description: 'Please upload a file smaller than 10MB',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setSelectedFile(file);
+      setAnalysisResult(null);
+    }
+  };
 
-    const result = reportSchema.safeParse({
-      ...form,
-      notice_agency: form.notice_agency || undefined,
-    });
+  const removeFile = () => {
+    setSelectedFile(null);
+    setAnalysisResult(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
-    if (!result.success) {
+  const analyzeNotice = async () => {
+    if (!selectedFile) return;
+
+    setIsAnalyzing(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-notice`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to analyze notice');
+      }
+
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      setAnalysisResult(data.analysis);
+      setShowReviewModal(true);
+      
       toast({
-        title: 'Validation Error',
-        description: result.error.errors[0].message,
+        title: 'Analysis Complete',
+        description: 'Please review the extracted information.',
+      });
+    } catch (error: any) {
+      console.error('Analysis error:', error);
+      toast({
+        title: 'Analysis Failed',
+        description: error.message || 'Failed to analyze the notice. Please try again.',
         variant: 'destructive',
       });
-      return;
+    } finally {
+      setIsAnalyzing(false);
     }
+  };
 
-    setIsSubmitting(true);
-    
+  const saveCase = async () => {
+    if (!analysisResult || !selectedFile || !user) return;
+
+    setIsSaving(true);
     try {
       // Get user's profile ID
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (profileError || !profile) {
         throw new Error('Could not find your profile');
       }
 
-      const { error } = await supabase
+      // Upload file to storage
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('notices')
+        .upload(fileName, selectedFile);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error('Failed to upload file');
+      }
+
+      // Determine agency value
+      const agency = analysisResult.agency?.toUpperCase() === 'IRS' ? 'IRS' : 'State';
+
+      // Create case record
+      const { error: insertError } = await supabase
         .from('cases')
         .insert({
           client_id: profile.id,
-          notice_agency: form.notice_agency,
-          notice_type: form.notice_type,
-          tax_year: form.tax_year,
-          summary: form.summary || null,
+          notice_agency: agency,
+          notice_type: analysisResult.notice_type || 'Unknown',
+          tax_year: analysisResult.tax_year || parseInt(taxYear),
+          summary: analysisResult.summary || null,
+          file_path: fileName,
           status: 'new',
         });
 
-      if (error) throw error;
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw new Error('Failed to save case');
+      }
 
+      setShowReviewModal(false);
       setSubmitted(true);
+      
       toast({
-        title: 'Notice Reported',
-        description: 'Your notice has been submitted. An agent will be assigned shortly.',
+        title: 'Case Created',
+        description: 'Your notice has been submitted successfully.',
       });
     } catch (error: any) {
+      console.error('Save error:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to submit notice',
+        description: error.message || 'Failed to save case',
         variant: 'destructive',
       });
     } finally {
-      setIsSubmitting(false);
+      setIsSaving(false);
     }
+  };
+
+  const generateYearOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = currentYear; i >= currentYear - 10; i--) {
+      years.push(i);
+    }
+    return years;
   };
 
   if (loading || !user) {
@@ -124,10 +231,14 @@ export default function ReportNotice() {
                 Notice Submitted
               </h2>
               <p className="text-muted-foreground text-center max-w-sm mb-6">
-                Your audit notice has been reported. Our team will review it and assign an agent to your case.
+                Your audit notice has been analyzed and submitted. Our team will review it and assign an agent to your case.
               </p>
               <div className="flex gap-4">
-                <Button variant="outline" onClick={() => setSubmitted(false)}>
+                <Button variant="outline" onClick={() => {
+                  setSubmitted(false);
+                  setSelectedFile(null);
+                  setAnalysisResult(null);
+                }}>
                   Report Another
                 </Button>
                 <Button onClick={() => navigate('/dashboard')}>
@@ -147,7 +258,7 @@ export default function ReportNotice() {
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Report a Notice</h1>
           <p className="text-muted-foreground mt-1">
-            Submit details about the audit notice you received
+            Upload your tax notice and our AI will analyze it automatically
           </p>
         </div>
 
@@ -156,81 +267,178 @@ export default function ReportNotice() {
             <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center mb-4">
               <AlertTriangle className="h-6 w-6 text-warning" />
             </div>
-            <CardTitle>Notice Details</CardTitle>
+            <CardTitle>Upload Notice</CardTitle>
             <CardDescription>
-              Provide information about the audit notice you received
+              Upload a PDF or image of your tax notice for AI-powered analysis
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="agency">Notice Agency</Label>
-                  <Select
-                    value={form.notice_agency}
-                    onValueChange={(value) => setForm({ ...form, notice_agency: value as 'IRS' | 'State' })}
-                  >
-                    <SelectTrigger id="agency">
-                      <SelectValue placeholder="Select agency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="IRS">IRS (Federal)</SelectItem>
-                      <SelectItem value="State">State Tax Authority</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          <CardContent className="space-y-6">
+            {/* Tax Year Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="tax_year">Tax Year</Label>
+              <Select value={taxYear} onValueChange={setTaxYear}>
+                <SelectTrigger id="tax_year">
+                  <SelectValue placeholder="Select tax year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {generateYearOptions().map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="tax_year">Tax Year</Label>
-                  <Input
-                    id="tax_year"
-                    type="number"
-                    min={2000}
-                    max={new Date().getFullYear()}
-                    value={form.tax_year}
-                    onChange={(e) => setForm({ ...form, tax_year: parseInt(e.target.value) })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notice_type">Notice Type</Label>
-                <Input
-                  id="notice_type"
-                  type="text"
-                  placeholder="e.g., CP2000, Audit Letter, Notice of Deficiency"
-                  value={form.notice_type}
-                  onChange={(e) => setForm({ ...form, notice_type: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="summary">Summary (Optional)</Label>
-                <Textarea
-                  id="summary"
-                  placeholder="Briefly describe the issue or any relevant details..."
-                  rows={4}
-                  value={form.summary}
-                  onChange={(e) => setForm({ ...form, summary: e.target.value })}
-                />
-              </div>
-
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
+            {/* File Upload */}
+            <div className="space-y-2">
+              <Label>Notice Document</Label>
+              <div 
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  selectedFile 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-border hover:border-primary/50 hover:bg-secondary/50'
+                }`}
+              >
+                {selectedFile ? (
+                  <div className="flex items-center justify-center gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-foreground">{selectedFile.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={removeFile}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
                 ) : (
-                  'Submit Notice'
+                  <div 
+                    className="cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                    <p className="font-medium text-foreground mb-1">
+                      Click to upload or drag and drop
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      PDF, PNG, or JPG (max 10MB)
+                    </p>
+                  </div>
                 )}
-              </Button>
-            </form>
+                <Input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+            </div>
+
+            {/* Analyze Button */}
+            <Button 
+              onClick={analyzeNotice}
+              disabled={!selectedFile || isAnalyzing}
+              className="w-full"
+              size="lg"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Analyzing Notice...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-5 w-5" />
+                  Analyze with AI
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
       </div>
+
+      {/* Review Modal */}
+      <Dialog open={showReviewModal} onOpenChange={setShowReviewModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Review Analysis</DialogTitle>
+            <DialogDescription>
+              Please verify the AI-extracted information is correct before submitting.
+            </DialogDescription>
+          </DialogHeader>
+
+          {analysisResult && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs uppercase">Agency</Label>
+                  <p className="font-medium text-foreground">
+                    {analysisResult.agency || 'Not detected'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs uppercase">Notice Type</Label>
+                  <p className="font-medium text-foreground">
+                    {analysisResult.notice_type || 'Not detected'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs uppercase">Tax Year</Label>
+                  <p className="font-medium text-foreground">
+                    {analysisResult.tax_year || taxYear}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs uppercase">Name on Notice</Label>
+                  <p className="font-medium text-foreground">
+                    {analysisResult.client_name_on_notice || 'Not detected'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-muted-foreground text-xs uppercase">Summary</Label>
+                <p className="text-sm text-foreground bg-secondary/50 rounded-lg p-3">
+                  {analysisResult.summary || 'No summary available'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowReviewModal(false)}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={saveCase} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Confirm & Submit
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
