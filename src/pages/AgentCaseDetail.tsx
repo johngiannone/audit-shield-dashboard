@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Loader2, Building, Calendar, User, FileText, ExternalLink, AlertTriangle, Bell } from 'lucide-react';
+import { ArrowLeft, Loader2, Building, Calendar, User, FileText, ExternalLink, AlertTriangle, Bell, UserMinus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CaseNotes } from '@/components/cases/CaseNotes';
 import { CaseTimeline } from '@/components/cases/CaseTimeline';
@@ -40,6 +40,7 @@ export default function AgentCaseDetail() {
   const [noticeUrl, setNoticeUrl] = useState<string | null>(null);
   const [taxReturnUrl, setTaxReturnUrl] = useState<string | null>(null);
   const [sendingReminder, setSendingReminder] = useState(false);
+  const [unassigning, setUnassigning] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -219,6 +220,45 @@ export default function AgentCaseDetail() {
     }
   };
 
+  const unassignCase = async () => {
+    if (!caseDetail || !profileId) return;
+
+    setUnassigning(true);
+    try {
+      const { error } = await supabase
+        .from('cases')
+        .update({ 
+          assigned_agent_id: null, 
+          status: 'triage' 
+        })
+        .eq('id', caseDetail.id);
+
+      if (error) throw error;
+
+      await supabase.from('case_status_history').insert({
+        case_id: caseDetail.id,
+        old_status: caseDetail.status,
+        new_status: 'triage',
+        changed_by: profileId,
+      });
+
+      toast({
+        title: 'Case Unassigned',
+        description: 'Case has been returned to the queue.',
+      });
+
+      navigate('/caseload');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to unassign case',
+        variant: 'destructive',
+      });
+    } finally {
+      setUnassigning(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'triage':
@@ -264,6 +304,19 @@ export default function AgentCaseDetail() {
               </p>
             </div>
           </div>
+          <Button
+            variant="outline"
+            onClick={unassignCase}
+            disabled={unassigning}
+            className="text-destructive hover:bg-destructive/10"
+          >
+            {unassigning ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <UserMinus className="h-4 w-4 mr-2" />
+            )}
+            Unassign Case
+          </Button>
         </div>
 
         {/* 3-Column Layout */}
