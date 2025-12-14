@@ -1,15 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
-import { AlertTriangle, Loader2, CheckCircle, Upload, FileText, X, Sparkles } from 'lucide-react';
+import { Loader2, CheckCircle, Upload, FileText, X, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface AnalysisResult {
@@ -26,13 +27,17 @@ export default function ReportNotice() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [taxYear, setTaxYear] = useState<string>(new Date().getFullYear().toString());
+  const [taxYear, setTaxYear] = useState<string>('2024');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -43,33 +48,117 @@ export default function ReportNotice() {
     }
   }, [user, loading, role, navigate]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const uploadFile = useCallback(async (file: File) => {
+    if (!user) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}_${file.name}`;
+      
+      // Simulate progress for better UX (actual upload doesn't provide progress)
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + 10;
+        });
+      }, 100);
+
+      const { error: uploadError } = await supabase.storage
+        .from('audit-notices')
+        .upload(fileName, file);
+
+      clearInterval(progressInterval);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error('Failed to upload file');
+      }
+
+      setUploadProgress(100);
+      setUploadedFilePath(fileName);
+      
+      toast({
+        title: 'Upload Complete',
+        description: 'Your file is ready for analysis.',
+      });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      setSelectedFile(null);
+      setUploadProgress(0);
+      toast({
+        title: 'Upload Failed',
+        description: error.message || 'Failed to upload file. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  }, [user, toast]);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
-      if (!validTypes.includes(file.type)) {
-        toast({
-          title: 'Invalid file type',
-          description: 'Please upload a PDF or image file (PNG, JPG)',
-          variant: 'destructive',
-        });
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: 'File too large',
-          description: 'Please upload a file smaller than 10MB',
-          variant: 'destructive',
-        });
-        return;
-      }
-      setSelectedFile(file);
-      setAnalysisResult(null);
+      await processFile(file);
     }
   };
 
-  const removeFile = () => {
+  const processFile = async (file: File) => {
+    const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Please upload a PDF or image file (PNG, JPG)',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please upload a file smaller than 10MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setSelectedFile(file);
+    setAnalysisResult(null);
+    setUploadedFilePath(null);
+    await uploadFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      await processFile(file);
+    }
+  };
+
+  const removeFile = async () => {
+    // Try to delete from storage if uploaded
+    if (uploadedFilePath) {
+      await supabase.storage.from('audit-notices').remove([uploadedFilePath]);
+    }
     setSelectedFile(null);
+    setUploadedFilePath(null);
+    setUploadProgress(0);
     setAnalysisResult(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -133,7 +222,7 @@ export default function ReportNotice() {
   };
 
   const saveCase = async () => {
-    if (!analysisResult || !selectedFile || !user) return;
+    if (!analysisResult || !uploadedFilePath || !user) return;
 
     setIsSaving(true);
     try {
@@ -148,19 +237,6 @@ export default function ReportNotice() {
         throw new Error('Could not find your profile');
       }
 
-      // Upload file to storage
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('notices')
-        .upload(fileName, selectedFile);
-
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw new Error('Failed to upload file');
-      }
-
       // Determine agency value
       const agency = analysisResult.agency?.toUpperCase() === 'IRS' ? 'IRS' : 'State';
 
@@ -173,7 +249,7 @@ export default function ReportNotice() {
           notice_type: analysisResult.notice_type || 'Unknown',
           tax_year: analysisResult.tax_year || parseInt(taxYear),
           summary: analysisResult.summary || null,
-          file_path: fileName,
+          file_path: uploadedFilePath,
           status: 'new',
         });
 
@@ -201,14 +277,7 @@ export default function ReportNotice() {
     }
   };
 
-  const generateYearOptions = () => {
-    const currentYear = new Date().getFullYear();
-    const years = [];
-    for (let i = currentYear; i >= currentYear - 10; i--) {
-      years.push(i);
-    }
-    return years;
-  };
+  const taxYears = ['2024', '2023', '2022', '2021'];
 
   if (loading || !user) {
     return (
@@ -221,8 +290,8 @@ export default function ReportNotice() {
   if (submitted) {
     return (
       <DashboardLayout>
-        <div className="max-w-2xl mx-auto animate-fade-in">
-          <Card className="border-0 shadow-xl">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Card className="max-w-md w-full border-0 shadow-xl">
             <CardContent className="flex flex-col items-center justify-center py-16">
               <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mb-6">
                 <CheckCircle className="h-10 w-10 text-success" />
@@ -237,6 +306,8 @@ export default function ReportNotice() {
                 <Button variant="outline" onClick={() => {
                   setSubmitted(false);
                   setSelectedFile(null);
+                  setUploadedFilePath(null);
+                  setUploadProgress(0);
                   setAnalysisResult(null);
                 }}>
                   Report Another
@@ -254,25 +325,12 @@ export default function ReportNotice() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Report a Notice</h1>
-          <p className="text-muted-foreground mt-1">
-            Upload your tax notice and our AI will analyze it automatically
-          </p>
-        </div>
-
-        <Card className="border-0 shadow-md">
-          <CardHeader>
-            <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center mb-4">
-              <AlertTriangle className="h-6 w-6 text-warning" />
-            </div>
-            <CardTitle>Upload Notice</CardTitle>
-            <CardDescription>
-              Upload a PDF or image of your tax notice for AI-powered analysis
-            </CardDescription>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-xl w-full border-0 shadow-xl">
+          <CardHeader className="text-center pb-2">
+            <CardTitle className="font-display text-2xl">Analyze Your Tax Notice</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 pt-4">
             {/* Tax Year Selection */}
             <div className="space-y-2">
               <Label htmlFor="tax_year">Tax Year</Label>
@@ -281,8 +339,8 @@ export default function ReportNotice() {
                   <SelectValue placeholder="Select tax year" />
                 </SelectTrigger>
                 <SelectContent>
-                  {generateYearOptions().map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
+                  {taxYears.map((year) => (
+                    <SelectItem key={year} value={year}>
                       {year}
                     </SelectItem>
                   ))}
@@ -290,47 +348,73 @@ export default function ReportNotice() {
               </Select>
             </div>
 
-            {/* File Upload */}
+            {/* File Upload Drop Zone */}
             <div className="space-y-2">
-              <Label>Notice Document</Label>
+              <Label>Upload a photo or scan of the first page of your IRS/State letter</Label>
               <div 
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  selectedFile 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-border hover:border-primary/50 hover:bg-secondary/50'
+                className={`relative border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer ${
+                  isDragging 
+                    ? 'border-primary bg-primary/10' 
+                    : selectedFile 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-border hover:border-primary/50 hover:bg-secondary/50'
                 }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => !selectedFile && fileInputRef.current?.click()}
               >
                 {selectedFile ? (
-                  <div className="flex items-center justify-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <FileText className="h-6 w-6 text-primary" />
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-center gap-4">
+                      <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <FileText className="h-7 w-7 text-primary" />
+                      </div>
+                      <div className="text-left flex-1">
+                        <p className="font-medium text-foreground truncate max-w-[200px]">
+                          {selectedFile.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile();
+                        }}
+                        className="text-muted-foreground hover:text-destructive"
+                        disabled={isUploading}
+                      >
+                        <X className="h-5 w-5" />
+                      </Button>
                     </div>
-                    <div className="text-left">
-                      <p className="font-medium text-foreground">{selectedFile.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={removeFile}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="h-5 w-5" />
-                    </Button>
+                    
+                    {/* Progress Bar */}
+                    {(isUploading || uploadProgress > 0) && (
+                      <div className="space-y-2">
+                        <Progress value={uploadProgress} className="h-2" />
+                        <p className="text-sm text-muted-foreground">
+                          {uploadProgress < 100 ? 'Uploading...' : 'Upload complete'}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div 
-                    className="cursor-pointer"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                  <div>
+                    <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mx-auto mb-4">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                    </div>
                     <p className="font-medium text-foreground mb-1">
-                      Click to upload or drag and drop
+                      Drag and drop your file here
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      PDF, PNG, or JPG (max 10MB)
+                    <p className="text-sm text-muted-foreground mb-3">
+                      or click to browse
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Accepts PDF, PNG, JPG (max 10MB)
                     </p>
                   </div>
                 )}
@@ -347,7 +431,7 @@ export default function ReportNotice() {
             {/* Analyze Button */}
             <Button 
               onClick={analyzeNotice}
-              disabled={!selectedFile || isAnalyzing}
+              disabled={!uploadedFilePath || isAnalyzing || isUploading}
               className="w-full"
               size="lg"
             >
