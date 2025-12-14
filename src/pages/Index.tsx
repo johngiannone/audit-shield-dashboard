@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Brain, Gavel, CheckCircle, Calendar, Briefcase, Star } from 'lucide-react';
+import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Brain, Gavel, CheckCircle, Calendar, Briefcase, Star, X, Clock, DollarSign, Frown, Smile } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 export default function Index() {
@@ -298,6 +298,106 @@ export default function Index() {
             </Card>
           </div>
         </div>
+
+        {/* Why Prepay Comparison Section */}
+        <div className="mt-24 max-w-5xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Why Prepay for Protection?
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              See the difference our coverage makes when the IRS comes calling
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Without Us - The Risk */}
+            <div className="bg-red-50 dark:bg-red-950/20 rounded-2xl p-8 border border-red-200 dark:border-red-900/50 animate-fade-in">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <X className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
+                <h3 className="font-display text-xl font-semibold text-foreground">
+                  The Cost of an Audit <span className="text-red-600 dark:text-red-400">Without Us</span>
+                </h3>
+              </div>
+              
+              <ul className="space-y-5">
+                <li className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <DollarSign className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-sm">Average Professional Fees</p>
+                    <p className="font-display text-2xl font-bold text-red-600 dark:text-red-400">$3,500+</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Clock className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-sm">Hours of Your Time Lost</p>
+                    <p className="font-display text-2xl font-bold text-red-600 dark:text-red-400">40+ Hours</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Frown className="h-5 w-5 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-sm">Stress Level</p>
+                    <p className="font-display text-2xl font-bold text-red-600 dark:text-red-400">High</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            {/* With Us - The Solution */}
+            <div className="bg-green-50 dark:bg-green-950/20 rounded-2xl p-8 border border-green-200 dark:border-green-900/50 animate-fade-in" style={{ animationDelay: '100ms' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                </div>
+                <h3 className="font-display text-xl font-semibold text-foreground">
+                  The Cost <span className="text-green-600 dark:text-green-400">With Return Shield</span>
+                </h3>
+              </div>
+              
+              <ul className="space-y-5">
+                <li className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-sm">Your Cost</p>
+                    <p className="font-display text-2xl font-bold text-green-600 dark:text-green-400">$0 <span className="text-base font-normal text-muted-foreground">(Included in Plan)</span></p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Clock className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-sm">Your Time</p>
+                    <p className="font-display text-2xl font-bold text-green-600 dark:text-green-400">0 Hours</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Smile className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-sm">Stress Level</p>
+                    <p className="font-display text-2xl font-bold text-green-600 dark:text-green-400">Zero</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* How it Works Timeline */}
         <div className="mt-24 max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
