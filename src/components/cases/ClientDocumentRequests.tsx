@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Upload, Clock, CheckCircle, FileText, AlertCircle } from 'lucide-react';
+import { Loader2, Upload, Clock, CheckCircle, FileText, AlertCircle, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface DocumentRequest {
@@ -11,6 +11,7 @@ interface DocumentRequest {
   document_name: string;
   description: string | null;
   status: string;
+  rejection_reason: string | null;
   created_at: string;
 }
 
@@ -51,7 +52,7 @@ export function ClientDocumentRequests({ caseId, profileId, onDocumentUploaded }
     try {
       const { data, error } = await supabase
         .from('document_requests')
-        .select('id, document_name, description, status, created_at')
+        .select('id, document_name, description, status, rejection_reason, created_at')
         .eq('case_id', caseId)
         .order('created_at', { ascending: false });
 
@@ -193,16 +194,26 @@ export function ClientDocumentRequests({ caseId, profileId, onDocumentUploaded }
             {pendingRequests.map((request) => (
               <div
                 key={request.id}
-                className="p-4 rounded-lg bg-warning/5 border border-warning/20"
+                className={`p-4 rounded-lg ${request.rejection_reason ? 'bg-destructive/5 border border-destructive/20' : 'bg-warning/5 border border-warning/20'}`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center flex-shrink-0">
-                      <Clock className="h-5 w-5 text-warning" />
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${request.rejection_reason ? 'bg-destructive/10' : 'bg-warning/10'}`}>
+                      {request.rejection_reason ? (
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                      ) : (
+                        <Clock className="h-5 w-5 text-warning" />
+                      )}
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{request.document_name}</p>
-                      {request.description && (
+                      {request.rejection_reason && (
+                        <div className="mt-2 p-2 rounded bg-destructive/10 border border-destructive/20">
+                          <p className="text-xs font-medium text-destructive">Please re-upload:</p>
+                          <p className="text-sm text-destructive/90 mt-1">{request.rejection_reason}</p>
+                        </div>
+                      )}
+                      {request.description && !request.rejection_reason && (
                         <p className="text-sm text-muted-foreground mt-1">{request.description}</p>
                       )}
                       <p className="text-xs text-muted-foreground mt-2">
@@ -212,6 +223,7 @@ export function ClientDocumentRequests({ caseId, profileId, onDocumentUploaded }
                   </div>
                   <Button
                     size="sm"
+                    variant={request.rejection_reason ? "destructive" : "default"}
                     onClick={() => handleUploadClick(request.id)}
                     disabled={uploadingFor === request.id}
                   >
@@ -220,7 +232,7 @@ export function ClientDocumentRequests({ caseId, profileId, onDocumentUploaded }
                     ) : (
                       <Upload className="h-4 w-4 mr-2" />
                     )}
-                    Upload
+                    {request.rejection_reason ? 'Re-upload' : 'Upload'}
                   </Button>
                 </div>
               </div>
