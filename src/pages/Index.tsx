@@ -196,6 +196,35 @@ export default function Index() {
           </div>
         </div>
       </main>
+
+      {/* Pre-Footer CTA */}
+      <section className="bg-primary py-16 md:py-20">
+        <div className="container mx-auto px-6 text-center">
+          <div className="max-w-3xl mx-auto animate-fade-in">
+            <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
+              The IRS Clock is Ticking.
+            </h2>
+            <p className="text-primary-foreground/80 text-lg md:text-xl mb-8 leading-relaxed">
+              Most notices have strict deadlines. Delaying can lead to penalties and interest.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/auth">
+                <Button 
+                  size="lg" 
+                  variant="secondary"
+                  className="w-full sm:w-auto text-base px-10 font-semibold"
+                >
+                  Start My Defense Now
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+            </div>
+            <p className="text-primary-foreground/60 text-sm mt-6">
+              No commitment required. Get a free case review today.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
