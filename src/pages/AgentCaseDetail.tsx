@@ -6,6 +6,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Loader2, Building, Calendar, User, FileText, ExternalLink, AlertTriangle, Bell, UserMinus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -304,19 +315,40 @@ export default function AgentCaseDetail() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            onClick={unassignCase}
-            disabled={unassigning}
-            className="text-destructive hover:bg-destructive/10"
-          >
-            {unassigning ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <UserMinus className="h-4 w-4 mr-2" />
-            )}
-            Unassign Case
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={unassigning}
+                className="text-destructive hover:bg-destructive/10"
+              >
+                {unassigning ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <UserMinus className="h-4 w-4 mr-2" />
+                )}
+                Unassign Case
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Unassign this case?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will return the case to the queue where it can be picked up by another agent. 
+                  Any notes you've added will remain on the case.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={unassignCase}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Unassign Case
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         {/* 3-Column Layout */}
