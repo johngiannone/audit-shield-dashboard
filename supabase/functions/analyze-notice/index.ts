@@ -46,7 +46,23 @@ serve(async (req) => {
         mediaType = 'image/png';
       } else if (file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg')) {
         mediaType = 'image/jpeg';
+      } else if (file.name.toLowerCase().endsWith('.gif')) {
+        mediaType = 'image/gif';
+      } else if (file.name.toLowerCase().endsWith('.webp')) {
+        mediaType = 'image/webp';
       }
+    }
+
+    // Check if file is a supported image format (Claude vision only supports images, not PDFs)
+    const supportedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!supportedImageTypes.includes(mediaType)) {
+      console.error(`Unsupported file type: ${mediaType}. Only images are supported for AI analysis.`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'PDF files are not supported for AI analysis. Please upload a photo or screenshot (PNG, JPG) of your tax notice instead.' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log(`Sending to OpenRouter with media type: ${mediaType}`);
