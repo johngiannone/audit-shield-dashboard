@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CaseMessages } from '@/components/cases/CaseMessages';
+import { ClientDocumentRequests } from '@/components/cases/ClientDocumentRequests';
 
 interface CaseDetail {
   id: string;
@@ -429,6 +430,15 @@ export default function ClientCaseDetail() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Document Requests from Agent */}
+        {profileId && (
+          <ClientDocumentRequests 
+            caseId={caseId!} 
+            profileId={profileId} 
+            onDocumentUploaded={fetchCaseData}
+          />
+        )}
 
         {/* Documents */}
         <Card className="border-0 shadow-md">
