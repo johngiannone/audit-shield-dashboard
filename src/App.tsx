@@ -18,6 +18,7 @@ import ClientCaseDetail from "./pages/ClientCaseDetail";
 import AgentCaseDetail from "./pages/AgentCaseDetail";
 import Analytics from "./pages/Analytics";
 import Partners from "./pages/Partners";
+import Affiliates from "./pages/Affiliates";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
                 <Route path="/my-cases/:caseId" element={<ClientCaseDetail />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/partners" element={<Partners />} />
+                <Route path="/affiliates" element={<Affiliates />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </ReferralTracker>
