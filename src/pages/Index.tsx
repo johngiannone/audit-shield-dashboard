@@ -99,7 +99,37 @@ export default function Index() {
                 <ShieldCheck className="h-5 w-5 text-green-600" />
                 <span className="text-sm font-semibold text-foreground">Verified Secure</span>
               </div>
+        </div>
+
+        {/* Trust Strip */}
+        <div className="mt-20 -mx-6 px-6 py-10 bg-[hsl(210,17%,98%)] dark:bg-muted/30 border-y border-border">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto text-center">
+            <div className="animate-fade-in" style={{ animationDelay: '0ms' }}>
+              <div className="font-display text-4xl md:text-5xl font-bold text-foreground tracking-tight">
+                10,000<span className="text-primary">+</span>
+              </div>
+              <div className="text-sm uppercase tracking-widest text-muted-foreground mt-2 font-medium">
+                Cases Resolved
+              </div>
             </div>
+            <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+              <div className="font-display text-4xl md:text-5xl font-bold text-foreground tracking-tight">
+                $50M<span className="text-primary">+</span>
+              </div>
+              <div className="text-sm uppercase tracking-widest text-muted-foreground mt-2 font-medium">
+                Tax Savings Saved
+              </div>
+            </div>
+            <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+              <div className="font-display text-4xl md:text-5xl font-bold text-foreground tracking-tight">
+                &lt;4<span className="text-primary">hrs</span>
+              </div>
+              <div className="text-sm uppercase tracking-widest text-muted-foreground mt-2 font-medium">
+                Average Response Time
+              </div>
+            </div>
+          </div>
+        </div>
             {/* Decorative elements */}
             <div className="absolute -z-10 -top-4 -right-4 w-full h-full rounded-2xl bg-primary/10" />
           </div>
