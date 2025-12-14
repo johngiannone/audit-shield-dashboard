@@ -148,8 +148,8 @@ const handler = async (req: Request): Promise<Response> => {
               <h3 style="color: #1e3a5f; margin: 30px 0 15px 0;">What Happens If You Get Audited?</h3>
               <ol style="color: #555; line-height: 1.8; padding-left: 20px;">
                 <li><strong>Upload Your Notice</strong> – Snap a photo or upload the PDF of any IRS/State letter</li>
-                <li><strong>AI Analysis</strong> – Our system extracts key details and assigns your case</li>
-                <li><strong>Expert Defense</strong> – A dedicated Enrolled Agent handles everything for you</li>
+                <li><strong>Get Matched</strong> – A dedicated Enrolled Agent is assigned to your case within hours</li>
+                <li><strong>Expert Defense</strong> – Your agent handles all communication and representation for you</li>
               </ol>
               
               <p style="font-size: 16px; line-height: 1.6; color: #555; margin-top: 25px;">
