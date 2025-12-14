@@ -92,7 +92,7 @@ serve(async (req: Request): Promise<Response> => {
 
     // Send the email
     const emailResponse = await resend.emails.send({
-      from: "Audit Defense <onboarding@resend.dev>",
+      from: "Return Shield <onboarding@resend.dev>",
       to: [clientEmail],
       subject: `Case Assigned: ${caseData.notice_type}`,
       html: `
@@ -134,7 +134,7 @@ serve(async (req: Request): Promise<Response> => {
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #e0e0e0;">
           
           <p style="font-size: 12px; color: #888;">
-            This email was sent by Audit Defense. Please do not reply directly to this email.
+            This email was sent by Return Shield. Please do not reply directly to this email.
           </p>
         </div>
       `,

@@ -121,8 +121,8 @@ export default function Auth() {
           <div className="w-16 h-16 rounded-xl gradient-primary flex items-center justify-center shadow-xl mb-4">
             <Shield className="h-8 w-8 text-primary-foreground" />
           </div>
-          <h1 className="font-display text-3xl font-bold text-foreground">AuditShield</h1>
-          <p className="text-muted-foreground mt-1">Audit Defense Portal</p>
+          <h1 className="font-display text-3xl font-bold text-foreground">Return Shield</h1>
+          <p className="text-muted-foreground mt-1">Tax Defense Portal</p>
         </div>
 
         <Card className="shadow-xl border-0">
@@ -192,7 +192,7 @@ export default function Auth() {
               <TabsContent value="signup" className="mt-0">
                 <CardTitle className="text-xl mb-2">Create your account</CardTitle>
                 <CardDescription className="mb-6">
-                  Get started with AuditShield protection
+                  Get started with Return Shield protection
                 </CardDescription>
                 
                 <form onSubmit={handleSignup} className="space-y-4">

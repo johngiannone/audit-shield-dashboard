@@ -48,9 +48,9 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="animate-fade-in">
               <h1 className="font-display text-lg font-semibold text-sidebar-foreground">
-                AuditShield
+                Return Shield
               </h1>
-              <p className="text-xs text-sidebar-foreground/70">Defense Portal</p>
+              <p className="text-xs text-sidebar-foreground/70">Tax Defense Portal</p>
             </div>
           )}
         </div>
@@ -95,7 +95,7 @@ export function AppSidebar() {
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         {!collapsed && (
           <div className="text-xs text-sidebar-foreground/60 text-center">
-            © 2024 AuditShield
+            © 2024 Return Shield
           </div>
         )}
       </SidebarFooter>
