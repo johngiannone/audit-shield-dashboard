@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Shield, ArrowRight, Calculator, TrendingUp, DollarSign, Users, Clock, CheckCircle } from 'lucide-react';
+import { Shield, ArrowRight, Calculator, TrendingUp, DollarSign, Users, Clock, CheckCircle, RefreshCw, Handshake } from 'lucide-react';
 import partnerDashboard from '@/assets/partner-dashboard.png';
 
 export default function Partners() {
@@ -83,11 +83,11 @@ export default function Partners() {
           </div>
         </div>
 
-        {/* Benefits Section */}
+        {/* Why Partner Section */}
         <div className="mt-32">
           <div className="text-center mb-14">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Why Partner with Return Shield?
+              Why Partner?
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Add a valuable service to your practice without adding complexity.
@@ -97,19 +97,19 @@ export default function Partners() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                icon: DollarSign,
-                title: 'Recurring Revenue',
-                description: 'Earn commission on every policy sold. Annual renewals mean passive income year after year.',
+                icon: TrendingUp,
+                title: 'Instant Revenue Stream',
+                description: 'Turn a cost center into a profit center. Earn a commission on every protection plan sold during tax season.',
               },
               {
-                icon: Users,
-                title: 'Client Retention',
-                description: 'Clients who purchase protection are more likely to return for next year\'s filing.',
+                icon: RefreshCw,
+                title: 'Year-Round Client Retention',
+                description: "Don't just see them in April. Our branded client portal keeps your firm top-of-mind with monthly tax tips and audit risk monitoring.",
               },
               {
-                icon: Clock,
-                title: 'Zero Liability',
-                description: 'We handle all audit defense work. You never have to deal with the IRS on their behalf.',
+                icon: Handshake,
+                title: 'We Do The Work, You Get The Credit',
+                description: 'When a notice arrives, our Enrolled Agents handle the defense. Your client stays protected, and your staff stays focused on billable work.',
               },
             ].map((benefit, i) => (
               <div 
