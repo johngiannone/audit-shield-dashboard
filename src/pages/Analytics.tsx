@@ -3,9 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, TrendingUp, Clock, Users, BarChart3 } from 'lucide-react';
+import { Loader2, TrendingUp, Clock, Users, BarChart3, CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, isWithinInterval } from 'date-fns';
+import { cn } from '@/lib/utils';
 import {
   BarChart,
   Bar,
@@ -50,6 +55,14 @@ const STATUS_COLORS: Record<string, string> = {
   resolved: 'hsl(140, 70%, 45%)',
 };
 
+const PRESET_RANGES = [
+  { label: 'Last 30 days', getValue: () => ({ from: subMonths(new Date(), 1), to: new Date() }) },
+  { label: 'Last 3 months', getValue: () => ({ from: subMonths(new Date(), 3), to: new Date() }) },
+  { label: 'Last 6 months', getValue: () => ({ from: subMonths(new Date(), 6), to: new Date() }) },
+  { label: 'Last year', getValue: () => ({ from: subMonths(new Date(), 12), to: new Date() }) },
+  { label: 'All time', getValue: () => ({ from: undefined, to: undefined }) },
+];
+
 export default function Analytics() {
   const navigate = useNavigate();
   const { user, role, loading } = useAuth();
@@ -59,6 +72,8 @@ export default function Analytics() {
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([]);
   const [agentWorkload, setAgentWorkload] = useState<AgentWorkload[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(subMonths(new Date(), 6));
+  const [dateTo, setDateTo] = useState<Date | undefined>(new Date());
 
   useEffect(() => {
     if (!loading && !user) {
@@ -73,16 +88,25 @@ export default function Analytics() {
     if (user && role === 'agent') {
       fetchAnalytics();
     }
-  }, [user, role]);
+  }, [user, role, dateFrom, dateTo]);
 
   const fetchAnalytics = async () => {
     setDataLoading(true);
     try {
-      // Fetch all cases
-      const { data: cases, error } = await supabase
+      // Build query with date filters
+      let query = supabase
         .from('cases')
         .select('*')
         .order('created_at', { ascending: true });
+
+      if (dateFrom) {
+        query = query.gte('created_at', dateFrom.toISOString());
+      }
+      if (dateTo) {
+        query = query.lte('created_at', endOfMonth(dateTo).toISOString());
+      }
+
+      const { data: cases, error } = await query;
 
       if (error) throw error;
 
@@ -129,19 +153,21 @@ export default function Analytics() {
         avgResolutionDays,
       });
 
-      // Calculate monthly trends (last 6 months)
-      const now = new Date();
+      // Calculate monthly trends based on selected range
+      const rangeStart = dateFrom || new Date(Math.min(...cases.map(c => new Date(c.created_at).getTime())));
+      const rangeEnd = dateTo || new Date();
+      
+      const months = eachMonthOfInterval({ start: startOfMonth(rangeStart), end: endOfMonth(rangeEnd) });
       const monthlyData: Record<string, { created: number; resolved: number }> = {};
       
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      months.forEach(date => {
+        const key = format(date, 'MMM yy');
         monthlyData[key] = { created: 0, resolved: 0 };
-      }
+      });
 
       cases.forEach(c => {
         const createdDate = new Date(c.created_at);
-        const createdKey = createdDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        const createdKey = format(createdDate, 'MMM yy');
         
         if (monthlyData[createdKey]) {
           monthlyData[createdKey].created++;
@@ -149,7 +175,7 @@ export default function Analytics() {
 
         if (c.status === 'resolved') {
           const resolvedDate = new Date(c.updated_at);
-          const resolvedKey = resolvedDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+          const resolvedKey = format(resolvedDate, 'MMM yy');
           
           if (monthlyData[resolvedKey]) {
             monthlyData[resolvedKey].resolved++;
@@ -224,14 +250,108 @@ export default function Analytics() {
     { name: 'Resolved', value: stats.resolved, color: STATUS_COLORS.resolved },
   ].filter(d => d.value > 0) : [];
 
+  const handlePresetSelect = (preset: typeof PRESET_RANGES[0]) => {
+    const range = preset.getValue();
+    setDateFrom(range.from);
+    setDateTo(range.to);
+  };
+
+  const getDateRangeLabel = () => {
+    if (!dateFrom && !dateTo) return 'All time';
+    if (dateFrom && dateTo) return `${format(dateFrom, 'MMM d, yyyy')} - ${format(dateTo, 'MMM d, yyyy')}`;
+    if (dateFrom) return `From ${format(dateFrom, 'MMM d, yyyy')}`;
+    if (dateTo) return `Until ${format(dateTo, 'MMM d, yyyy')}`;
+    return 'Select range';
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
-        <div>
-          <h1 className="font-display text-3xl font-bold text-foreground">Analytics</h1>
-          <p className="text-muted-foreground mt-1">
-            Case metrics and performance insights
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl font-bold text-foreground">Analytics</h1>
+            <p className="text-muted-foreground mt-1">
+              Case metrics and performance insights
+            </p>
+          </div>
+
+          {/* Date Range Filter */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "justify-start text-left font-normal min-w-[140px]",
+                    !dateFrom && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFrom ? format(dateFrom, 'MMM d, yyyy') : 'Start date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={setDateFrom}
+                  disabled={(date) => dateTo ? date > dateTo : false}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+
+            <span className="text-muted-foreground">to</span>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "justify-start text-left font-normal min-w-[140px]",
+                    !dateTo && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateTo ? format(dateTo, 'MMM d, yyyy') : 'End date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={setDateTo}
+                  disabled={(date) => dateFrom ? date < dateFrom : false}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="secondary" size="sm">
+                  Presets
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-40 p-1" align="end">
+                <div className="flex flex-col">
+                  {PRESET_RANGES.map((preset) => (
+                    <Button
+                      key={preset.label}
+                      variant="ghost"
+                      size="sm"
+                      className="justify-start"
+                      onClick={() => handlePresetSelect(preset)}
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
         {dataLoading ? (
@@ -251,7 +371,7 @@ export default function Analytics() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold font-display">{stats?.total || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">All time</p>
+                  <p className="text-xs text-muted-foreground mt-1">{getDateRangeLabel()}</p>
                 </CardContent>
               </Card>
 
