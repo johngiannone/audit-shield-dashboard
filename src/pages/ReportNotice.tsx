@@ -382,7 +382,7 @@ export default function ReportNotice() {
           summary: analysisResult.summary || null,
           file_path: uploadedFilePath,
           tax_return_path: skipTaxReturn ? null : taxReturnFilePath,
-          status: 'new',
+          status: 'triage',
         })
         .select('id')
         .single();

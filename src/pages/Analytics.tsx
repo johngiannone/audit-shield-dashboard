@@ -29,9 +29,9 @@ import {
 
 interface CaseStats {
   total: number;
-  new: number;
-  in_progress: number;
-  pending_info: number;
+  triage: number;
+  agent_action: number;
+  client_action: number;
   resolved: number;
   avgResolutionDays: number | null;
 }
@@ -49,9 +49,9 @@ interface AgentWorkload {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  new: 'hsl(200, 80%, 50%)',
-  in_progress: 'hsl(45, 90%, 50%)',
-  pending_info: 'hsl(280, 60%, 60%)',
+  triage: 'hsl(200, 80%, 50%)',
+  agent_action: 'hsl(45, 90%, 50%)',
+  client_action: 'hsl(280, 60%, 60%)',
   resolved: 'hsl(140, 70%, 45%)',
 };
 
@@ -113,9 +113,9 @@ export default function Analytics() {
       if (!cases || cases.length === 0) {
         setStats({
           total: 0,
-          new: 0,
-          in_progress: 0,
-          pending_info: 0,
+          triage: 0,
+          agent_action: 0,
+          client_action: 0,
           resolved: 0,
           avgResolutionDays: null,
         });
@@ -127,9 +127,9 @@ export default function Analytics() {
 
       // Calculate stats
       const statusCounts = {
-        new: cases.filter(c => c.status === 'new').length,
-        in_progress: cases.filter(c => c.status === 'in_progress').length,
-        pending_info: cases.filter(c => c.status === 'pending_info').length,
+        triage: cases.filter(c => c.status === 'triage').length,
+        agent_action: cases.filter(c => c.status === 'agent_action').length,
+        client_action: cases.filter(c => c.status === 'client_action').length,
         resolved: cases.filter(c => c.status === 'resolved').length,
       };
 
@@ -244,9 +244,9 @@ export default function Analytics() {
   }
 
   const pieData = stats ? [
-    { name: 'New', value: stats.new, color: STATUS_COLORS.new },
-    { name: 'In Progress', value: stats.in_progress, color: STATUS_COLORS.in_progress },
-    { name: 'Pending Info', value: stats.pending_info, color: STATUS_COLORS.pending_info },
+    { name: 'Triage', value: stats.triage, color: STATUS_COLORS.triage },
+    { name: 'Agent Action', value: stats.agent_action, color: STATUS_COLORS.agent_action },
+    { name: 'Client Action', value: stats.client_action, color: STATUS_COLORS.client_action },
     { name: 'Resolved', value: stats.resolved, color: STATUS_COLORS.resolved },
   ].filter(d => d.value > 0) : [];
 
@@ -384,7 +384,7 @@ export default function Analytics() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold font-display">
-                    {(stats?.new || 0) + (stats?.in_progress || 0) + (stats?.pending_info || 0)}
+                    {(stats?.triage || 0) + (stats?.agent_action || 0) + (stats?.client_action || 0)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Requiring attention</p>
                 </CardContent>

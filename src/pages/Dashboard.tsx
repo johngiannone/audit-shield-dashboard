@@ -83,13 +83,14 @@ export default function Dashboard() {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      new: 'bg-info/10 text-info border-info/20',
-      in_progress: 'bg-warning/10 text-warning border-warning/20',
+      triage: 'bg-info/10 text-info border-info/20',
+      agent_action: 'bg-warning/10 text-warning border-warning/20',
+      client_action: 'bg-accent/10 text-accent-foreground border-accent/20',
       resolved: 'bg-success/10 text-success border-success/20',
       active: 'bg-success/10 text-success border-success/20',
       expired: 'bg-muted text-muted-foreground border-muted',
     };
-    return styles[status as keyof typeof styles] || styles.new;
+    return styles[status as keyof typeof styles] || styles.triage;
   };
 
   if (loading || !user) {
@@ -131,13 +132,13 @@ export default function Dashboard() {
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    New Cases
+                    Triage
                   </CardTitle>
                   <Inbox className="h-5 w-5 text-info" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold font-display">
-                    {cases.filter(c => c.status === 'new').length}
+                    {cases.filter(c => c.status === 'triage').length}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Waiting for assignment</p>
                 </CardContent>
@@ -146,15 +147,15 @@ export default function Dashboard() {
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    In Progress
+                    Agent Action
                   </CardTitle>
                   <Clock className="h-5 w-5 text-warning" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold font-display">
-                    {cases.filter(c => c.status === 'in_progress').length}
+                    {cases.filter(c => c.status === 'agent_action').length}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Active investigations</p>
+                  <p className="text-xs text-muted-foreground mt-1">Waiting on agent work</p>
                 </CardContent>
               </Card>
 

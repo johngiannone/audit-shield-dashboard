@@ -221,11 +221,11 @@ export default function AgentCaseDetail() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'new':
+      case 'triage':
         return 'bg-info/10 text-info border-info/20';
-      case 'in_progress':
+      case 'agent_action':
         return 'bg-warning/10 text-warning border-warning/20';
-      case 'pending_info':
+      case 'client_action':
         return 'bg-accent/10 text-accent-foreground border-accent/20';
       case 'resolved':
         return 'bg-success/10 text-success border-success/20';
@@ -289,9 +289,9 @@ export default function AgentCaseDetail() {
                       )}
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="new">New</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="pending_info">Pending Info</SelectItem>
+                      <SelectItem value="triage">Triage</SelectItem>
+                      <SelectItem value="agent_action">Agent Action</SelectItem>
+                      <SelectItem value="client_action">Client Action</SelectItem>
                       <SelectItem value="resolved">Resolved</SelectItem>
                     </SelectContent>
                   </Select>

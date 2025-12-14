@@ -71,7 +71,7 @@ export default function CaseQueue() {
         .from('cases')
         .select('*')
         .is('assigned_agent_id', null)
-        .eq('status', 'new')
+        .eq('status', 'triage')
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -130,7 +130,7 @@ export default function CaseQueue() {
         .from('cases')
         .update({
           assigned_agent_id: profileId,
-          status: 'in_progress',
+          status: 'agent_action',
         })
         .eq('id', selectedCase.id);
 
