@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, CheckCircle, Upload, FileText, X, Sparkles, Image, FileType } from 'lucide-react';
+import { Loader2, CheckCircle, Upload, FileText, X, Sparkles, Image, FileType, AlertCircle, RotateCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface AnalysisResult {
@@ -38,6 +38,7 @@ export default function ReportNotice() {
   const [isSaving, setIsSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -53,6 +54,7 @@ export default function ReportNotice() {
 
     setIsUploading(true);
     setUploadProgress(0);
+    setUploadError(null);
 
     try {
       const fileExt = file.name.split('.').pop();
@@ -89,8 +91,8 @@ export default function ReportNotice() {
       });
     } catch (error: any) {
       console.error('Upload error:', error);
-      setSelectedFile(null);
       setUploadProgress(0);
+      setUploadError(error.message || 'Failed to upload file. Please try again.');
       toast({
         title: 'Upload Failed',
         description: error.message || 'Failed to upload file. Please try again.',
@@ -396,8 +398,32 @@ export default function ReportNotice() {
                       </Button>
                     </div>
                     
+                    {/* Upload Error State */}
+                    {uploadError && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <p className="text-sm font-medium">{uploadError}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (selectedFile) {
+                              uploadFile(selectedFile);
+                            }
+                          }}
+                          className="w-full"
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Retry Upload
+                        </Button>
+                      </div>
+                    )}
+
                     {/* Progress Bar */}
-                    {(isUploading || uploadProgress > 0) && (
+                    {!uploadError && (isUploading || uploadProgress > 0) && (
                       <div className="space-y-2">
                         <Progress value={uploadProgress} className="h-2" />
                         <p className="text-sm text-muted-foreground">
