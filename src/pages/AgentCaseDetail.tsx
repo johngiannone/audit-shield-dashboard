@@ -287,7 +287,7 @@ export default function AgentCaseDetail() {
 
           {/* Right Column - Document Requests */}
           <div>
-            <DocumentRequests caseId={caseId!} noticeUrl={noticeUrl} />
+            <DocumentRequests caseId={caseId!} agentId={profileId} noticeUrl={noticeUrl} />
           </div>
         </div>
       </div>

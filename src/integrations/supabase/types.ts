@@ -274,6 +274,54 @@ export type Database = {
           },
         ]
       }
+      document_requests: {
+        Row: {
+          case_id: string
+          created_at: string
+          description: string | null
+          document_name: string
+          fulfilled_at: string | null
+          id: string
+          requested_by: string
+          status: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          description?: string | null
+          document_name: string
+          fulfilled_at?: string | null
+          id?: string
+          requested_by: string
+          status?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          description?: string | null
+          document_name?: string
+          fulfilled_at?: string | null
+          id?: string
+          requested_by?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_requests_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
