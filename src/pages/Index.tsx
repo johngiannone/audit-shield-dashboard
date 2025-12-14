@@ -62,11 +62,14 @@ export default function Index() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link to="/plans">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto text-base px-8">
-                  View Membership Plans
-                </Button>
-              </Link>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="w-full sm:w-auto text-base px-8"
+                onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                View Membership Plans
+              </Button>
             </div>
 
             {/* Trust Signals */}
