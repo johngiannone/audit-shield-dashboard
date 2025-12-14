@@ -22,9 +22,9 @@ interface Case {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  new: 'New',
-  in_progress: 'In Progress',
-  pending_info: 'Pending Info',
+  triage: 'Triage',
+  agent_action: 'Agent Action',
+  client_action: 'Client Action',
   resolved: 'Resolved',
 };
 
@@ -103,11 +103,11 @@ export default function MyCases() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'new':
+      case 'triage':
         return <AlertTriangle className="h-4 w-4 text-info" />;
-      case 'in_progress':
+      case 'agent_action':
         return <Clock className="h-4 w-4 text-warning" />;
-      case 'pending_info':
+      case 'client_action':
         return <AlertTriangle className="h-4 w-4 text-accent-foreground" />;
       case 'resolved':
         return <CheckCircle className="h-4 w-4 text-success" />;
@@ -118,12 +118,12 @@ export default function MyCases() {
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      new: 'bg-info/10 text-info border-info/20',
-      in_progress: 'bg-warning/10 text-warning border-warning/20',
-      pending_info: 'bg-accent/10 text-accent-foreground border-accent/20',
+      triage: 'bg-info/10 text-info border-info/20',
+      agent_action: 'bg-warning/10 text-warning border-warning/20',
+      client_action: 'bg-accent/10 text-accent-foreground border-accent/20',
       resolved: 'bg-success/10 text-success border-success/20',
     };
-    return styles[status] || styles.new;
+    return styles[status] || styles.triage;
   };
 
   if (loading || !user) {

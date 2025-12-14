@@ -43,9 +43,9 @@ interface CaseDocument {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  new: 'New',
-  in_progress: 'In Progress',
-  pending_info: 'Pending Information',
+  triage: 'Triage',
+  agent_action: 'Agent Action',
+  client_action: 'Client Action',
   resolved: 'Resolved',
 };
 
@@ -221,11 +221,11 @@ export default function ClientCaseDetail() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'new':
+      case 'triage':
         return <AlertTriangle className="h-4 w-4" />;
-      case 'in_progress':
+      case 'agent_action':
         return <Clock className="h-4 w-4" />;
-      case 'pending_info':
+      case 'client_action':
         return <AlertTriangle className="h-4 w-4" />;
       case 'resolved':
         return <CheckCircle className="h-4 w-4" />;
@@ -236,11 +236,11 @@ export default function ClientCaseDetail() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'new':
+      case 'triage':
         return 'text-info bg-info/10 border-info/20';
-      case 'in_progress':
+      case 'agent_action':
         return 'text-warning bg-warning/10 border-warning/20';
-      case 'pending_info':
+      case 'client_action':
         return 'text-accent-foreground bg-accent/10 border-accent/20';
       case 'resolved':
         return 'text-success bg-success/10 border-success/20';
@@ -251,9 +251,9 @@ export default function ClientCaseDetail() {
 
   const getProgressPercentage = (status: string) => {
     switch (status) {
-      case 'new': return 25;
-      case 'in_progress': return 50;
-      case 'pending_info': return 60;
+      case 'triage': return 25;
+      case 'agent_action': return 50;
+      case 'client_action': return 60;
       case 'resolved': return 100;
       default: return 0;
     }

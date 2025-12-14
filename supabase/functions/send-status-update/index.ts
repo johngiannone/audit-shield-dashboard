@@ -16,18 +16,18 @@ interface StatusUpdateRequest {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  new: "New",
-  in_progress: "In Progress",
-  pending_info: "Pending Information",
+  triage: "Triage",
+  agent_action: "Agent Action",
+  client_action: "Client Action",
   resolved: "Resolved",
 };
 
 const STATUS_MESSAGES: Record<string, { subject: string; body: string }> = {
-  in_progress: {
+  agent_action: {
     subject: "Your Case is Being Reviewed",
     body: "Your case is now actively being reviewed by your assigned Enrolled Agent. We are working on analyzing your notice and preparing the best course of action.",
   },
-  pending_info: {
+  client_action: {
     subject: "Action Required: Additional Information Needed",
     body: "We need additional information from you to proceed with your case. Please log in to your dashboard to view the requested documents and upload them as soon as possible.",
   },
