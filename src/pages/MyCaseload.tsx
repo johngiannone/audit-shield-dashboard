@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { Briefcase, Loader2, AlertTriangle, CheckCircle, Clock, Eye, Zap, Hourglass, Archive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { differenceInDays } from 'date-fns';
 
 interface Case {
   id: string;
@@ -19,6 +20,7 @@ interface Case {
   tax_year: number;
   summary: string | null;
   created_at: string;
+  updated_at: string;
   assigned_agent_id: string | null;
   client_name?: string | null;
 }
@@ -169,8 +171,15 @@ export default function MyCaseload() {
   const actionRequiredCases = cases.filter(c => c.status === 'agent_action');
   const waitingOnClientCases = cases
     .filter(c => c.status === 'client_action')
-    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()); // Oldest first
+    .sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()); // Oldest first by when status changed
   const resolvedCases = cases.filter(c => c.status === 'resolved');
+
+  const getDaysWaiting = (updatedAt: string) => {
+    const days = differenceInDays(new Date(), new Date(updatedAt));
+    if (days === 0) return 'Today';
+    if (days === 1) return '1 day';
+    return `${days} days`;
+  };
 
   if (loading || !user) {
     return (
@@ -180,7 +189,7 @@ export default function MyCaseload() {
     );
   }
 
-  const CaseCard = ({ caseItem, isInactive = false }: { caseItem: Case; isInactive?: boolean }) => (
+  const CaseCard = ({ caseItem, isInactive = false, showWaitingTime = false }: { caseItem: Case; isInactive?: boolean; showWaitingTime?: boolean }) => (
     <div 
       className={`p-4 rounded-lg border transition-all ${
         isInactive 
@@ -197,6 +206,19 @@ export default function MyCaseload() {
             <span className="text-sm font-medium text-foreground truncate">
               {caseItem.notice_type}
             </span>
+            {showWaitingTime && (
+              <Badge 
+                variant="outline" 
+                className={`text-xs ${
+                  differenceInDays(new Date(), new Date(caseItem.updated_at)) >= 3 
+                    ? 'bg-destructive/10 text-destructive border-destructive/20' 
+                    : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                <Clock className="h-3 w-3 mr-1" />
+                {getDaysWaiting(caseItem.updated_at)} waiting
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span>{caseItem.client_name || 'Unknown Client'}</span>
@@ -354,7 +376,7 @@ export default function MyCaseload() {
                         These cases are waiting on client action. Sorted by oldest first.
                       </p>
                       {waitingOnClientCases.map((caseItem) => (
-                        <CaseCard key={caseItem.id} caseItem={caseItem} isInactive />
+                        <CaseCard key={caseItem.id} caseItem={caseItem} isInactive showWaitingTime />
                       ))}
                     </div>
                   )}
