@@ -7,6 +7,10 @@
 /* Audit Defense Dashboard Design System */
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   :root {
     /* Navy Professional Palette */
     --background: 210 20% 98%;
