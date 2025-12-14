@@ -39,8 +39,8 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const { planType, retroactiveYears } = await req.json();
-    logStep("Request params", { planType, retroactiveYears });
+    const { planType, retroactiveYears, referralCode } = await req.json();
+    logStep("Request params", { planType, retroactiveYears, referralCode });
 
     if (!planType || !["individual", "business"].includes(planType)) {
       throw new Error("Invalid plan type");
@@ -81,6 +81,18 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://your-app.lovable.app";
 
+    // Build metadata with optional referral code
+    const metadata: Record<string, string> = {
+      user_id: user.id,
+      plan_type: planType,
+      covered_years: JSON.stringify(coveredYears),
+    };
+
+    if (referralCode) {
+      metadata.referral_code = referralCode;
+      logStep("Adding referral code to checkout", { referralCode });
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
@@ -88,17 +100,10 @@ serve(async (req) => {
       mode: "subscription",
       success_url: `${origin}/dashboard?checkout=success`,
       cancel_url: `${origin}/?checkout=canceled`,
-      metadata: {
-        user_id: user.id,
-        plan_type: planType,
-        covered_years: JSON.stringify(coveredYears),
-      },
+      client_reference_id: referralCode || undefined,
+      metadata,
       subscription_data: {
-        metadata: {
-          user_id: user.id,
-          plan_type: planType,
-          covered_years: JSON.stringify(coveredYears),
-        },
+        metadata,
       },
     });
 

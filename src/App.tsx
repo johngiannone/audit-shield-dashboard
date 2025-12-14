@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { HelmetProvider } from "react-helmet-async";
+import { useReferralTracking } from "@/hooks/useReferralTracking";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -21,6 +22,12 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Component to handle referral tracking inside BrowserRouter
+const ReferralTracker = ({ children }: { children: React.ReactNode }) => {
+  useReferralTracking();
+  return <>{children}</>;
+};
+
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
@@ -29,21 +36,23 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/plans" element={<Plans />} />
-              <Route path="/report" element={<ReportNotice />} />
-              <Route path="/queue" element={<CaseQueue />} />
-              <Route path="/caseload" element={<MyCaseload />} />
-              <Route path="/agent/cases/:caseId" element={<AgentCaseDetail />} />
-              <Route path="/my-cases" element={<MyCases />} />
-              <Route path="/my-cases/:caseId" element={<ClientCaseDetail />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/partners" element={<Partners />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <ReferralTracker>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/plans" element={<Plans />} />
+                <Route path="/report" element={<ReportNotice />} />
+                <Route path="/queue" element={<CaseQueue />} />
+                <Route path="/caseload" element={<MyCaseload />} />
+                <Route path="/agent/cases/:caseId" element={<AgentCaseDetail />} />
+                <Route path="/my-cases" element={<MyCases />} />
+                <Route path="/my-cases/:caseId" element={<ClientCaseDetail />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/partners" element={<Partners />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </ReferralTracker>
           </BrowserRouter>
         </AuthProvider>
       </TooltipProvider>

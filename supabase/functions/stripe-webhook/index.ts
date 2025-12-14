@@ -48,8 +48,10 @@ serve(async (req) => {
       const userId = session.metadata?.user_id;
       const planType = session.metadata?.plan_type;
       const coveredYearsStr = session.metadata?.covered_years;
+      const referralCode = session.metadata?.referral_code || session.client_reference_id;
       const customerId = session.customer as string;
       const subscriptionId = session.subscription as string;
+      const amountTotal = session.amount_total || 0; // Amount in cents
 
       if (!userId || !planType) {
         logStep("Missing metadata", { userId, planType });
@@ -57,7 +59,7 @@ serve(async (req) => {
       }
 
       const coveredYears = coveredYearsStr ? JSON.parse(coveredYearsStr) : [2024];
-      logStep("Metadata parsed", { userId, planType, coveredYears, customerId, subscriptionId });
+      logStep("Metadata parsed", { userId, planType, coveredYears, customerId, subscriptionId, referralCode });
 
       // Get profile_id from user_id
       const { data: profile, error: profileError } = await supabaseAdmin
@@ -72,6 +74,64 @@ serve(async (req) => {
       }
 
       logStep("Found profile", { profileId: profile.id });
+
+      // Handle referral attribution
+      if (referralCode) {
+        logStep("Processing referral attribution", { referralCode });
+        
+        // Find the affiliate with this referral code
+        const { data: affiliate, error: affiliateError } = await supabaseAdmin
+          .from("affiliates")
+          .select("id, commission_rate, total_earnings")
+          .eq("referral_code", referralCode)
+          .maybeSingle();
+
+        if (affiliateError) {
+          logStep("Error finding affiliate", { error: affiliateError.message });
+        } else if (affiliate) {
+          // Calculate commission (amount is in cents, convert to dollars for storage)
+          const commissionRate = affiliate.commission_rate || 0.20;
+          const commissionAmount = (amountTotal / 100) * commissionRate;
+          const newTotalEarnings = (parseFloat(affiliate.total_earnings) || 0) + commissionAmount;
+
+          logStep("Calculating commission", { 
+            amountTotal, 
+            commissionRate, 
+            commissionAmount, 
+            newTotalEarnings 
+          });
+
+          // Update affiliate earnings
+          const { error: updateError } = await supabaseAdmin
+            .from("affiliates")
+            .update({ 
+              total_earnings: newTotalEarnings,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", affiliate.id);
+
+          if (updateError) {
+            logStep("Error updating affiliate earnings", { error: updateError.message });
+          } else {
+            logStep("Updated affiliate earnings", { affiliateId: affiliate.id, newTotalEarnings });
+          }
+
+          // Mark referral visit as converted
+          const { error: visitError } = await supabaseAdmin
+            .from("referral_visits")
+            .update({ converted: true })
+            .eq("referral_code", referralCode)
+            .eq("converted", false);
+
+          if (visitError) {
+            logStep("Error updating referral visit", { error: visitError.message });
+          } else {
+            logStep("Marked referral visit as converted");
+          }
+        } else {
+          logStep("No affiliate found for referral code", { referralCode });
+        }
+      }
 
       // Check if plan already exists
       const { data: existingPlan } = await supabaseAdmin

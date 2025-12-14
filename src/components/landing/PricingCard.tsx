@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getStoredReferralCode } from '@/hooks/useReferralTracking';
 
 interface PricingCardProps {
   type: 'individual' | 'business';
@@ -49,10 +50,14 @@ export function PricingCard({ type }: PricingCardProps) {
 
     setIsLoading(true);
     try {
+      // Get referral code from localStorage if present
+      const referralCode = getStoredReferralCode();
+      
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: {
           planType: type,
           retroactiveYears: selectedYears,
+          referralCode, // Pass to Stripe metadata
         },
       });
 
