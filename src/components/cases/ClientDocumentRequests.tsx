@@ -84,6 +84,10 @@ export function ClientDocumentRequests({ caseId, profileId, onDocumentUploaded }
       return;
     }
 
+    // Get the document name for the notification
+    const request = requests.find(r => r.id === selectedRequestId);
+    const documentName = request?.document_name || file.name;
+
     setUploadingFor(selectedRequestId);
     try {
       const fileExt = file.name.split('.').pop();
@@ -126,7 +130,19 @@ export function ClientDocumentRequests({ caseId, profileId, onDocumentUploaded }
 
       if (updateError) throw updateError;
 
-      if (updateError) throw updateError;
+      // Notify the agent about the upload
+      try {
+        await supabase.functions.invoke('send-document-upload-notification', {
+          body: {
+            case_id: caseId,
+            document_name: documentName,
+            client_profile_id: profileId,
+          },
+        });
+      } catch (notifyError) {
+        console.error('Failed to send notification:', notifyError);
+        // Don't throw - upload was successful
+      }
 
       toast({
         title: 'Document Uploaded',
