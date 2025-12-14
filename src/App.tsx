@@ -14,6 +14,7 @@ import MyCaseload from "./pages/MyCaseload";
 import MyCases from "./pages/MyCases";
 import ClientCaseDetail from "./pages/ClientCaseDetail";
 import AgentCaseDetail from "./pages/AgentCaseDetail";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/caseload/:caseId" element={<AgentCaseDetail />} />
             <Route path="/my-cases" element={<MyCases />} />
             <Route path="/my-cases/:caseId" element={<ClientCaseDetail />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
