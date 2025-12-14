@@ -20,3 +20,9 @@ verify_jwt = true
 
 [functions.send-document-upload-notification]
 verify_jwt = true
+
+[functions.send-client-reminder]
+verify_jwt = true
+
+[functions.send-welcome-email]
+verify_jwt = true
