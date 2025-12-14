@@ -1,18 +1,17 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  ArrowLeft, Loader2, FileText, Calendar, Building, 
-  User, Clock, CheckCircle, AlertTriangle, File, Download
-} from 'lucide-react';
+import { ArrowLeft, Loader2, Building, Calendar, User, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { CaseMessages } from '@/components/cases/CaseMessages';
+import { CaseNotes } from '@/components/cases/CaseNotes';
+import { CaseTimeline } from '@/components/cases/CaseTimeline';
+import { DocumentRequests } from '@/components/cases/DocumentRequests';
 
 interface CaseDetail {
   id: string;
@@ -25,32 +24,15 @@ interface CaseDetail {
   created_at: string;
   client_id: string;
   client_name: string | null;
-  client_email: string | null;
 }
-
-interface CaseDocument {
-  id: string;
-  file_name: string;
-  file_path: string;
-  document_type: string;
-  created_at: string;
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  new: 'New',
-  in_progress: 'In Progress',
-  pending_info: 'Pending Information',
-  resolved: 'Resolved',
-};
 
 export default function AgentCaseDetail() {
   const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
   const { user, role, loading } = useAuth();
   const { toast } = useToast();
-  
+
   const [caseDetail, setCaseDetail] = useState<CaseDetail | null>(null);
-  const [documents, setDocuments] = useState<CaseDocument[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
@@ -74,7 +56,6 @@ export default function AgentCaseDetail() {
   const fetchCaseData = async () => {
     setDataLoading(true);
     try {
-      // Get profile ID
       const { data: profile } = await supabase
         .from('profiles')
         .select('id')
@@ -85,7 +66,6 @@ export default function AgentCaseDetail() {
         setProfileId(profile.id);
       }
 
-      // Fetch case details
       const { data: caseData, error: caseError } = await supabase
         .from('cases')
         .select('*')
@@ -98,43 +78,23 @@ export default function AgentCaseDetail() {
         return;
       }
 
-      // Fetch client info
       const { data: clientProfile } = await supabase
         .from('profiles')
-        .select('full_name, user_id')
+        .select('full_name')
         .eq('id', caseData.client_id)
         .maybeSingle();
-
-      let clientEmail = null;
-      if (clientProfile?.user_id) {
-        const { data: { user: clientUser } } = await supabase.auth.admin.getUserById(
-          clientProfile.user_id
-        ).catch(() => ({ data: { user: null } }));
-        clientEmail = clientUser?.email || null;
-      }
 
       setCaseDetail({
         ...caseData,
         client_name: clientProfile?.full_name || null,
-        client_email: clientEmail,
       });
 
-      // Get signed URL for notice
       if (caseData.file_path) {
         const { data } = await supabase.storage
           .from('notices')
           .createSignedUrl(caseData.file_path, 3600);
         setNoticeUrl(data?.signedUrl || null);
       }
-
-      // Fetch documents
-      const { data: docsData } = await supabase
-        .from('case_documents')
-        .select('*')
-        .eq('case_id', caseId)
-        .order('created_at', { ascending: false });
-
-      setDocuments(docsData || []);
     } catch (error) {
       toast({
         title: 'Error',
@@ -160,17 +120,13 @@ export default function AgentCaseDetail() {
 
       if (error) throw error;
 
-      // Log status history
-      await supabase
-        .from('case_status_history')
-        .insert({
-          case_id: caseDetail.id,
-          old_status: oldStatus,
-          new_status: newStatus,
-          changed_by: profileId,
-        });
+      await supabase.from('case_status_history').insert({
+        case_id: caseDetail.id,
+        old_status: oldStatus,
+        new_status: newStatus,
+        changed_by: profileId,
+      });
 
-      // Send status update email
       try {
         await supabase.functions.invoke('send-status-update', {
           body: {
@@ -200,16 +156,6 @@ export default function AgentCaseDetail() {
     }
   };
 
-  const downloadDocument = async (filePath: string, fileName: string) => {
-    const { data } = await supabase.storage
-      .from('notices')
-      .createSignedUrl(filePath, 60);
-
-    if (data?.signedUrl) {
-      window.open(data.signedUrl, '_blank');
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'new':
@@ -233,7 +179,7 @@ export default function AgentCaseDetail() {
     );
   }
 
-  if (!caseDetail) {
+  if (!caseDetail || !profileId) {
     return null;
   }
 
@@ -248,181 +194,100 @@ export default function AgentCaseDetail() {
             </Button>
             <div>
               <h1 className="font-display text-2xl font-bold text-foreground">
-                {caseDetail.notice_type}
+                Case Workspace
               </h1>
               <p className="text-muted-foreground">
-                {caseDetail.notice_agency} • Tax Year {caseDetail.tax_year}
+                {caseDetail.notice_type} • {caseDetail.notice_agency}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Select
-              value={caseDetail.status}
-              onValueChange={updateStatus}
-              disabled={updating}
-            >
-              <SelectTrigger className="w-[180px]">
-                {updating ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <SelectValue />
-                )}
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="new">New</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="pending_info">Pending Info</SelectItem>
-                <SelectItem value="resolved">Resolved</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column */}
-          <div className="space-y-6">
-            {/* Client Info */}
+        {/* 3-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Case Details */}
+          <div className="space-y-4">
             <Card className="border-0 shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg">Client Information</CardTitle>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Case Details</CardTitle>
+                  <Select
+                    value={caseDetail.status}
+                    onValueChange={updateStatus}
+                    disabled={updating}
+                  >
+                    <SelectTrigger className="w-[140px]">
+                      {updating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Badge variant="outline" className={getStatusColor(caseDetail.status)}>
+                          {caseDetail.status.replace('_', ' ')}
+                        </Badge>
+                      )}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="pending_info">Pending Info</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <User className="h-5 w-5 text-primary mt-0.5" />
+                  <User className="h-4 w-4 text-primary mt-1" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Name</p>
-                    <p className="font-medium">{caseDetail.client_name || 'Unknown'}</p>
+                    <p className="text-xs text-muted-foreground">Client</p>
+                    <p className="text-sm font-medium">{caseDetail.client_name || 'Unknown'}</p>
                   </div>
                 </div>
-                {caseDetail.client_email && (
-                  <div className="flex items-start gap-3">
-                    <FileText className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-medium">{caseDetail.client_email}</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
-            {/* Case Details */}
-            <Card className="border-0 shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg">Case Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <Building className="h-5 w-5 text-primary mt-0.5" />
+                  <Calendar className="h-4 w-4 text-primary mt-1" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Agency</p>
-                    <p className="font-medium">{caseDetail.notice_agency}</p>
+                    <p className="text-xs text-muted-foreground">Tax Year</p>
+                    <p className="text-sm font-medium">{caseDetail.tax_year}</p>
                   </div>
                 </div>
+
                 <div className="flex items-start gap-3">
-                  <FileText className="h-5 w-5 text-primary mt-0.5" />
+                  <Building className="h-4 w-4 text-primary mt-1" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Notice Type</p>
-                    <p className="font-medium">{caseDetail.notice_type}</p>
+                    <p className="text-xs text-muted-foreground">Agency</p>
+                    <p className="text-sm font-medium">{caseDetail.notice_agency}</p>
                   </div>
                 </div>
+
                 <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-primary mt-0.5" />
+                  <FileText className="h-4 w-4 text-primary mt-1" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Tax Year</p>
-                    <p className="font-medium">{caseDetail.tax_year}</p>
+                    <p className="text-xs text-muted-foreground">Notice Type</p>
+                    <p className="text-sm font-medium">{caseDetail.notice_type}</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Submitted</p>
-                    <p className="font-medium">
-                      {new Date(caseDetail.created_at).toLocaleDateString()}
+
+                {caseDetail.summary && (
+                  <div className="pt-3 border-t">
+                    <p className="text-xs text-muted-foreground mb-1">AI Summary</p>
+                    <p className="text-sm text-foreground leading-relaxed">
+                      {caseDetail.summary}
                     </p>
                   </div>
-                </div>
-                {caseDetail.summary && (
-                  <div className="pt-4 border-t">
-                    <p className="text-sm text-muted-foreground mb-2">AI Summary</p>
-                    <p className="text-sm">{caseDetail.summary}</p>
-                  </div>
                 )}
-              </CardContent>
-            </Card>
-
-            {/* Documents */}
-            <Card className="border-0 shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg">Documents</CardTitle>
-                <CardDescription>Uploaded documents for this case</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {noticeUrl && (
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <FileText className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">Original Notice</p>
-                          <p className="text-xs text-muted-foreground">Primary document</p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(noticeUrl, '_blank')}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        View
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {documents.map((doc) => (
-                    <div 
-                      key={doc.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                          <File className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{doc.file_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(doc.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => downloadDocument(doc.file_path, doc.file_name)}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-
-                  {!noticeUrl && documents.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <File className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No documents yet</p>
-                    </div>
-                  )}
-                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Right Column - Messages */}
+          {/* Middle Column - Activity & Notes */}
+          <div className="space-y-4">
+            <CaseNotes caseId={caseId!} agentId={profileId} />
+            <CaseTimeline caseId={caseId!} caseCreatedAt={caseDetail.created_at} />
+          </div>
+
+          {/* Right Column - Document Requests */}
           <div>
-            {profileId && caseId && (
-              <CaseMessages caseId={caseId} profileId={profileId} isAgent />
-            )}
+            <DocumentRequests caseId={caseId!} noticeUrl={noticeUrl} />
           </div>
         </div>
       </div>

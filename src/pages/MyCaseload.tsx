@@ -254,14 +254,14 @@ export default function MyCaseload() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate(`/caseload/${caseItem.id}`)}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => navigate(`/agent/cases/${caseItem.id}`)}
+                                            >
+                                              <Eye className="h-4 w-4 mr-1" />
+                                              View
+                                            </Button>
                             <Select
                               value={caseItem.status}
                               onValueChange={(value) => updateStatus(caseItem.id, value)}
