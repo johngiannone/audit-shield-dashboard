@@ -340,6 +340,39 @@ export type Database = {
           },
         ]
       }
+      partner_leads: {
+        Row: {
+          annual_returns: string
+          contact_person: string
+          created_at: string
+          email: string
+          firm_name: string
+          id: string
+          status: string
+          tax_software: string
+        }
+        Insert: {
+          annual_returns: string
+          contact_person: string
+          created_at?: string
+          email: string
+          firm_name: string
+          id?: string
+          status?: string
+          tax_software: string
+        }
+        Update: {
+          annual_returns?: string
+          contact_person?: string
+          created_at?: string
+          email?: string
+          firm_name?: string
+          id?: string
+          status?: string
+          tax_software?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
