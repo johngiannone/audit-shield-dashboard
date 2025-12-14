@@ -283,6 +283,7 @@ export type Database = {
           file_url: string | null
           fulfilled_at: string | null
           id: string
+          rejection_reason: string | null
           requested_by: string
           status: string
         }
@@ -294,6 +295,7 @@ export type Database = {
           file_url?: string | null
           fulfilled_at?: string | null
           id?: string
+          rejection_reason?: string | null
           requested_by: string
           status?: string
         }
@@ -305,6 +307,7 @@ export type Database = {
           file_url?: string | null
           fulfilled_at?: string | null
           id?: string
+          rejection_reason?: string | null
           requested_by?: string
           status?: string
         }
