@@ -136,9 +136,25 @@ export default function CaseQueue() {
 
       if (error) throw error;
 
+      // Send intro email to client
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-intro-email', {
+          body: {
+            case_id: selectedCase.id,
+            agent_profile_id: profileId,
+          },
+        });
+
+        if (emailError) {
+          console.error('Failed to send intro email:', emailError);
+        }
+      } catch (emailErr) {
+        console.error('Email function error:', emailErr);
+      }
+
       toast({
         title: 'Case Assigned',
-        description: 'The case has been assigned to you.',
+        description: 'The case has been assigned to you and the client has been notified.',
       });
 
       setCases(cases.filter(c => c.id !== selectedCase.id));
