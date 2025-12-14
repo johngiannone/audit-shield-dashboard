@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Shield, ArrowRight, Calculator, TrendingUp, DollarSign, Users, Clock, CheckCircle, RefreshCw, Handshake } from 'lucide-react';
 import partnerDashboard from '@/assets/partner-dashboard.png';
 import { RevenueCalculator } from '@/components/partners/RevenueCalculator';
+import { PartnerApplicationForm } from '@/components/partners/PartnerApplicationForm';
 
 export default function Partners() {
   return (
@@ -43,7 +44,11 @@ export default function Partners() {
             
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 mb-12">
-              <Button size="lg" className="text-base px-8">
+              <Button 
+                size="lg" 
+                className="text-base px-8"
+                onClick={() => document.getElementById('apply')?.scrollIntoView({ behavior: 'smooth' })}
+              >
                 Become a Partner
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
@@ -240,22 +245,19 @@ export default function Partners() {
           </div>
         </div>
 
-        {/* CTA Section */}
-        <div className="mt-32 bg-primary/5 rounded-3xl p-12 text-center">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Ready to Boost Your Practice Revenue?
-          </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
-            Join hundreds of tax professionals already earning with Return Shield.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="text-base px-8">
-              Apply Now
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button size="lg" variant="outline" className="text-base px-8">
-              Schedule a Demo
-            </Button>
+        {/* Partner Application Form Section */}
+        <div className="mt-32" id="apply">
+          <div className="text-center mb-14">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Apply to Become a Partner
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Fill out the form below and our partnerships team will reach out within 1-2 business days.
+            </p>
+          </div>
+
+          <div className="max-w-2xl mx-auto">
+            <PartnerApplicationForm />
           </div>
         </div>
       </main>
