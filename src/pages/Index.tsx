@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Brain, Gavel } from 'lucide-react';
-import heroAgent from '@/assets/hero-agent.jpg';
+import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Brain, Gavel, CheckCircle, Calendar } from 'lucide-react';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -43,24 +42,30 @@ export default function Index() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left Side - Copy */}
           <div className="animate-slide-up">
+            <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-4 py-1.5 rounded-full text-sm font-medium mb-6">
+              <CheckCircle className="h-4 w-4" />
+              Limited Time: Lock in 2024 Rates
+            </div>
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-6">
-              Don't Face the IRS Alone.
+              Audit Protection for Your Tax Return. <span className="text-primary">Just $99/Year.</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-              Professional Audit Defense by Enrolled Agents. We handle the paperwork, the calls, and the strategy so you don't have to.
+              The IRS is hiring thousands of new agents. Lock in your defense team now. If you get audited, we handle everything for <span className="font-semibold text-foreground">$0 extra fees</span>.
             </p>
             
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
               <Link to="/auth">
                 <Button size="lg" className="w-full sm:w-auto text-base px-8">
-                  Start My Defense
+                  Get Coverage Now
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="w-full sm:w-auto text-base px-8">
-                How it Works
-              </Button>
+              <Link to="/plans">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto text-base px-8">
+                  View Membership Plans
+                </Button>
+              </Link>
             </div>
 
             {/* Trust Signals */}
@@ -86,18 +91,56 @@ export default function Index() {
             </div>
           </div>
 
-          {/* Right Side - Visual */}
+          {/* Right Side - Protected Status UI */}
           <div className="relative animate-fade-in lg:order-last">
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-              <img 
-                src={heroAgent} 
-                alt="Professional enrolled agent reviewing tax documents" 
-                className="w-full h-auto object-cover"
-              />
-              {/* Verified Secure Badge */}
-              <div className="absolute top-4 right-4 bg-background/95 backdrop-blur-sm rounded-lg px-4 py-2.5 shadow-lg flex items-center gap-2 border border-border">
-                <ShieldCheck className="h-5 w-5 text-green-600" />
-                <span className="text-sm font-semibold text-foreground">Verified Secure</span>
+            <div className="relative bg-card rounded-2xl shadow-2xl border border-border overflow-hidden">
+              {/* Status Card Header */}
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                      <ShieldCheck className="h-7 w-7 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-white/80 text-sm font-medium">Protection Status</p>
+                      <p className="text-white text-xl font-bold">ACTIVE</p>
+                    </div>
+                  </div>
+                  <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
+                </div>
+              </div>
+              
+              {/* Status Card Body */}
+              <div className="p-6 space-y-5">
+                <div className="flex items-center justify-between py-3 border-b border-border">
+                  <span className="text-muted-foreground">Coverage Year</span>
+                  <span className="font-semibold text-foreground">2024</span>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-border">
+                  <span className="text-muted-foreground">Plan Type</span>
+                  <span className="font-semibold text-foreground">Premium Protection</span>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-border">
+                  <span className="text-muted-foreground">Defense Team</span>
+                  <span className="font-semibold text-foreground">Enrolled Agent Assigned</span>
+                </div>
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-muted-foreground">Renewal</span>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-semibold text-foreground">Dec 31, 2024</span>
+                  </div>
+                </div>
+                
+                {/* Coverage Features */}
+                <div className="pt-4 space-y-3">
+                  {['Full IRS Audit Defense', 'State Tax Coverage', 'Unlimited Consultations', '$0 Out-of-Pocket'].map((feature, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <span className="text-foreground">{feature}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             {/* Decorative elements */}
