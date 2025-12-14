@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Briefcase, CheckCircle, ArrowRight, Info, Loader2, AlertTriangle } from 'lucide-react';
+import { Shield, Briefcase, CheckCircle, ArrowRight, Info, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -141,21 +141,37 @@ export function PricingCard({ type }: PricingCardProps) {
           </div>
           
           <div className="space-y-3">
-            {RETROACTIVE_YEARS.map(({ year, label }) => (
-              <label 
-                key={year}
-                className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Checkbox 
-                    checked={selectedYears.includes(year)}
-                    onCheckedChange={() => toggleYear(year)}
-                  />
-                  <span className="text-sm text-foreground">{label}</span>
-                </div>
-                <span className="text-sm font-medium text-muted-foreground">+${ADDON_PRICE}</span>
-              </label>
-            ))}
+            {RETROACTIVE_YEARS.map(({ year, label }) => {
+              const isSelected = selectedYears.includes(year);
+              return (
+                <label 
+                  key={year}
+                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
+                    isSelected 
+                      ? 'border-green-500 bg-green-50 dark:bg-green-950/30' 
+                      : 'border-border bg-muted/30 hover:bg-muted/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Checkbox 
+                      checked={isSelected}
+                      onCheckedChange={() => toggleYear(year)}
+                    />
+                    <span className={`text-sm ${isSelected ? 'text-green-700 dark:text-green-300 font-medium' : 'text-foreground'}`}>
+                      {label}
+                    </span>
+                  </div>
+                  {isSelected ? (
+                    <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span className="text-xs font-semibold">Protected</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm font-medium text-muted-foreground">+${ADDON_PRICE}</span>
+                  )}
+                </label>
+              );
+            })}
           </div>
         </div>
 
