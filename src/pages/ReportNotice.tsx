@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, CheckCircle, Upload, FileText, X, Sparkles } from 'lucide-react';
+import { Loader2, CheckCircle, Upload, FileText, X, Sparkles, Image, FileType } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface AnalysisResult {
@@ -368,7 +368,11 @@ export default function ReportNotice() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-center gap-4">
                       <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <FileText className="h-7 w-7 text-primary" />
+                        {selectedFile.type === 'application/pdf' ? (
+                          <FileType className="h-7 w-7 text-primary" />
+                        ) : (
+                          <Image className="h-7 w-7 text-primary" />
+                        )}
                       </div>
                       <div className="text-left flex-1">
                         <p className="font-medium text-foreground truncate max-w-[200px]">
