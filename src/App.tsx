@@ -34,7 +34,7 @@ const App = () => (
             <Route path="/report" element={<ReportNotice />} />
             <Route path="/queue" element={<CaseQueue />} />
             <Route path="/caseload" element={<MyCaseload />} />
-            <Route path="/caseload/:caseId" element={<AgentCaseDetail />} />
+            <Route path="/agent/cases/:caseId" element={<AgentCaseDetail />} />
             <Route path="/my-cases" element={<MyCases />} />
             <Route path="/my-cases/:caseId" element={<ClientCaseDetail />} />
             <Route path="/analytics" element={<Analytics />} />

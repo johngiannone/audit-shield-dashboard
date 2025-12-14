@@ -136,6 +136,45 @@ export type Database = {
           },
         ]
       }
+      case_notes: {
+        Row: {
+          agent_id: string
+          case_id: string
+          created_at: string
+          id: string
+          note: string
+        }
+        Insert: {
+          agent_id: string
+          case_id: string
+          created_at?: string
+          id?: string
+          note: string
+        }
+        Update: {
+          agent_id?: string
+          case_id?: string
+          created_at?: string
+          id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_notes_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "case_notes_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_status_history: {
         Row: {
           case_id: string
