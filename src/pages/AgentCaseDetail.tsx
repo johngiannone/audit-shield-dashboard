@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Loader2, Building, Calendar, User, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, Building, Calendar, User, FileText, ExternalLink, AlertTriangle, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CaseNotes } from '@/components/cases/CaseNotes';
 import { CaseTimeline } from '@/components/cases/CaseTimeline';
@@ -21,6 +21,7 @@ interface CaseDetail {
   tax_year: number;
   summary: string | null;
   file_path: string | null;
+  tax_return_path: string | null;
   created_at: string;
   client_id: string;
   client_name: string | null;
@@ -37,6 +38,8 @@ export default function AgentCaseDetail() {
   const [updating, setUpdating] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [noticeUrl, setNoticeUrl] = useState<string | null>(null);
+  const [taxReturnUrl, setTaxReturnUrl] = useState<string | null>(null);
+  const [sendingReminder, setSendingReminder] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -89,11 +92,20 @@ export default function AgentCaseDetail() {
         client_name: clientProfile?.full_name || null,
       });
 
+      // Get signed URL for notice
       if (caseData.file_path) {
         const { data } = await supabase.storage
-          .from('notices')
+          .from('audit-notices')
           .createSignedUrl(caseData.file_path, 3600);
         setNoticeUrl(data?.signedUrl || null);
+      }
+
+      // Get signed URL for tax return
+      if (caseData.tax_return_path) {
+        const { data } = await supabase.storage
+          .from('audit-notices')
+          .createSignedUrl(caseData.tax_return_path, 3600);
+        setTaxReturnUrl(data?.signedUrl || null);
       }
     } catch (error) {
       toast({
@@ -103,6 +115,57 @@ export default function AgentCaseDetail() {
       });
     } finally {
       setDataLoading(false);
+    }
+  };
+
+  const remindClientForTaxReturn = async () => {
+    if (!caseDetail || !profileId) return;
+
+    setSendingReminder(true);
+    try {
+      // Check if a tax return request already exists
+      const { data: existingRequest } = await supabase
+        .from('document_requests')
+        .select('id')
+        .eq('case_id', caseDetail.id)
+        .ilike('document_name', '%Tax Return%')
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (!existingRequest) {
+        // Create a document request for the tax return
+        await supabase.from('document_requests').insert({
+          case_id: caseDetail.id,
+          document_name: `Tax Return ${caseDetail.tax_year}`,
+          description: `Please upload your 1040 Tax Return for ${caseDetail.tax_year}`,
+          status: 'pending',
+          requested_by: profileId,
+        });
+      }
+
+      // Send reminder email
+      await supabase.functions.invoke('send-document-request', {
+        body: {
+          case_id: caseDetail.id,
+          document_name: `Tax Return ${caseDetail.tax_year}`,
+          description: `Please upload your 1040 Tax Return for ${caseDetail.tax_year} to help us with your case.`,
+          agent_profile_id: profileId,
+        },
+      });
+
+      toast({
+        title: 'Reminder Sent',
+        description: 'Client has been notified to upload their tax return.',
+      });
+    } catch (error) {
+      console.error('Reminder error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send reminder',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingReminder(false);
     }
   };
 
@@ -275,6 +338,66 @@ export default function AgentCaseDetail() {
                     </p>
                   </div>
                 )}
+
+                {/* Key Documents Section */}
+                <div className="pt-3 border-t">
+                  <p className="text-xs text-muted-foreground mb-3 uppercase font-medium">Key Documents</p>
+                  <div className="space-y-3">
+                    {/* Notice Document */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Notice</span>
+                      {noticeUrl ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(noticeUrl, '_blank')}
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">Not uploaded</Badge>
+                      )}
+                    </div>
+
+                    {/* Tax Return Document */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Tax Return</span>
+                      {caseDetail.tax_return_path && taxReturnUrl ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(taxReturnUrl, '_blank')}
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 text-xs">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Missing
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={remindClientForTaxReturn}
+                            disabled={sendingReminder}
+                          >
+                            {sendingReminder ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <>
+                                <Bell className="h-3 w-3 mr-1" />
+                                Remind
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
