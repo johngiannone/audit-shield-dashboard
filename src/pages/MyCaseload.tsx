@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { Briefcase, Loader2, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Briefcase, Loader2, AlertTriangle, CheckCircle, Clock, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Case {
@@ -231,7 +231,7 @@ export default function MyCaseload() {
                   </TableHeader>
                   <TableBody>
                     {cases.map((caseItem) => (
-                      <TableRow key={caseItem.id}>
+                      <TableRow key={caseItem.id} className="cursor-pointer hover:bg-muted/50">
                         <TableCell>
                           <Badge variant="outline" className="font-medium">
                             {caseItem.notice_agency}
@@ -253,25 +253,35 @@ export default function MyCaseload() {
                           {new Date(caseItem.created_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Select
-                            value={caseItem.status}
-                            onValueChange={(value) => updateStatus(caseItem.id, value)}
-                            disabled={updating === caseItem.id}
-                          >
-                            <SelectTrigger className="w-[140px]">
-                              {updating === caseItem.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <SelectValue />
-                              )}
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="new">New</SelectItem>
-                              <SelectItem value="in_progress">In Progress</SelectItem>
-                              <SelectItem value="pending_info">Pending Info</SelectItem>
-                              <SelectItem value="resolved">Resolved</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/caseload/${caseItem.id}`)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                            <Select
+                              value={caseItem.status}
+                              onValueChange={(value) => updateStatus(caseItem.id, value)}
+                              disabled={updating === caseItem.id}
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                {updating === caseItem.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <SelectValue />
+                                )}
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="new">New</SelectItem>
+                                <SelectItem value="in_progress">In Progress</SelectItem>
+                                <SelectItem value="pending_info">Pending Info</SelectItem>
+                                <SelectItem value="resolved">Resolved</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

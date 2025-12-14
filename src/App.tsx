@@ -13,6 +13,7 @@ import CaseQueue from "./pages/CaseQueue";
 import MyCaseload from "./pages/MyCaseload";
 import MyCases from "./pages/MyCases";
 import ClientCaseDetail from "./pages/ClientCaseDetail";
+import AgentCaseDetail from "./pages/AgentCaseDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/report" element={<ReportNotice />} />
             <Route path="/queue" element={<CaseQueue />} />
             <Route path="/caseload" element={<MyCaseload />} />
+            <Route path="/caseload/:caseId" element={<AgentCaseDetail />} />
             <Route path="/my-cases" element={<MyCases />} />
             <Route path="/my-cases/:caseId" element={<ClientCaseDetail />} />
             <Route path="*" element={<NotFound />} />
