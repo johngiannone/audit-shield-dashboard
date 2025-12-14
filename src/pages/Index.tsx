@@ -183,33 +183,30 @@ export default function Index() {
         <div className="mt-24 max-w-6xl mx-auto" id="pricing">
           <div className="text-center mb-14">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Simple, Transparent Protection
+              Choose Your Level of Protection
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Choose the coverage that fits your needs. No hidden fees, ever.
+              One flat fee. Zero deductibles. Full representation if you get audited.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Single Year Plan */}
+          <div className="grid md:grid-cols-3 gap-8 items-start">
+            {/* Silver Shield */}
             <Card className="relative bg-card border border-border shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-fade-in" style={{ animationDelay: '0ms' }}>
               <CardHeader className="pb-4 pt-8 px-8">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                  <Shield className="h-7 w-7 text-primary" />
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                  <Shield className="h-7 w-7 text-slate-500" />
                 </div>
-                <h3 className="font-display text-xl font-semibold text-foreground">Single Year</h3>
-                <p className="text-muted-foreground text-sm mt-1">Protection for one tax return</p>
+                <h3 className="font-display text-xl font-semibold text-foreground">Silver Shield</h3>
+                <p className="text-muted-foreground text-sm mt-1">Essential protection for this year's return</p>
               </CardHeader>
               <CardContent className="px-8 pb-8">
                 <div className="mb-6">
-                  <span className="font-display text-4xl font-bold text-foreground">$99</span>
+                  <span className="font-display text-4xl font-bold text-foreground">$49</span>
                   <span className="text-muted-foreground">/year</span>
                 </div>
-                <p className="text-muted-foreground text-sm mb-6">
-                  Full audit representation included.
-                </p>
                 <ul className="space-y-3 mb-8">
-                  {['Dedicated Enrolled Agent', 'Correspondence handling', 'In-person representation', '100% Fees Covered'].map((feature, i) => (
+                  {['2024 Tax Year Coverage', 'Federal & State Defense', 'Identity Theft Restoration', 'W-2 Income Protection'].map((feature, i) => (
                     <li key={i} className="flex items-center gap-2 text-sm text-foreground">
                       <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                       {feature}
@@ -217,12 +214,12 @@ export default function Index() {
                   ))}
                 </ul>
                 <Link to="/auth">
-                  <Button variant="outline" className="w-full">Get Started</Button>
+                  <Button variant="outline" className="w-full">Protect 2024 Return</Button>
                 </Link>
               </CardContent>
             </Card>
 
-            {/* Multi-Year Bundle - Featured */}
+            {/* Gold Shield - Featured */}
             <Card className="relative bg-card border-2 border-primary shadow-2xl hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-fade-in scale-105" style={{ animationDelay: '100ms' }}>
               {/* Most Popular Badge */}
               <div className="absolute -top-4 left-1/2 -translate-x-1/2">
@@ -232,25 +229,26 @@ export default function Index() {
                 </div>
               </div>
               <CardHeader className="pb-4 pt-10 px-8">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                  <ShieldCheck className="h-7 w-7 text-primary" />
+                <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
+                  <ShieldCheck className="h-7 w-7 text-amber-600 dark:text-amber-400" />
                 </div>
-                <h3 className="font-display text-xl font-semibold text-foreground">Multi-Year Bundle</h3>
-                <p className="text-muted-foreground text-sm mt-1">Protect the last 3 years of returns</p>
+                <h3 className="font-display text-xl font-semibold text-foreground">Gold Shield</h3>
+                <p className="text-muted-foreground text-sm mt-1">Complete peace of mind for all open tax years</p>
               </CardHeader>
               <CardContent className="px-8 pb-8">
-                <div className="mb-6">
-                  <span className="font-display text-4xl font-bold text-foreground">$249</span>
+                <div className="mb-4">
+                  <span className="font-display text-4xl font-bold text-foreground">$99</span>
                   <span className="text-muted-foreground">/year</span>
                   <div className="inline-flex ml-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded text-xs font-medium">
                     Best Value
                   </div>
                 </div>
-                <p className="text-muted-foreground text-sm mb-6">
-                  Retroactive coverage included.
-                </p>
+                {/* Key Differentiator */}
+                <div className="bg-primary/10 rounded-lg px-4 py-2.5 mb-6">
+                  <p className="text-sm font-semibold text-primary">Covers 2021, 2022, 2023 & 2024</p>
+                </div>
                 <ul className="space-y-3 mb-8">
-                  {['Dedicated Enrolled Agent', 'Correspondence handling', 'In-person representation', '100% Fees Covered'].map((feature, i) => (
+                  {['Includes all Silver features', 'Retroactive Audit Defense', 'Investment Income Coverage', 'Priority Agent Access'].map((feature, i) => (
                     <li key={i} className="flex items-center gap-2 text-sm text-foreground">
                       <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                       {feature}
@@ -259,32 +257,33 @@ export default function Index() {
                 </ul>
                 <Link to="/auth">
                   <Button className="w-full">
-                    Get Started
+                    Get Total Protection
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
               </CardContent>
             </Card>
 
-            {/* Business/Self-Employed */}
+            {/* Platinum Business */}
             <Card className="relative bg-card border border-border shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-fade-in" style={{ animationDelay: '200ms' }}>
               <CardHeader className="pb-4 pt-8 px-8">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                  <Briefcase className="h-7 w-7 text-primary" />
+                <div className="w-14 h-14 rounded-2xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-4">
+                  <Briefcase className="h-7 w-7 text-violet-600 dark:text-violet-400" />
                 </div>
-                <h3 className="font-display text-xl font-semibold text-foreground">Business / Self-Employed</h3>
-                <p className="text-muted-foreground text-sm mt-1">Schedule C & Business protection</p>
+                <h3 className="font-display text-xl font-semibold text-foreground">Platinum Business</h3>
+                <p className="text-muted-foreground text-sm mt-1">For Freelancers, Contractors & LLCs</p>
               </CardHeader>
               <CardContent className="px-8 pb-8">
-                <div className="mb-6">
-                  <span className="font-display text-4xl font-bold text-foreground">$349</span>
+                <div className="mb-4">
+                  <span className="font-display text-4xl font-bold text-foreground">$199</span>
                   <span className="text-muted-foreground">/year</span>
                 </div>
-                <p className="text-muted-foreground text-sm mb-6">
-                  Zero deductible.
-                </p>
+                {/* Key Differentiator */}
+                <div className="bg-violet-100 dark:bg-violet-900/30 rounded-lg px-4 py-2.5 mb-6">
+                  <p className="text-sm font-semibold text-violet-700 dark:text-violet-400">Schedule C & Business Defense</p>
+                </div>
                 <ul className="space-y-3 mb-8">
-                  {['Dedicated Enrolled Agent', 'Correspondence handling', 'In-person representation', '100% Fees Covered'].map((feature, i) => (
+                  {['Includes all Gold features', 'Self-Employment Audit Defense', 'Business Expense Verification', 'Payroll Tax Inquiry Defense'].map((feature, i) => (
                     <li key={i} className="flex items-center gap-2 text-sm text-foreground">
                       <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                       {feature}
@@ -292,10 +291,18 @@ export default function Index() {
                   ))}
                 </ul>
                 <Link to="/auth">
-                  <Button variant="outline" className="w-full">Get Started</Button>
+                  <Button variant="outline" className="w-full">Protect My Business</Button>
                 </Link>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Trust Footer */}
+          <div className="mt-10 text-center">
+            <div className="inline-flex items-center gap-2 text-muted-foreground">
+              <Lock className="h-4 w-4" />
+              <span className="text-sm">Membership includes 100% of professional fees. No hidden costs.</span>
+            </div>
           </div>
         </div>
 
