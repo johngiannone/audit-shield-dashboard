@@ -1,0 +1,160 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@18.5.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
+};
+
+serve(async (req) => {
+  try {
+    logStep("Webhook received");
+
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+      apiVersion: "2025-08-27.basil",
+    });
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    const body = await req.text();
+    const signature = req.headers.get("stripe-signature");
+
+    if (!signature) {
+      logStep("Missing stripe-signature header");
+      return new Response("Missing signature", { status: 400 });
+    }
+
+    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+    let event: Stripe.Event;
+
+    if (webhookSecret) {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      logStep("Event verified with webhook secret", { type: event.type });
+    } else {
+      // For development, parse without verification
+      event = JSON.parse(body);
+      logStep("Event parsed (no webhook secret)", { type: event.type });
+    }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      logStep("Processing checkout.session.completed", { sessionId: session.id });
+
+      const userId = session.metadata?.user_id;
+      const planType = session.metadata?.plan_type;
+      const coveredYearsStr = session.metadata?.covered_years;
+      const customerId = session.customer as string;
+      const subscriptionId = session.subscription as string;
+
+      if (!userId || !planType) {
+        logStep("Missing metadata", { userId, planType });
+        return new Response("Missing metadata", { status: 400 });
+      }
+
+      const coveredYears = coveredYearsStr ? JSON.parse(coveredYearsStr) : [2024];
+      logStep("Metadata parsed", { userId, planType, coveredYears, customerId, subscriptionId });
+
+      // Get profile_id from user_id
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (profileError || !profile) {
+        logStep("Error finding profile", { error: profileError?.message, userId });
+        return new Response("Profile not found", { status: 400 });
+      }
+
+      logStep("Found profile", { profileId: profile.id });
+
+      // Check if plan already exists
+      const { data: existingPlan } = await supabaseAdmin
+        .from("audit_plans")
+        .select("id")
+        .eq("profile_id", profile.id)
+        .eq("tax_year", 2024)
+        .maybeSingle();
+
+      if (existingPlan) {
+        // Update existing plan
+        const { error: updateError } = await supabaseAdmin
+          .from("audit_plans")
+          .update({
+            status: "active",
+            plan_level: planType,
+            covered_years: coveredYears,
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscriptionId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingPlan.id);
+
+        if (updateError) {
+          logStep("Error updating plan", { error: updateError.message });
+          return new Response("Error updating plan", { status: 500 });
+        }
+        logStep("Updated existing plan", { planId: existingPlan.id });
+      } else {
+        // Create new plan
+        const { error: insertError } = await supabaseAdmin
+          .from("audit_plans")
+          .insert({
+            profile_id: profile.id,
+            tax_year: 2024,
+            status: "active",
+            plan_level: planType,
+            covered_years: coveredYears,
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscriptionId,
+          });
+
+        if (insertError) {
+          logStep("Error inserting plan", { error: insertError.message });
+          return new Response("Error inserting plan", { status: 500 });
+        }
+        logStep("Created new plan");
+      }
+
+      // Send welcome email
+      try {
+        const { data: profileData } = await supabaseAdmin
+          .from("profiles")
+          .select("full_name")
+          .eq("id", profile.id)
+          .single();
+
+        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
+
+        await supabaseAdmin.functions.invoke("send-welcome-email", {
+          body: {
+            email: userData.user?.email,
+            name: profileData?.full_name || "Valued Member",
+            planLevel: planType,
+          },
+        });
+        logStep("Welcome email sent");
+      } catch (emailError) {
+        logStep("Error sending welcome email", { error: String(emailError) });
+        // Don't fail the webhook for email errors
+      }
+    }
+
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { "Content-Type": "application/json" },
+      status: 200,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logStep("ERROR", { message: errorMessage });
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      headers: { "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+});
