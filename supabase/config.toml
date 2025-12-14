@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.send-status-update]
 verify_jwt = true
+
+[functions.send-message-notification]
+verify_jwt = true

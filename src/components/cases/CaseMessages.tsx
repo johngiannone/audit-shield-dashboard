@@ -125,15 +125,29 @@ export function CaseMessages({ caseId, profileId, isAgent = false }: CaseMessage
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
 
+    const messageText = newMessage.trim();
     setSending(true);
     try {
       const { error } = await supabase.from('case_messages').insert({
         case_id: caseId,
         sender_id: profileId,
-        message: newMessage.trim(),
+        message: messageText,
       });
 
       if (error) throw error;
+
+      // Send email notification to the other party
+      try {
+        await supabase.functions.invoke('send-message-notification', {
+          body: {
+            case_id: caseId,
+            sender_profile_id: profileId,
+            message_preview: messageText,
+          },
+        });
+      } catch (notifyErr) {
+        console.error('Notification error:', notifyErr);
+      }
 
       setNewMessage('');
     } catch (error) {
