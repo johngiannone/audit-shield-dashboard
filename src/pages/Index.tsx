@@ -105,9 +105,14 @@ export default function Index() {
           </div>
           <span className="font-display text-xl font-semibold text-foreground">Return Shield</span>
         </div>
-        <Link to="/auth">
-          <Button variant="outline">Sign In</Button>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link to="/partners">
+            <Button variant="ghost">For Tax Pros</Button>
+          </Link>
+          <Link to="/auth">
+            <Button variant="outline">Sign In</Button>
+          </Link>
+        </div>
       </header>
 
       {/* Hero - Split Layout */}
