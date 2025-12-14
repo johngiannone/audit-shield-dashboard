@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Briefcase, CheckCircle, ArrowRight, Info, Loader2 } from 'lucide-react';
+import { Shield, Briefcase, CheckCircle, ArrowRight, Info, Loader2, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -124,23 +124,20 @@ export function PricingCard({ type }: PricingCardProps) {
 
         <Separator className="my-6" />
 
-        {/* Retroactive Coverage Add-on */}
+        {/* Retroactive Coverage Security Alert */}
         <div className="space-y-4 flex-1">
-          <div className="flex items-center gap-2">
-            <h4 className="font-display text-base font-semibold text-foreground">Add Retroactive Coverage</h4>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <p className="text-sm">
-                    Did you know? The IRS typically examines returns filed within the last three years. 
-                    <span className="text-muted-foreground ml-1">(Source: IRS.gov)</span>
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h4 className="font-display text-sm font-semibold text-amber-800 dark:text-amber-300">
+                  Your 2021-2023 returns are currently exposed
+                </h4>
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  1 in 4 audits target returns filed in previous years. Add protection now to lock in coverage.
+                </p>
+              </div>
+            </div>
           </div>
           
           <div className="space-y-3">
