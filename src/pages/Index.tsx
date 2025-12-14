@@ -128,7 +128,60 @@ export default function Index() {
                 Average Response Time
               </div>
             </div>
+        </div>
+
+        {/* How it Works */}
+        <div className="mt-24 max-w-5xl mx-auto">
+          <div className="text-center mb-14">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+              How it Works
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              From notice to resolution in three simple steps
+            </p>
           </div>
+
+          <div className="grid md:grid-cols-3 gap-8 relative">
+            {/* Connector Line */}
+            <div className="hidden md:block absolute top-16 left-1/6 right-1/6 h-0.5 bg-gradient-to-r from-primary/20 via-primary to-primary/20" style={{ left: '16%', right: '16%' }} />
+
+            {[
+              { 
+                step: '01', 
+                title: 'Submit Your Notice', 
+                desc: 'Upload your IRS or state notice. Our AI instantly analyzes it and extracts key details.',
+                icon: FileText
+              },
+              { 
+                step: '02', 
+                title: 'Get Matched', 
+                desc: 'An Enrolled Agent reviews your case and reaches out within hours to introduce themselves.',
+                icon: Users
+              },
+              { 
+                step: '03', 
+                title: 'We Handle It', 
+                desc: 'Sit back while we manage all correspondence, deadlines, and negotiations on your behalf.',
+                icon: Shield
+              },
+            ].map((item, i) => (
+              <div key={i} className="relative animate-fade-in" style={{ animationDelay: `${i * 150}ms` }}>
+                {/* Step Number Circle */}
+                <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-display font-bold text-lg mx-auto mb-6 relative z-10 shadow-lg">
+                  {item.step}
+                </div>
+                
+                <div className="bg-card rounded-xl p-6 text-center shadow-md hover:shadow-lg transition-shadow border border-border/50">
+                  <div className="w-14 h-14 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <item.icon className="h-7 w-7 text-primary" />
+                  </div>
+                  <h3 className="font-display text-xl font-semibold text-foreground mb-3">{item.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
         </div>
             {/* Decorative elements */}
             <div className="absolute -z-10 -top-4 -right-4 w-full h-full rounded-2xl bg-primary/10" />
