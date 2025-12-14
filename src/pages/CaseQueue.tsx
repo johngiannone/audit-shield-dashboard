@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
-import { Inbox, Loader2, UserPlus, AlertTriangle } from 'lucide-react';
+import { Inbox, Loader2, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { CaseDetailModal } from '@/components/cases/CaseDetailModal';
 
 interface Case {
   id: string;
@@ -17,9 +18,11 @@ interface Case {
   notice_type: string;
   tax_year: number;
   summary: string | null;
+  file_path: string | null;
   created_at: string;
   assigned_agent_id: string | null;
   client_id: string;
+  client_name: string | null;
 }
 
 export default function CaseQueue() {
@@ -29,8 +32,11 @@ export default function CaseQueue() {
   
   const [cases, setCases] = useState<Case[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const [claiming, setClaiming] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
+  
+  const [selectedCase, setSelectedCase] = useState<Case | null>(null);
+  const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
+  const [isAssigning, setIsAssigning] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -50,7 +56,6 @@ export default function CaseQueue() {
   const fetchProfileAndCases = async () => {
     setDataLoading(true);
     try {
-      // Get agent's profile ID
       const { data: profile } = await supabase
         .from('profiles')
         .select('id')
@@ -62,7 +67,7 @@ export default function CaseQueue() {
       }
 
       // Fetch unassigned cases
-      const { data, error } = await supabase
+      const { data: casesData, error } = await supabase
         .from('cases')
         .select('*')
         .is('assigned_agent_id', null)
@@ -70,7 +75,22 @@ export default function CaseQueue() {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setCases(data || []);
+
+      // Fetch client names for each case
+      const clientIds = [...new Set((casesData || []).map(c => c.client_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', clientIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+      
+      const casesWithClientNames = (casesData || []).map(c => ({
+        ...c,
+        client_name: profileMap.get(c.client_id) || null,
+      }));
+      
+      setCases(casesWithClientNames);
     } catch (error) {
       toast({
         title: 'Error',
@@ -82,10 +102,29 @@ export default function CaseQueue() {
     }
   };
 
-  const claimCase = async (caseId: string) => {
-    if (!profileId) return;
+  const openCaseDetail = async (caseItem: Case) => {
+    setSelectedCase(caseItem);
+    
+    if (caseItem.file_path) {
+      const { data } = await supabase.storage
+        .from('notices')
+        .createSignedUrl(caseItem.file_path, 3600);
+      
+      setSelectedFileUrl(data?.signedUrl || null);
+    } else {
+      setSelectedFileUrl(null);
+    }
+  };
 
-    setClaiming(caseId);
+  const closeCaseDetail = () => {
+    setSelectedCase(null);
+    setSelectedFileUrl(null);
+  };
+
+  const assignCase = async () => {
+    if (!profileId || !selectedCase) return;
+
+    setIsAssigning(true);
     try {
       const { error } = await supabase
         .from('cases')
@@ -93,25 +132,25 @@ export default function CaseQueue() {
           assigned_agent_id: profileId,
           status: 'in_progress',
         })
-        .eq('id', caseId);
+        .eq('id', selectedCase.id);
 
       if (error) throw error;
 
       toast({
-        title: 'Case Claimed',
+        title: 'Case Assigned',
         description: 'The case has been assigned to you.',
       });
 
-      // Remove from queue
-      setCases(cases.filter(c => c.id !== caseId));
+      setCases(cases.filter(c => c.id !== selectedCase.id));
+      closeCaseDetail();
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to claim case',
+        description: 'Failed to assign case',
         variant: 'destructive',
       });
     } finally {
-      setClaiming(null);
+      setIsAssigning(false);
     }
   };
 
@@ -163,45 +202,38 @@ export default function CaseQueue() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Agency</TableHead>
+                      <TableHead>Client</TableHead>
                       <TableHead>Notice Type</TableHead>
+                      <TableHead>Agency</TableHead>
                       <TableHead>Tax Year</TableHead>
-                      <TableHead>Submitted</TableHead>
+                      <TableHead className="max-w-xs">AI Summary</TableHead>
                       <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {cases.map((caseItem) => (
-                      <TableRow key={caseItem.id}>
-                        <TableCell>
-                          <Badge variant="outline" className="font-medium">
-                            {caseItem.notice_agency}
-                          </Badge>
-                        </TableCell>
+                      <TableRow key={caseItem.id} className="cursor-pointer hover:bg-muted/50">
                         <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4 text-warning" />
-                            {caseItem.notice_type}
-                          </div>
+                          {caseItem.client_name || 'Unknown'}
+                        </TableCell>
+                        <TableCell>{caseItem.notice_type}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{caseItem.notice_agency}</Badge>
                         </TableCell>
                         <TableCell>{caseItem.tax_year}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(caseItem.created_at).toLocaleDateString()}
+                        <TableCell className="max-w-xs">
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {caseItem.summary || 'No summary'}
+                          </p>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
                             size="sm"
-                            onClick={() => claimCase(caseItem.id)}
-                            disabled={claiming === caseItem.id}
+                            variant="outline"
+                            onClick={() => openCaseDetail(caseItem)}
                           >
-                            {claiming === caseItem.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <>
-                                <UserPlus className="h-4 w-4 mr-2" />
-                                Claim
-                              </>
-                            )}
+                            <Eye className="h-4 w-4 mr-2" />
+                            View
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -213,6 +245,15 @@ export default function CaseQueue() {
           </CardContent>
         </Card>
       </div>
+
+      <CaseDetailModal
+        isOpen={!!selectedCase}
+        onClose={closeCaseDetail}
+        caseData={selectedCase}
+        fileUrl={selectedFileUrl}
+        onAssign={assignCase}
+        isAssigning={isAssigning}
+      />
     </DashboardLayout>
   );
 }
