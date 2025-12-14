@@ -95,6 +95,11 @@ export function ClientDocumentRequests({ caseId, profileId, onDocumentUploaded }
 
       if (uploadError) throw uploadError;
 
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('notices')
+        .getPublicUrl(filePath);
+
       // Create document record
       const { error: docError } = await supabase
         .from('case_documents')
@@ -108,14 +113,17 @@ export function ClientDocumentRequests({ caseId, profileId, onDocumentUploaded }
 
       if (docError) throw docError;
 
-      // Update request status to fulfilled
+      // Update request status to 'uploaded' and store file_url
       const { error: updateError } = await supabase
         .from('document_requests')
         .update({ 
-          status: 'fulfilled',
+          status: 'uploaded',
+          file_url: filePath,
           fulfilled_at: new Date().toISOString()
         })
         .eq('id', selectedRequestId);
+
+      if (updateError) throw updateError;
 
       if (updateError) throw updateError;
 
@@ -142,7 +150,7 @@ export function ClientDocumentRequests({ caseId, profileId, onDocumentUploaded }
   };
 
   const pendingRequests = requests.filter(r => r.status === 'pending');
-  const fulfilledRequests = requests.filter(r => r.status === 'fulfilled');
+  const uploadedRequests = requests.filter(r => r.status === 'uploaded' || r.status === 'approved');
 
   if (loading) {
     return (
@@ -220,11 +228,11 @@ export function ClientDocumentRequests({ caseId, profileId, onDocumentUploaded }
           </div>
         )}
 
-        {/* Fulfilled Requests */}
-        {fulfilledRequests.length > 0 && (
+        {/* Uploaded/Approved Requests */}
+        {uploadedRequests.length > 0 && (
           <div className="space-y-3">
-            <p className="text-sm font-medium text-success">Completed ({fulfilledRequests.length})</p>
-            {fulfilledRequests.map((request) => (
+            <p className="text-sm font-medium text-success">Completed ({uploadedRequests.length})</p>
+            {uploadedRequests.map((request) => (
               <div
                 key={request.id}
                 className="p-4 rounded-lg bg-success/5 border border-success/20"
@@ -239,8 +247,12 @@ export function ClientDocumentRequests({ caseId, profileId, onDocumentUploaded }
                       Submitted {new Date(request.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                    Submitted
+                  <Badge variant="outline" className={
+                    request.status === 'approved' 
+                      ? 'bg-success/10 text-success border-success/20'
+                      : 'bg-info/10 text-info border-info/20'
+                  }>
+                    {request.status === 'approved' ? 'Approved' : 'Under Review'}
                   </Badge>
                 </div>
               </div>

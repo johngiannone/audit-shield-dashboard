@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Briefcase, Loader2, ChevronRight, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ActionRequiredCard } from '@/components/cases/ActionRequiredCard';
 
 interface Case {
   id: string;
@@ -34,6 +35,7 @@ export default function MyCases() {
   
   const [cases, setCases] = useState<Case[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [profileId, setProfileId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -53,6 +55,17 @@ export default function MyCases() {
   const fetchMyCases = async () => {
     setDataLoading(true);
     try {
+      // Get profile ID
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (profile) {
+        setProfileId(profile.id);
+      }
+
       const { data: casesData, error } = await supabase
         .from('cases')
         .select('*')
@@ -135,6 +148,9 @@ export default function MyCases() {
             Report New Notice
           </Button>
         </div>
+
+        {/* Action Required Card */}
+        {profileId && <ActionRequiredCard profileId={profileId} />}
 
         <Card className="border-0 shadow-md">
           <CardHeader>
