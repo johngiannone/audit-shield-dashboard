@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Brain, Gavel, CheckCircle, Calendar, Briefcase, Star, X, Clock, DollarSign, Frown, Smile, ChevronUp } from 'lucide-react';
+import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Users, Gavel, CheckCircle, Calendar, Briefcase, Star, X, Clock, DollarSign, Frown, Smile, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Helmet } from 'react-helmet-async';
@@ -472,9 +472,9 @@ export default function Index() {
                 },
                 { 
                   step: '2', 
-                  title: 'AI Analysis & Assignment', 
-                  desc: 'Our system analyzes the threat and assigns a dedicated Enrolled Agent.',
-                  icon: Brain
+                  title: 'Get Matched', 
+                  desc: 'A dedicated Enrolled Agent is assigned to your case within hours.',
+                  icon: Users
                 },
                 { 
                   step: '3', 
