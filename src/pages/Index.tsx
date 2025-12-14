@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Brain, Gavel, CheckCircle, Calendar } from 'lucide-react';
+import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Brain, Gavel, CheckCircle, Calendar, Briefcase, Star } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -178,7 +179,125 @@ export default function Index() {
           </div>
         </div>
 
-        {/* How it Works Timeline */}
+        {/* Pricing Section */}
+        <div className="mt-24 max-w-6xl mx-auto" id="pricing">
+          <div className="text-center mb-14">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Simple, Transparent Protection
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Choose the coverage that fits your needs. No hidden fees, ever.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Single Year Plan */}
+            <Card className="relative bg-card border border-border shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-fade-in" style={{ animationDelay: '0ms' }}>
+              <CardHeader className="pb-4 pt-8 px-8">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                  <Shield className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-display text-xl font-semibold text-foreground">Single Year</h3>
+                <p className="text-muted-foreground text-sm mt-1">Protection for one tax return</p>
+              </CardHeader>
+              <CardContent className="px-8 pb-8">
+                <div className="mb-6">
+                  <span className="font-display text-4xl font-bold text-foreground">$99</span>
+                  <span className="text-muted-foreground">/year</span>
+                </div>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Full audit representation included.
+                </p>
+                <ul className="space-y-3 mb-8">
+                  {['Dedicated Enrolled Agent', 'Correspondence handling', 'In-person representation', '100% Fees Covered'].map((feature, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Link to="/auth">
+                  <Button variant="outline" className="w-full">Get Started</Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Multi-Year Bundle - Featured */}
+            <Card className="relative bg-card border-2 border-primary shadow-2xl hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-fade-in scale-105" style={{ animationDelay: '100ms' }}>
+              {/* Most Popular Badge */}
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <div className="bg-primary text-primary-foreground px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-1.5 shadow-lg">
+                  <Star className="h-4 w-4 fill-current" />
+                  Most Popular
+                </div>
+              </div>
+              <CardHeader className="pb-4 pt-10 px-8">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                  <ShieldCheck className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-display text-xl font-semibold text-foreground">Multi-Year Bundle</h3>
+                <p className="text-muted-foreground text-sm mt-1">Protect the last 3 years of returns</p>
+              </CardHeader>
+              <CardContent className="px-8 pb-8">
+                <div className="mb-6">
+                  <span className="font-display text-4xl font-bold text-foreground">$249</span>
+                  <span className="text-muted-foreground">/year</span>
+                  <div className="inline-flex ml-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded text-xs font-medium">
+                    Best Value
+                  </div>
+                </div>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Retroactive coverage included.
+                </p>
+                <ul className="space-y-3 mb-8">
+                  {['Dedicated Enrolled Agent', 'Correspondence handling', 'In-person representation', '100% Fees Covered'].map((feature, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Link to="/auth">
+                  <Button className="w-full">
+                    Get Started
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Business/Self-Employed */}
+            <Card className="relative bg-card border border-border shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-fade-in" style={{ animationDelay: '200ms' }}>
+              <CardHeader className="pb-4 pt-8 px-8">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                  <Briefcase className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-display text-xl font-semibold text-foreground">Business / Self-Employed</h3>
+                <p className="text-muted-foreground text-sm mt-1">Schedule C & Business protection</p>
+              </CardHeader>
+              <CardContent className="px-8 pb-8">
+                <div className="mb-6">
+                  <span className="font-display text-4xl font-bold text-foreground">$349</span>
+                  <span className="text-muted-foreground">/year</span>
+                </div>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Zero deductible.
+                </p>
+                <ul className="space-y-3 mb-8">
+                  {['Dedicated Enrolled Agent', 'Correspondence handling', 'In-person representation', '100% Fees Covered'].map((feature, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Link to="/auth">
+                  <Button variant="outline" className="w-full">Get Started</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
         <div className="mt-24 max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
