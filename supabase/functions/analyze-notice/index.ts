@@ -1,3 +1,5 @@
+// Import the safe Base64 encoder from Deno Standard Library
+import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -31,9 +33,9 @@ serve(async (req) => {
 
     console.log(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size}`);
 
-    // Convert file to base64
+    // Convert file to base64 safely using Deno's standard library
     const arrayBuffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const base64 = encodeBase64(arrayBuffer);
     
     // Determine media type
     let mediaType = file.type;
