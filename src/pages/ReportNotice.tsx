@@ -111,12 +111,12 @@ export default function ReportNotice() {
   };
 
   const processFile = async (file: File) => {
-    // Only accept images - PDFs are not supported by the AI vision model
-    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+    // Gemini supports PDFs and images
+    const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       toast({
         title: 'Invalid file type',
-        description: 'Please upload a photo or screenshot (PNG, JPG) of your tax notice. PDFs are not supported.',
+        description: 'Please upload a PDF or image file (PNG, JPG, GIF, WebP)',
         variant: 'destructive',
       });
       return;
@@ -445,14 +445,14 @@ export default function ReportNotice() {
                       or click to browse
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Accepts PNG, JPG, GIF, WebP (max 10MB)
+                      Accepts PDF, PNG, JPG (max 10MB)
                     </p>
                   </div>
                 )}
                 <Input
                   ref={fileInputRef}
                   type="file"
-                  accept=".png,.jpg,.jpeg,.gif,.webp"
+                  accept=".pdf,.png,.jpg,.jpeg,.gif,.webp"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
