@@ -4,6 +4,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Brain, Gavel, CheckCircle, Calendar, Briefcase, Star, X, Clock, DollarSign, Frown, Smile, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Helmet } from 'react-helmet-async';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -32,8 +34,68 @@ export default function Index() {
     );
   }
 
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What exactly does 'Audit Defense' cover?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "If you receive a notice from the IRS or State tax authorities, we handle everything. This includes drafting correspondence, making phone calls to the agency, and physically representing you at audit meetings if necessary. We defend your tax return to ensure you only pay what you legally owe—not a penny more."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I still have to pay the taxes if I lose?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Our membership covers 100% of the professional fees to defend you (which can cost $3,500+ without insurance). However, any additional taxes, penalties, or interest determined to be owed to the IRS are your responsibility. Our job is to minimize or eliminate that amount through expert defense."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "I am self-employed / have a side hustle. Which plan do I need?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "You need the Platinum Business plan. The Silver and Gold plans cover personal W-2 income and standard deductions. If you file a Schedule C (Sole Proprietorship) or have 1099 income, your audit risk is significantly higher, requiring the specialized defense included in the Platinum tier."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does the 'Gold Shield' cover tax returns I filed years ago?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes! The Gold Shield plan provides Retroactive Coverage. It protects the current tax year plus the previous three tax years (the standard IRS statute of limitations). As long as you haven't received a notice for those years before buying the plan, they are fully covered."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What if I already received a notice yesterday?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Our prepaid memberships are for future protection. If you already have a notice in hand, we can still help! Please click 'Report a Notice' in the top navigation to upload your letter. Our team will review it and provide a customized flat-rate quote for defense, separate from our annual membership plans."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Who will be handling my case?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "You are assigned a dedicated Enrolled Agent (EA) or CPA. Enrolled Agents are federally licensed tax practitioners empowered by the U.S. Department of the Treasury to represent taxpayers before the IRS. We do not outsource your defense to unqualified support staff."
+        }
+      }
+    ]
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <script type="application/ld+json">
+          {JSON.stringify(faqSchema)}
+        </script>
+      </Helmet>
       {/* Header */}
       <header className="container mx-auto px-6 py-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -314,7 +376,75 @@ export default function Index() {
             <div className="inline-flex items-center gap-2 text-muted-foreground">
               <Lock className="h-4 w-4" />
               <span className="text-sm">Membership includes 100% of professional fees. No hidden costs.</span>
-            </div>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mt-24 max-w-4xl mx-auto bg-secondary/30 rounded-3xl p-8 md:p-12" id="faq">
+          <div className="text-center mb-10">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-muted-foreground text-lg">
+              Everything you need to know about our audit defense coverage
+            </p>
+          </div>
+
+          <Accordion type="single" collapsible className="space-y-4">
+            <AccordionItem value="item-1" className="bg-card rounded-xl border border-border px-6 data-[state=open]:shadow-md transition-shadow">
+              <AccordionTrigger className="font-display text-left text-foreground hover:no-underline py-5">
+                What exactly does "Audit Defense" cover?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-5">
+                If you receive a notice from the IRS or State tax authorities, we handle everything. This includes drafting correspondence, making phone calls to the agency, and physically representing you at audit meetings if necessary. We defend your tax return to ensure you only pay what you legally owe—not a penny more.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-2" className="bg-card rounded-xl border border-border px-6 data-[state=open]:shadow-md transition-shadow">
+              <AccordionTrigger className="font-display text-left text-foreground hover:no-underline py-5">
+                Do I still have to pay the taxes if I lose?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-5">
+                Yes. Our membership covers 100% of the professional fees to defend you (which can cost $3,500+ without insurance). However, any additional taxes, penalties, or interest determined to be owed to the IRS are your responsibility. Our job is to minimize or eliminate that amount through expert defense.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-3" className="bg-card rounded-xl border border-border px-6 data-[state=open]:shadow-md transition-shadow">
+              <AccordionTrigger className="font-display text-left text-foreground hover:no-underline py-5">
+                I am self-employed / have a side hustle. Which plan do I need?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-5">
+                You need the Platinum Business plan. The Silver and Gold plans cover personal W-2 income and standard deductions. If you file a Schedule C (Sole Proprietorship) or have 1099 income, your audit risk is significantly higher, requiring the specialized defense included in the Platinum tier.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-4" className="bg-card rounded-xl border border-border px-6 data-[state=open]:shadow-md transition-shadow">
+              <AccordionTrigger className="font-display text-left text-foreground hover:no-underline py-5">
+                Does the "Gold Shield" cover tax returns I filed years ago?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-5">
+                Yes! The Gold Shield plan provides Retroactive Coverage. It protects the current tax year plus the previous three tax years (the standard IRS statute of limitations). As long as you haven't received a notice for those years before buying the plan, they are fully covered.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-5" className="bg-card rounded-xl border border-border px-6 data-[state=open]:shadow-md transition-shadow">
+              <AccordionTrigger className="font-display text-left text-foreground hover:no-underline py-5">
+                What if I already received a notice yesterday?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-5">
+                Our prepaid memberships are for future protection. If you already have a notice in hand, we can still help! Please click "Report a Notice" in the top navigation to upload your letter. Our team will review it and provide a customized flat-rate quote for defense, separate from our annual membership plans.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-6" className="bg-card rounded-xl border border-border px-6 data-[state=open]:shadow-md transition-shadow">
+              <AccordionTrigger className="font-display text-left text-foreground hover:no-underline py-5">
+                Who will be handling my case?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground pb-5">
+                You are assigned a dedicated Enrolled Agent (EA) or CPA. Enrolled Agents are federally licensed tax practitioners empowered by the U.S. Department of the Treasury to represent taxpayers before the IRS. We do not outsource your defense to unqualified support staff.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
           </div>
         </div>
 
