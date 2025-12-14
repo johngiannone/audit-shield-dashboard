@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.send-document-rejection]
 verify_jwt = true
+
+[functions.send-document-upload-notification]
+verify_jwt = true
