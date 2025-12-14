@@ -11,6 +11,7 @@ import {
   User, Clock, CheckCircle, AlertTriangle, File
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { CaseMessages } from '@/components/cases/CaseMessages';
 
 interface CaseDetail {
   id: string;
@@ -492,6 +493,11 @@ export default function ClientCaseDetail() {
             )}
           </CardContent>
         </Card>
+
+        {/* Messages */}
+        {profileId && caseId && caseDetail.agent_name && (
+          <CaseMessages caseId={caseId} profileId={profileId} />
+        )}
       </div>
     </DashboardLayout>
   );
