@@ -173,6 +173,16 @@ export function PricingCard({ type }: PricingCardProps) {
               );
             })}
           </div>
+          
+          {/* Protection Summary */}
+          {selectedYears.length > 0 && (
+            <div className="flex items-center justify-center gap-2 py-2 px-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <ShieldCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                {selectedYears.length} of 3 prior years protected
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Dynamic Total Button */}
