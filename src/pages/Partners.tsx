@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Shield, ArrowRight, Calculator, TrendingUp, DollarSign, Users, Clock, CheckCircle, RefreshCw, Handshake } from 'lucide-react';
 import partnerDashboard from '@/assets/partner-dashboard.png';
+import { RevenueCalculator } from '@/components/partners/RevenueCalculator';
 
 export default function Partners() {
   return (
@@ -46,10 +47,7 @@ export default function Partners() {
                 Become a Partner
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" className="text-base px-8">
-                <Calculator className="mr-2 h-5 w-5" />
-                Calculate Your Revenue
-              </Button>
+              <RevenueCalculator />
             </div>
 
             {/* Stats */}
