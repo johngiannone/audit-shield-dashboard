@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -34,6 +34,24 @@ export default function BulkEnroll() {
   const [parsedData, setParsedData] = useState<ClientRow[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [agentName, setAgentName] = useState<string>('Your Tax Professional');
+
+  // Fetch agent name
+  useEffect(() => {
+    const fetchAgentName = async () => {
+      if (profileId) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', profileId)
+          .maybeSingle();
+        if (data?.full_name) {
+          setAgentName(data.full_name);
+        }
+      }
+    };
+    fetchAgentName();
+  }, [profileId]);
 
   // Redirect if not agent
   if (!authLoading && (!user || role !== 'agent')) {
@@ -140,43 +158,47 @@ export default function BulkEnroll() {
     setIsSubmitting(true);
 
     try {
-      let successCount = 0;
-      let errorCount = 0;
-
-      for (const row of validRows) {
-        // Create a placeholder user_id (agents will need to link these to actual auth users later)
-        // For now, we store the client info with managed_by set to the agent
-        const { error } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: crypto.randomUUID(), // Placeholder - will be updated when client creates account
-            full_name: `${row.firstName} ${row.lastName}`,
-            phone: row.phone || null,
-            managed_by: profileId
-          });
-
-        if (error) {
-          console.error('Insert error:', error);
-          errorCount++;
-        } else {
-          successCount++;
+      // Call the edge function to process bulk invites
+      const { data, error } = await supabase.functions.invoke('process-bulk-invites', {
+        body: {
+          clients: validRows.map(row => ({
+            firstName: row.firstName,
+            lastName: row.lastName,
+            email: row.email,
+            phone: row.phone,
+            taxYear: row.taxYear,
+          })),
+          agentName,
+          agentProfileId: profileId,
         }
+      });
+
+      if (error) {
+        throw error;
       }
+
+      const { summary, results } = data;
 
       toast({
         title: 'Enrollment complete',
-        description: `Successfully enrolled ${successCount} clients${errorCount > 0 ? `. ${errorCount} failed.` : '.'}`
+        description: `Successfully invited ${summary.successful} clients${summary.failed > 0 ? `. ${summary.failed} failed.` : '. Invite emails have been sent.'}`
       });
 
-      if (successCount > 0) {
+      // Show individual errors if any
+      const failures = results?.filter((r: any) => !r.success) || [];
+      if (failures.length > 0) {
+        console.log('Failed invites:', failures);
+      }
+
+      if (summary.successful > 0) {
         setParsedData([]);
         setFileName(null);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Enrollment error:', error);
       toast({
         title: 'Enrollment failed',
-        description: 'An unexpected error occurred.',
+        description: error.message || 'An unexpected error occurred.',
         variant: 'destructive'
       });
     } finally {
