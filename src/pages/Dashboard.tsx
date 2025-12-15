@@ -45,10 +45,17 @@ export default function Dashboard() {
     setDismissedVerificationBanner(true);
   };
 
-  // Clear dismissed state when email becomes verified
+  // Clear dismissed state and show success toast when email becomes verified
   useEffect(() => {
     if (user?.email_confirmed_at) {
+      const wasDismissed = localStorage.getItem('verification_banner_dismissed');
       localStorage.removeItem('verification_banner_dismissed');
+      if (wasDismissed) {
+        toast({
+          title: "Email verified!",
+          description: "Your email has been successfully verified.",
+        });
+      }
     }
   }, [user?.email_confirmed_at]);
 
