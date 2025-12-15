@@ -414,6 +414,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          managed_by: string | null
           phone: string | null
           referral_code: string | null
           referred_by: string | null
@@ -427,6 +428,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          managed_by?: string | null
           phone?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -440,6 +442,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          managed_by?: string | null
           phone?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -447,6 +450,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_managed_by_fkey"
+            columns: ["managed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_referred_by_fkey"
             columns: ["referred_by"]
