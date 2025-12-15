@@ -14,6 +14,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, role: AppRole, referralCode?: string | null) => Promise<{ error: Error | null }>;
   signInWithLinkedIn: () => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
+  signInWithApple: () => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -57,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isOAuthProvider = (provider: string | undefined) => {
-    return provider === 'linkedin_oidc' || provider === 'google';
+    return provider === 'linkedin_oidc' || provider === 'google' || provider === 'apple';
   };
 
   const handleOAuthUserSetup = async (session: Session) => {
@@ -194,6 +195,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
+  const signInWithApple = async () => {
+    preserveReferralCode();
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo: `${window.location.origin}/auth`,
+      },
+    });
+    return { error };
+  };
+
   const signUp = async (email: string, password: string, fullName: string, selectedRole: AppRole, referralCode?: string | null) => {
     const redirectUrl = `${window.location.origin}/`;
 
@@ -269,7 +282,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, profileId, loading, signIn, signUp, signInWithLinkedIn, signInWithGoogle, resetPassword, updatePassword, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, profileId, loading, signIn, signUp, signInWithLinkedIn, signInWithGoogle, signInWithApple, resetPassword, updatePassword, signOut }}>
       {children}
     </AuthContext.Provider>
   );
