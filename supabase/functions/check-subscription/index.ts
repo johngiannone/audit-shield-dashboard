@@ -48,7 +48,8 @@ serve(async (req) => {
       logStep("No Stripe customer found");
       return new Response(JSON.stringify({ 
         subscribed: false,
-        subscription: null 
+        subscription: null,
+        invoices: []
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -58,6 +59,7 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
+    // Fetch subscriptions
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: "all",
@@ -65,11 +67,33 @@ serve(async (req) => {
       expand: ["data.default_payment_method"],
     });
 
+    // Fetch invoices
+    const invoicesResponse = await stripe.invoices.list({
+      customer: customerId,
+      limit: 10,
+    });
+
+    const invoices = invoicesResponse.data.map((invoice: Stripe.Invoice) => ({
+      id: invoice.id,
+      number: invoice.number,
+      status: invoice.status,
+      amount: invoice.amount_paid,
+      currency: invoice.currency,
+      created: new Date(invoice.created * 1000).toISOString(),
+      periodStart: invoice.period_start ? new Date(invoice.period_start * 1000).toISOString() : null,
+      periodEnd: invoice.period_end ? new Date(invoice.period_end * 1000).toISOString() : null,
+      invoicePdf: invoice.invoice_pdf,
+      hostedInvoiceUrl: invoice.hosted_invoice_url,
+    }));
+
+    logStep("Fetched invoices", { count: invoices.length });
+
     if (subscriptions.data.length === 0) {
       logStep("No subscriptions found");
       return new Response(JSON.stringify({ 
         subscribed: false,
-        subscription: null 
+        subscription: null,
+        invoices
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -121,7 +145,8 @@ serve(async (req) => {
         currentPeriodEnd,
         cancelAtPeriodEnd,
         last4,
-      }
+      },
+      invoices
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
