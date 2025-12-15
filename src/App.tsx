@@ -20,6 +20,7 @@ import Analytics from "./pages/Analytics";
 import Partners from "./pages/Partners";
 import Affiliates from "./pages/Affiliates";
 import AffiliatePortal from "./pages/AffiliatePortal";
+import AffiliateAdmin from "./pages/AffiliateAdmin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
                 <Route path="/partners" element={<Partners />} />
                 <Route path="/affiliates" element={<Affiliates />} />
                 <Route path="/affiliate-portal" element={<AffiliatePortal />} />
+                <Route path="/admin/affiliates" element={<AffiliateAdmin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </ReferralTracker>
