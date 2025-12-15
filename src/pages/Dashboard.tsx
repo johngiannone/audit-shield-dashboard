@@ -36,7 +36,14 @@ export default function Dashboard() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [isResending, setIsResending] = useState(false);
-  const [dismissedVerificationBanner, setDismissedVerificationBanner] = useState(false);
+  const [dismissedVerificationBanner, setDismissedVerificationBanner] = useState(() => {
+    return localStorage.getItem('verification_banner_dismissed') === 'true';
+  });
+
+  const dismissVerificationBanner = () => {
+    localStorage.setItem('verification_banner_dismissed', 'true');
+    setDismissedVerificationBanner(true);
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -160,14 +167,14 @@ export default function Dashboard() {
                 <button
                   type="button"
                   className="text-sm text-muted-foreground hover:text-foreground"
-                  onClick={() => setDismissedVerificationBanner(true)}
+                  onClick={dismissVerificationBanner}
                 >
                   Dismiss
                 </button>
               </div>
             </AlertDescription>
             <button
-              onClick={() => setDismissedVerificationBanner(true)}
+              onClick={dismissVerificationBanner}
               className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" />
