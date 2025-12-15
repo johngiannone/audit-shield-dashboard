@@ -6,10 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { FileText, Loader2, Shield, Calendar, ShieldCheck, Briefcase, CheckCircle, ArrowRight, Star, CreditCard, AlertCircle, ExternalLink } from 'lucide-react';
+import { FileText, Loader2, Shield, Calendar, ShieldCheck, Briefcase, CheckCircle, ArrowRight, Star, CreditCard, AlertCircle, ExternalLink, Receipt, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePurchasePlan, PlanLevel } from '@/hooks/usePurchasePlan';
-
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 interface Plan {
   id: string;
   tax_year: number;
@@ -29,6 +29,19 @@ interface SubscriptionInfo {
   last4: string | null;
 }
 
+interface Invoice {
+  id: string;
+  number: string | null;
+  status: string | null;
+  amount: number;
+  currency: string;
+  created: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  invoicePdf: string | null;
+  hostedInvoiceUrl: string | null;
+}
+
 export default function Plans() {
   const navigate = useNavigate();
   const { user, role, loading, profileId } = useAuth();
@@ -38,6 +51,7 @@ export default function Plans() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
 
@@ -85,6 +99,9 @@ export default function Plans() {
       if (error) throw error;
       if (data?.subscription) {
         setSubscription(data.subscription);
+      }
+      if (data?.invoices) {
+        setInvoices(data.invoices);
       }
     } catch (error) {
       console.error('Failed to fetch subscription:', error);
@@ -284,6 +301,96 @@ export default function Plans() {
                     Cancel Auto-Renewal
                   </Button>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Billing History Section */}
+        {!subscriptionLoading && invoices.length > 0 && (
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Receipt className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="font-display text-lg">Billing History</CardTitle>
+                  <CardDescription>Your past invoices and receipts</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-lg border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>Invoice</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">
+                          {invoice.number || invoice.id.slice(0, 8)}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(invoice.created).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          {new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: invoice.currency.toUpperCase()
+                          }).format(invoice.amount / 100)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline" 
+                            className={
+                              invoice.status === 'paid' 
+                                ? 'bg-success/10 text-success border-success/20' 
+                                : invoice.status === 'open'
+                                ? 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400'
+                                : 'bg-muted text-muted-foreground'
+                            }
+                          >
+                            {invoice.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {invoice.hostedInvoiceUrl && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(invoice.hostedInvoiceUrl!, '_blank')}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {invoice.invoicePdf && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(invoice.invoicePdf!, '_blank')}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
