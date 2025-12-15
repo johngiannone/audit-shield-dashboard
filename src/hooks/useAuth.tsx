@@ -13,6 +13,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string, role: AppRole, referralCode?: string | null) => Promise<{ error: Error | null }>;
   signInWithLinkedIn: () => Promise<{ error: Error | null }>;
+  signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -53,11 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const isOAuthProvider = (provider: string | undefined) => {
+    return provider === 'linkedin_oidc' || provider === 'google';
+  };
+
   const handleOAuthUserSetup = async (session: Session) => {
     const userId = session.user.id;
     const provider = session.user.app_metadata?.provider;
     
-    if (provider === 'linkedin_oidc') {
+    if (isOAuthProvider(provider)) {
       const fullName = session.user.user_metadata?.full_name || 
                        session.user.user_metadata?.name || '';
       const avatarUrl = session.user.user_metadata?.avatar_url || 
@@ -73,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId);
 
       // Handle referral code preserved before OAuth redirect
-      const refCode = localStorage.getItem('linkedin_referral_code');
+      const refCode = localStorage.getItem('oauth_referral_code');
       if (refCode) {
         const { data: referrerProfile } = await supabase
           .from('profiles')
@@ -87,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .update({ referred_by: referrerProfile.id })
             .eq('user_id', userId);
         }
-        localStorage.removeItem('linkedin_referral_code');
+        localStorage.removeItem('oauth_referral_code');
       }
 
       // Ensure user has a role (default to 'client' for OAuth signups)
@@ -155,13 +160,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signInWithLinkedIn = async () => {
-    // Preserve referral code before OAuth redirect
+  const signInWithGoogle = async () => {
+    preserveReferralCode();
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth`,
+      },
+    });
+    return { error };
+  };
+
+  const preserveReferralCode = () => {
     const refCode = sessionStorage.getItem('referral_code') || 
                     localStorage.getItem('audit_referrer');
     if (refCode) {
-      localStorage.setItem('linkedin_referral_code', refCode);
+      localStorage.setItem('oauth_referral_code', refCode);
     }
+  };
+
+  const signInWithLinkedIn = async () => {
+    preserveReferralCode();
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'linkedin_oidc',
@@ -233,7 +253,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, profileId, loading, signIn, signUp, signInWithLinkedIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, profileId, loading, signIn, signUp, signInWithLinkedIn, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
