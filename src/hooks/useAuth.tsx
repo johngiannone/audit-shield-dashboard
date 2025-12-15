@@ -12,6 +12,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string, role: AppRole, referralCode?: string | null) => Promise<{ error: Error | null }>;
+  signInWithLinkedIn: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -52,6 +53,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const handleOAuthUserSetup = async (session: Session) => {
+    const userId = session.user.id;
+    const provider = session.user.app_metadata?.provider;
+    
+    if (provider === 'linkedin_oidc') {
+      const fullName = session.user.user_metadata?.full_name || 
+                       session.user.user_metadata?.name || '';
+      const avatarUrl = session.user.user_metadata?.avatar_url || 
+                        session.user.user_metadata?.picture || '';
+
+      // Update profile with LinkedIn data
+      await supabase
+        .from('profiles')
+        .update({ 
+          full_name: fullName,
+          avatar_url: avatarUrl 
+        })
+        .eq('user_id', userId);
+
+      // Handle referral code preserved before OAuth redirect
+      const refCode = localStorage.getItem('linkedin_referral_code');
+      if (refCode) {
+        const { data: referrerProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('referral_code', refCode.toUpperCase())
+          .maybeSingle();
+
+        if (referrerProfile) {
+          await supabase
+            .from('profiles')
+            .update({ referred_by: referrerProfile.id })
+            .eq('user_id', userId);
+        }
+        localStorage.removeItem('linkedin_referral_code');
+      }
+
+      // Ensure user has a role (default to 'client' for OAuth signups)
+      const { data: existingRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!existingRole) {
+        await supabase.from('user_roles').insert({
+          user_id: userId,
+          role: 'client',
+        });
+      }
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -64,6 +118,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => {
             fetchUserRole(session.user.id);
             fetchProfileId(session.user.id);
+            
+            // Handle OAuth user setup if this is a sign-in event
+            if (event === 'SIGNED_IN') {
+              handleOAuthUserSetup(session);
+            }
           }, 0);
         } else {
           setRole(null);
@@ -92,6 +151,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
+    });
+    return { error };
+  };
+
+  const signInWithLinkedIn = async () => {
+    // Preserve referral code before OAuth redirect
+    const refCode = sessionStorage.getItem('referral_code') || 
+                    localStorage.getItem('audit_referrer');
+    if (refCode) {
+      localStorage.setItem('linkedin_referral_code', refCode);
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'linkedin_oidc',
+      options: {
+        redirectTo: `${window.location.origin}/auth`,
+      },
     });
     return { error };
   };
@@ -157,7 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, profileId, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, profileId, loading, signIn, signUp, signInWithLinkedIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

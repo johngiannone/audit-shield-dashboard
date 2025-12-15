@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Shield, Mail, Lock, User, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
+import { LinkedInIcon } from '@/components/icons/LinkedInIcon';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -26,10 +27,11 @@ const signupSchema = z.object({
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signIn, signUp, user, loading } = useAuth();
+  const { signIn, signUp, signInWithLinkedIn, user, loading } = useAuth();
   const { toast } = useToast();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLinkedInLoading, setIsLinkedInLoading] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ fullName: '', email: '', password: '', role: 'client' as 'client' | 'agent' });
 
@@ -46,6 +48,20 @@ export default function Auth() {
       navigate('/dashboard');
     }
   }, [user, loading, navigate]);
+
+  const handleLinkedInSignIn = async () => {
+    setIsLinkedInLoading(true);
+    const { error } = await signInWithLinkedIn();
+    if (error) {
+      setIsLinkedInLoading(false);
+      toast({
+        title: 'LinkedIn Sign In Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+    // Don't reset loading - we're redirecting to LinkedIn
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,6 +145,41 @@ export default function Auth() {
     );
   }
 
+  const LinkedInButton = ({ disabled }: { disabled?: boolean }) => (
+    <Button 
+      type="button"
+      variant="outline"
+      className="w-full bg-[#0A66C2] hover:bg-[#004182] text-white border-0"
+      onClick={handleLinkedInSignIn}
+      disabled={disabled || isLinkedInLoading}
+    >
+      {isLinkedInLoading ? (
+        <>
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          Connecting...
+        </>
+      ) : (
+        <>
+          <LinkedInIcon className="mr-2 h-5 w-5" />
+          Continue with LinkedIn
+        </>
+      )}
+    </Button>
+  );
+
+  const Divider = () => (
+    <div className="relative my-6">
+      <div className="absolute inset-0 flex items-center">
+        <span className="w-full border-t" />
+      </div>
+      <div className="relative flex justify-center text-xs uppercase">
+        <span className="bg-card px-2 text-muted-foreground">
+          Or continue with email
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-secondary via-background to-secondary p-4">
       <div className="w-full max-w-md animate-slide-up">
@@ -157,6 +208,9 @@ export default function Auth() {
                 <CardDescription className="mb-6">
                   Enter your credentials to access your account
                 </CardDescription>
+                
+                <LinkedInButton disabled={isSubmitting} />
+                <Divider />
                 
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
@@ -191,7 +245,7 @@ export default function Auth() {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  <Button type="submit" className="w-full" disabled={isSubmitting || isLinkedInLoading}>
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -210,6 +264,9 @@ export default function Auth() {
                 <CardDescription className="mb-6">
                   Get started with Return Shield protection
                 </CardDescription>
+                
+                <LinkedInButton disabled={isSubmitting} />
+                <Divider />
                 
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
@@ -298,7 +355,7 @@ export default function Auth() {
                     </RadioGroup>
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  <Button type="submit" className="w-full" disabled={isSubmitting || isLinkedInLoading}>
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
