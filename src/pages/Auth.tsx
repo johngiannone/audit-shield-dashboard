@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,12 +25,21 @@ const signupSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signIn, signUp, user, loading } = useAuth();
   const { toast } = useToast();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [signupForm, setSignupForm] = useState({ fullName: '', email: '', password: '', role: 'client' as 'client' | 'agent' });
+
+  // Capture referral code from URL and store in sessionStorage
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      sessionStorage.setItem('referral_code', refCode);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (user && !loading) {
@@ -80,8 +89,15 @@ export default function Auth() {
     }
 
     setIsSubmitting(true);
-    const { error } = await signUp(signupForm.email, signupForm.password, signupForm.fullName, signupForm.role);
+    // Get referral code from sessionStorage
+    const referralCode = sessionStorage.getItem('referral_code');
+    const { error } = await signUp(signupForm.email, signupForm.password, signupForm.fullName, signupForm.role, referralCode);
     setIsSubmitting(false);
+    
+    // Clear referral code after signup attempt
+    if (!error) {
+      sessionStorage.removeItem('referral_code');
+    }
 
     if (error) {
       if (error.message.includes('already registered')) {

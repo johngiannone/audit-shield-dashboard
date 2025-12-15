@@ -409,32 +409,49 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          affiliate_status: string | null
           created_at: string
           full_name: string | null
           id: string
           phone: string | null
+          referral_code: string | null
+          referred_by: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           address?: string | null
+          affiliate_status?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
           phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           address?: string | null
+          affiliate_status?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
           phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       referral_visits: {
         Row: {
@@ -486,6 +503,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_referral_code: { Args: never; Returns: string }
       get_profile_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
