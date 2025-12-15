@@ -6,6 +6,8 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Users, 
@@ -18,7 +20,9 @@ import {
   FileText,
   Loader2,
   Check,
-  ExternalLink
+  ExternalLink,
+  Send,
+  UserPlus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, subDays } from 'date-fns';
@@ -38,9 +42,14 @@ export default function PartnerProgram() {
 
   const [loading, setLoading] = useState(true);
   const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('');
   const [recruits, setRecruits] = useState<Recruit[]>([]);
   const [activeCount, setActiveCount] = useState(0);
   const [copied, setCopied] = useState(false);
+  
+  // Invite form state
+  const [inviteEmails, setInviteEmails] = useState('');
+  const [sendingInvites, setSendingInvites] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -62,15 +71,16 @@ export default function PartnerProgram() {
     if (!profileId) return;
 
     try {
-      // Fetch user's referral code
+      // Fetch user's referral code and name
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('referral_code')
+        .select('referral_code, full_name')
         .eq('id', profileId)
         .maybeSingle();
 
       if (profileError) throw profileError;
       setReferralCode(profile?.referral_code || null);
+      setUserName(profile?.full_name || 'A colleague');
 
       // Fetch recruits (users referred by this user)
       const { data: recruitData, error: recruitsError } = await supabase
@@ -141,6 +151,64 @@ export default function PartnerProgram() {
     return <Badge variant="secondary" className="text-muted-foreground">Inactive</Badge>;
   };
 
+  const handleSendInvites = async () => {
+    if (!inviteEmails.trim() || !referralCode) return;
+
+    // Parse emails (comma, semicolon, or newline separated)
+    const emails = inviteEmails
+      .split(/[,;\n]+/)
+      .map(e => e.trim().toLowerCase())
+      .filter(e => e.length > 0 && e.includes('@'));
+
+    if (emails.length === 0) {
+      toast({
+        title: 'No valid emails',
+        description: 'Please enter at least one valid email address.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (emails.length > 20) {
+      toast({
+        title: 'Too many emails',
+        description: 'Please enter no more than 20 email addresses at a time.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSendingInvites(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('send-partner-invites', {
+        body: {
+          emails,
+          inviter_name: userName,
+          referral_code: referralCode,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Invites sent!',
+        description: `Successfully sent ${data.sent} invite${data.sent !== 1 ? 's' : ''}${data.failed > 0 ? `. ${data.failed} failed.` : '.'}`,
+      });
+
+      setInviteEmails('');
+    } catch (error: any) {
+      console.error('Error sending invites:', error);
+      toast({
+        title: 'Failed to send invites',
+        description: error.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingInvites(false);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <DashboardLayout>
@@ -207,6 +275,52 @@ export default function PartnerProgram() {
                 </Button>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Invite Colleagues Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Invite Colleagues
+            </CardTitle>
+            <CardDescription>
+              Send personalized invitation emails to other tax preparers
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="invite-emails">Email Addresses</Label>
+              <Textarea
+                id="invite-emails"
+                placeholder="Enter email addresses separated by commas, semicolons, or new lines&#10;e.g., john@example.com, jane@example.com"
+                value={inviteEmails}
+                onChange={(e) => setInviteEmails(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Maximum 20 emails per batch. Each recipient will receive an invite with your referral link.
+              </p>
+            </div>
+            <Button 
+              onClick={handleSendInvites}
+              disabled={sendingInvites || !inviteEmails.trim() || !referralCode}
+              className="gap-2"
+            >
+              {sendingInvites ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  Send Invites
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
 
