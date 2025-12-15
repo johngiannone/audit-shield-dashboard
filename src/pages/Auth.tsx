@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Shield, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Shield, Mail, Lock, User, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { LinkedInIcon } from '@/components/icons/LinkedInIcon';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -27,7 +28,7 @@ const signupSchema = z.object({
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signIn, signUp, signInWithLinkedIn, signInWithGoogle, signInWithApple, resetPassword, updatePassword, user, loading } = useAuth();
+  const { signIn, signUp, signInWithLinkedIn, signInWithGoogle, signInWithApple, resetPassword, updatePassword, resendVerificationEmail, user, loading } = useAuth();
   const { toast } = useToast();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,6 +39,8 @@ export default function Auth() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
 
   // Check if this is a password reset callback
   useEffect(() => {
@@ -212,6 +215,8 @@ export default function Auth() {
     // Clear referral code after signup attempt
     if (!error) {
       sessionStorage.removeItem('referral_code');
+      // Show verification reminder
+      setPendingVerificationEmail(signupForm.email);
     }
 
     if (error) {
@@ -230,8 +235,29 @@ export default function Auth() {
       }
     } else {
       toast({
-        title: 'Welcome!',
-        description: 'Your account has been created successfully.',
+        title: 'Check Your Email',
+        description: 'We sent you a verification link to confirm your account.',
+      });
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!pendingVerificationEmail) return;
+    
+    setIsResending(true);
+    const { error } = await resendVerificationEmail(pendingVerificationEmail);
+    setIsResending(false);
+    
+    if (error) {
+      toast({
+        title: 'Failed to Resend',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Email Sent',
+        description: 'We sent another verification link to your email.',
       });
     }
   };
@@ -342,6 +368,43 @@ export default function Auth() {
     </div>
   );
 
+  const EmailVerificationBanner = () => (
+    <Alert className="mb-6 border-primary/20 bg-primary/5">
+      <Mail className="h-4 w-4" />
+      <AlertTitle>Verify your email</AlertTitle>
+      <AlertDescription className="mt-2">
+        <p className="mb-3">
+          We sent a verification link to <strong>{pendingVerificationEmail}</strong>. 
+          Please check your inbox and click the link to activate your account.
+        </p>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleResendVerification}
+            disabled={isResending}
+          >
+            {isResending ? (
+              <>
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              'Resend verification email'
+            )}
+          </Button>
+          <button
+            type="button"
+            className="text-sm text-muted-foreground hover:text-foreground"
+            onClick={() => setPendingVerificationEmail(null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      </AlertDescription>
+    </Alert>
+  );
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-secondary via-background to-secondary p-4">
       <div className="w-full max-w-md animate-slide-up">
@@ -353,6 +416,8 @@ export default function Auth() {
           <h1 className="font-display text-3xl font-bold text-foreground">Return Shield</h1>
           <p className="text-muted-foreground mt-1">Tax Defense Portal</p>
         </div>
+
+        {pendingVerificationEmail && <EmailVerificationBanner />}
 
         <Card className="shadow-xl border-0">
           <Tabs defaultValue="login" className="w-full">
