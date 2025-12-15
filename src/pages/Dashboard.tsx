@@ -5,8 +5,9 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
-import { FileText, AlertTriangle, CheckCircle, Clock, ArrowRight, Inbox, Briefcase, Loader2 } from 'lucide-react';
+import { FileText, AlertTriangle, CheckCircle, Clock, ArrowRight, Inbox, Briefcase, Loader2, Mail, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ReferralPromoCard } from '@/components/dashboard/ReferralPromoCard';
 
@@ -28,12 +29,14 @@ interface Plan {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, resendVerificationEmail } = useAuth();
   const { toast } = useToast();
   
   const [cases, setCases] = useState<Case[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [isResending, setIsResending] = useState(false);
+  const [dismissedVerificationBanner, setDismissedVerificationBanner] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -102,9 +105,75 @@ export default function Dashboard() {
     );
   }
 
+  const isEmailUnverified = user && !user.email_confirmed_at;
+
+  const handleResendVerification = async () => {
+    if (!user?.email) return;
+    
+    setIsResending(true);
+    const { error } = await resendVerificationEmail(user.email);
+    setIsResending(false);
+    
+    if (error) {
+      toast({
+        title: 'Failed to Resend',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Email Sent',
+        description: 'We sent a verification link to your email.',
+      });
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
+        {/* Email Verification Banner */}
+        {isEmailUnverified && !dismissedVerificationBanner && (
+          <Alert className="border-warning/30 bg-warning/10">
+            <Mail className="h-4 w-4 text-warning" />
+            <AlertTitle className="text-warning">Email not verified</AlertTitle>
+            <AlertDescription className="mt-2">
+              <p className="text-muted-foreground mb-3">
+                Please verify your email address ({user.email}) to ensure you receive important notifications about your cases.
+              </p>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResendVerification}
+                  disabled={isResending}
+                  className="border-warning/30 hover:bg-warning/10"
+                >
+                  {isResending ? (
+                    <>
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    'Resend verification email'
+                  )}
+                </Button>
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                  onClick={() => setDismissedVerificationBanner(true)}
+                >
+                  Dismiss
+                </button>
+              </div>
+            </AlertDescription>
+            <button
+              onClick={() => setDismissedVerificationBanner(true)}
+              className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </Alert>
+        )}
         {/* Welcome Section */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
