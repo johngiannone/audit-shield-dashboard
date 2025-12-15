@@ -45,6 +45,13 @@ export default function Dashboard() {
     setDismissedVerificationBanner(true);
   };
 
+  // Clear dismissed state when email becomes verified
+  useEffect(() => {
+    if (user?.email_confirmed_at) {
+      localStorage.removeItem('verification_banner_dismissed');
+    }
+  }, [user?.email_confirmed_at]);
+
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
