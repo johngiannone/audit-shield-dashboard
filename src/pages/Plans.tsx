@@ -103,8 +103,20 @@ export default function Plans() {
   const fetchSubscription = async () => {
     setSubscriptionLoading(true);
     try {
+      // First verify we have a valid session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.log('No valid session for subscription check');
+        setSubscriptionLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('check-subscription');
-      if (error) throw error;
+      if (error) {
+        // Don't throw for auth errors - user might not have a subscription
+        console.error('Subscription check error:', error);
+        return;
+      }
       if (data?.subscription) {
         setSubscription(data.subscription);
       }
