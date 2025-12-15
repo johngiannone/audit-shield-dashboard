@@ -33,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Build the referral link
-    const baseUrl = Deno.env.get("SUPABASE_URL")?.replace('.supabase.co', '.lovableproject.com') || "https://taxaudithelp.com";
+    const baseUrl = "https://returnshield.com";
     const referralLink = `${baseUrl}/auth?ref=${referral_code}`;
 
     const results: { email: string; success: boolean; error?: string }[] = [];
@@ -60,13 +60,13 @@ const handler = async (req: Request): Promise<Response> => {
           body: JSON.stringify({
             from: "Return Shield <onboarding@resend.dev>",
             to: [trimmedEmail],
-            subject: `${inviter_name} has invited you to join the TaxAuditHelp network`,
+            subject: `${inviter_name} has invited you to join the Return Shield network`,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
                 <!-- Header -->
                 <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">🛡️ You're Invited!</h1>
-                  <p style="color: #b8d4f0; margin: 10px 0 0 0; font-size: 16px;">Join the TaxAuditHelp Network</p>
+                  <p style="color: #b8d4f0; margin: 10px 0 0 0; font-size: 16px;">Join the Return Shield Network</p>
                 </div>
                 
                 <!-- Main Content -->
@@ -76,7 +76,7 @@ const handler = async (req: Request): Promise<Response> => {
                   </p>
                   
                   <p style="font-size: 16px; line-height: 1.6; color: #555;">
-                    <strong>${inviter_name}</strong> has invited you to join the TaxAuditHelp network – a community of tax professionals offering premium audit defense services to their clients.
+                    <strong>${inviter_name}</strong> has invited you to join the Return Shield network – a community of tax professionals offering premium audit defense services to their clients.
                   </p>
                   
                   <!-- Benefits Box -->
