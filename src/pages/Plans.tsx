@@ -10,6 +10,7 @@ import { FileText, Loader2, Shield, Calendar, ShieldCheck, Briefcase, CheckCircl
 import { useToast } from '@/hooks/use-toast';
 import { usePurchasePlan, PlanLevel } from '@/hooks/usePurchasePlan';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { CardBrandIcon } from '@/components/billing/CardBrandIcon';
 interface Plan {
   id: string;
   tax_year: number;
@@ -282,12 +283,10 @@ export default function Plans() {
                 </div>
                 {subscription.paymentMethod ? (
                   <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <div className="w-10 h-7 bg-gradient-to-br from-slate-700 to-slate-900 rounded flex items-center justify-center">
-                      <CreditCard className="h-4 w-4 text-white" />
-                    </div>
+                    <CardBrandIcon brand={subscription.paymentMethod.brand} className="w-12 h-8 rounded shadow-sm" />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground capitalize">
-                        {subscription.paymentMethod.brand} •••• {subscription.paymentMethod.last4}
+                      <p className="text-sm font-medium text-foreground">
+                        •••• {subscription.paymentMethod.last4}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Expires {subscription.paymentMethod.expMonth.toString().padStart(2, '0')}/{subscription.paymentMethod.expYear}
