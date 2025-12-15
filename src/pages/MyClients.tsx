@@ -11,16 +11,18 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, Search, Mail, Phone, Edit2, Loader2, UserPlus, RefreshCw } from 'lucide-react';
+import { Users, Search, Mail, Phone, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ManagedClient {
   id: string;
   user_id: string;
   full_name: string | null;
+  email: string | null;
   phone: string | null;
   created_at: string;
   referral_code: string | null;
+  is_activated?: boolean;
 }
 
 export default function MyClients() {
@@ -50,12 +52,23 @@ export default function MyClients() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, full_name, phone, created_at, referral_code')
+        .select('id, user_id, full_name, email, phone, created_at, referral_code')
         .eq('managed_by', profileId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setClients(data || []);
+      
+      // Check activation status for each client
+      const clientsWithStatus = await Promise.all(
+        (data || []).map(async (client) => {
+          const { data: activated } = await supabase.rpc('is_user_activated', { 
+            p_user_id: client.user_id 
+          });
+          return { ...client, is_activated: activated ?? false };
+        })
+      );
+      
+      setClients(clientsWithStatus);
     } catch (error) {
       console.error('Error fetching clients:', error);
       toast({
@@ -120,6 +133,7 @@ export default function MyClients() {
     const query = searchQuery.toLowerCase();
     return (
       client.full_name?.toLowerCase().includes(query) ||
+      client.email?.toLowerCase().includes(query) ||
       client.phone?.toLowerCase().includes(query) ||
       client.referral_code?.toLowerCase().includes(query)
     );
@@ -245,9 +259,10 @@ export default function MyClients() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
                       <TableHead>Phone</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Enrolled</TableHead>
-                      <TableHead>Referral Code</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -260,6 +275,16 @@ export default function MyClients() {
                           </div>
                         </TableCell>
                         <TableCell>
+                          {client.email ? (
+                            <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                              <Mail className="h-3 w-3" />
+                              {client.email}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground/50">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           {client.phone ? (
                             <div className="flex items-center gap-1 text-muted-foreground">
                               <Phone className="h-3 w-3" />
@@ -270,18 +295,22 @@ export default function MyClients() {
                           )}
                         </TableCell>
                         <TableCell>
+                          {client.is_activated ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Pending
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <span className="text-sm text-muted-foreground">
                             {format(new Date(client.created_at), 'MMM d, yyyy')}
                           </span>
-                        </TableCell>
-                        <TableCell>
-                          {client.referral_code ? (
-                            <Badge variant="outline" className="font-mono text-xs">
-                              {client.referral_code}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground/50">—</span>
-                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button 

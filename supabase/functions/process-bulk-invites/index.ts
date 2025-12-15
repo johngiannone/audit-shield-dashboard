@@ -109,12 +109,13 @@ const handler = async (req: Request): Promise<Response> => {
 
         console.log(`User created: ${userData.user.id}`);
 
-        // Step 2: Create profile with managed_by
+        // Step 2: Create profile with managed_by and email
         const { error: profileError } = await supabaseAdmin
           .from("profiles")
           .upsert({
             user_id: userData.user.id,
             full_name: fullName,
+            email: client.email,
             phone: client.phone || null,
             managed_by: agentProfileId,
           }, {
