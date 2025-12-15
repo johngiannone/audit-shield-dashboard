@@ -30,7 +30,8 @@ import {
   Banknote,
   CheckCircle,
   AlertCircle,
-  Pencil
+  Pencil,
+  Download
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -217,6 +218,40 @@ export default function AffiliateAdmin() {
     ? ((stats.totalConversions / stats.totalClicks) * 100).toFixed(1)
     : '0';
 
+  const exportToCSV = () => {
+    const headers = ['Name', 'Referral Code', 'Clicks', 'Conversions', 'Commission Rate', 'Total Earnings', 'Payout Status', 'Joined'];
+    const rows = affiliates.map(affiliate => [
+      affiliate.profile?.full_name || 'Unknown',
+      affiliate.referral_code,
+      affiliate.clicks,
+      affiliate.conversions,
+      `${(affiliate.commission_rate * 100).toFixed(0)}%`,
+      `$${affiliate.total_earnings.toFixed(2)}`,
+      affiliate.stripe_connect_id ? 'Connected' : affiliate.total_earnings > 0 ? 'Pending Setup' : 'No Earnings',
+      format(new Date(affiliate.created_at), 'yyyy-MM-dd')
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `affiliates_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: 'Export complete',
+      description: `Exported ${affiliates.length} affiliates to CSV`,
+    });
+  };
+
   if (loading || !user || role !== 'agent') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -320,14 +355,26 @@ export default function AffiliateAdmin() {
                 <CardTitle className="font-display">All Affiliates</CardTitle>
                 <CardDescription>View and manage affiliate accounts</CardDescription>
               </div>
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search affiliates..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
+              <div className="flex items-center gap-3">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search affiliates..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={exportToCSV}
+                  disabled={affiliates.length === 0}
+                  className="gap-2 shrink-0"
+                >
+                  <Download className="h-4 w-4" />
+                  Export CSV
+                </Button>
               </div>
             </div>
           </CardHeader>
