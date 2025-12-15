@@ -1,4 +1,4 @@
-import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, BarChart3, Users } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, BarChart3, Users, Handshake } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -29,6 +29,7 @@ const agentNavItems = [
   { title: 'My Caseload', url: '/caseload', icon: Briefcase },
   { title: 'Analytics', url: '/analytics', icon: BarChart3 },
   { title: 'Affiliates', url: '/admin/affiliates', icon: Users },
+  { title: 'Partner Program', url: '/partner-program', icon: Handshake },
 ];
 
 export function AppSidebar() {
