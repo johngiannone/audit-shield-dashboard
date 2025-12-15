@@ -412,6 +412,7 @@ export type Database = {
           affiliate_status: string | null
           avatar_url: string | null
           created_at: string
+          email: string | null
           full_name: string | null
           id: string
           managed_by: string | null
@@ -426,6 +427,7 @@ export type Database = {
           affiliate_status?: string | null
           avatar_url?: string | null
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id?: string
           managed_by?: string | null
@@ -440,6 +442,7 @@ export type Database = {
           affiliate_status?: string | null
           avatar_url?: string | null
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id?: string
           managed_by?: string | null
@@ -525,6 +528,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_user_activated: { Args: { p_user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "client" | "agent"
