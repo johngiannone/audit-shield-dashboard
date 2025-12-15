@@ -39,8 +39,8 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const { planType, retroactiveYears, referralCode } = await req.json();
-    logStep("Request params", { planType, retroactiveYears, referralCode });
+    const { planType, retroactiveYears, referralCode, promoCode } = await req.json();
+    logStep("Request params", { planType, retroactiveYears, referralCode, promoCode });
 
     if (!planType || !["individual", "business"].includes(planType)) {
       throw new Error("Invalid plan type");
@@ -93,7 +93,7 @@ serve(async (req) => {
       logStep("Adding referral code to checkout", { referralCode });
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: any = {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: lineItems,
@@ -105,7 +105,33 @@ serve(async (req) => {
       subscription_data: {
         metadata,
       },
-    });
+      allow_promotion_codes: !promoCode, // Allow manual entry if no code provided
+    };
+
+    // If promo code provided, try to find and apply it
+    if (promoCode) {
+      try {
+        const promotionCodes = await stripe.promotionCodes.list({
+          code: promoCode,
+          active: true,
+          limit: 1,
+        });
+        
+        if (promotionCodes.data.length > 0) {
+          sessionParams.discounts = [{ promotion_code: promotionCodes.data[0].id }];
+          logStep("Applied promo code", { promoCode, promotionCodeId: promotionCodes.data[0].id });
+        } else {
+          logStep("Promo code not found or inactive", { promoCode });
+          // Still allow checkout, but without the discount
+          sessionParams.allow_promotion_codes = true;
+        }
+      } catch (promoError) {
+        logStep("Error looking up promo code", { promoCode, error: promoError });
+        sessionParams.allow_promotion_codes = true;
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     logStep("Checkout session created", { sessionId: session.id, url: session.url });
 

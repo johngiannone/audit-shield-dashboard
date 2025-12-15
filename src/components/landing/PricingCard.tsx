@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Briefcase, CheckCircle, ArrowRight, Info, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Shield, Briefcase, CheckCircle, ArrowRight, Info, Loader2, AlertTriangle, ShieldCheck, Tag } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,6 +26,7 @@ const RETROACTIVE_YEARS = [
 export function PricingCard({ type }: PricingCardProps) {
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -58,6 +60,7 @@ export function PricingCard({ type }: PricingCardProps) {
           planType: type,
           retroactiveYears: selectedYears,
           referralCode, // Pass to Stripe metadata
+          promoCode: promoCode.trim() || undefined,
         },
       });
 
@@ -190,8 +193,20 @@ export function PricingCard({ type }: PricingCardProps) {
           )}
         </div>
 
-        {/* Dynamic Total Button */}
-        <div className="mt-6 pt-4 border-t border-border">
+        {/* Promo Code */}
+        <div className="mt-6 pt-4 border-t border-border space-y-4">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Promo code"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                className="pl-9 uppercase"
+              />
+            </div>
+          </div>
+          
           <Button 
             className="w-full" 
             size="lg" 
@@ -208,7 +223,7 @@ export function PricingCard({ type }: PricingCardProps) {
             )}
           </Button>
           {addonTotal > 0 && (
-            <p className="text-xs text-muted-foreground text-center mt-2">
+            <p className="text-xs text-muted-foreground text-center">
               Base ${basePrice} + ${addonTotal} retroactive coverage
             </p>
           )}
