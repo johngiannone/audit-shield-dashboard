@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { FileText, AlertTriangle, CheckCircle, Clock, ArrowRight, Inbox, Briefcase, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ReferralPromoCard } from '@/components/dashboard/ReferralPromoCard';
 
 interface Case {
   id: string;
@@ -223,6 +224,11 @@ export default function Dashboard() {
             </>
           )}
         </div>
+
+        {/* Referral Promo Card - Clients Only */}
+        {role === 'client' && user && (
+          <ReferralPromoCard userId={user.id} />
+        )}
 
         {/* Recent Activity */}
         <Card className="border-0 shadow-md">
