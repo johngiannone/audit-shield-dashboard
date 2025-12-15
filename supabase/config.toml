@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.send-partner-invites]
 verify_jwt = true
+
+[functions.check-subscription]
+verify_jwt = true
+
+[functions.customer-portal]
+verify_jwt = true
