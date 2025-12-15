@@ -27,7 +27,6 @@ import {
   TrendingUp,
   Loader2,
   Search,
-  ExternalLink,
   Banknote,
   CheckCircle,
   AlertCircle,
@@ -35,6 +34,13 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { AffiliatePerformanceCharts } from '@/components/affiliates/AffiliatePerformanceCharts';
+
+interface ReferralVisit {
+  created_at: string;
+  converted: boolean;
+  referral_code: string;
+}
 
 interface Affiliate {
   id: string;
@@ -65,6 +71,7 @@ export default function AffiliateAdmin() {
   const { toast } = useToast();
   
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
+  const [referralVisits, setReferralVisits] = useState<ReferralVisit[]>([]);
   const [stats, setStats] = useState<AffiliateStats>({
     totalAffiliates: 0,
     totalClicks: 0,
@@ -153,7 +160,9 @@ export default function AffiliateAdmin() {
       // Fetch referral visits for each affiliate
       const { data: visitsData } = await supabase
         .from('referral_visits')
-        .select('referral_code, converted');
+        .select('referral_code, converted, created_at');
+
+      setReferralVisits(visitsData || []);
 
       // Map data together
       const affiliatesWithStats = affiliatesData?.map(affiliate => {
@@ -296,6 +305,12 @@ export default function AffiliateAdmin() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Performance Charts */}
+        <AffiliatePerformanceCharts 
+          referralVisits={referralVisits} 
+          affiliates={affiliates} 
+        />
 
         {/* Affiliates Table */}
         <Card className="border-0 shadow-md">
