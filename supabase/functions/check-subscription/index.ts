@@ -120,11 +120,16 @@ serve(async (req) => {
       }
     }
 
-    // Get last 4 digits of card if available
-    let last4 = null;
+    // Get payment method details if available
+    let paymentMethodDetails = null;
     const paymentMethod = subscription.default_payment_method;
     if (paymentMethod && typeof paymentMethod !== 'string' && paymentMethod.card) {
-      last4 = paymentMethod.card.last4;
+      paymentMethodDetails = {
+        last4: paymentMethod.card.last4,
+        brand: paymentMethod.card.brand,
+        expMonth: paymentMethod.card.exp_month,
+        expYear: paymentMethod.card.exp_year,
+      };
     }
 
     logStep("Subscription details retrieved", { 
@@ -144,7 +149,7 @@ serve(async (req) => {
         productId,
         currentPeriodEnd,
         cancelAtPeriodEnd,
-        last4,
+        paymentMethod: paymentMethodDetails,
       },
       invoices
     }), {

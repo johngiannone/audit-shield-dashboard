@@ -18,6 +18,13 @@ interface Plan {
   created_at: string;
 }
 
+interface PaymentMethodInfo {
+  last4: string;
+  brand: string;
+  expMonth: number;
+  expYear: number;
+}
+
 interface SubscriptionInfo {
   id: string;
   status: string;
@@ -26,7 +33,7 @@ interface SubscriptionInfo {
   productId: string;
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
-  last4: string | null;
+  paymentMethod: PaymentMethodInfo | null;
 }
 
 interface Invoice {
@@ -256,12 +263,44 @@ export default function Plans() {
                 </div>
               </div>
               
-              {subscription.last4 && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border">
-                  <CreditCard className="h-4 w-4" />
-                  <span>Payment method: •••• {subscription.last4}</span>
+              {/* Payment Method Section */}
+              <div className="pt-4 border-t border-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground">Payment Method</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleManageSubscription}
+                    disabled={portalLoading}
+                    className="text-primary hover:text-primary/80"
+                  >
+                    {portalLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    ) : null}
+                    Update Card
+                  </Button>
                 </div>
-              )}
+                {subscription.paymentMethod ? (
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="w-10 h-7 bg-gradient-to-br from-slate-700 to-slate-900 rounded flex items-center justify-center">
+                      <CreditCard className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground capitalize">
+                        {subscription.paymentMethod.brand} •••• {subscription.paymentMethod.last4}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Expires {subscription.paymentMethod.expMonth.toString().padStart(2, '0')}/{subscription.paymentMethod.expYear}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <CreditCard className="h-5 w-5 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">No payment method on file</p>
+                  </div>
+                )}
+              </div>
 
               {subscription.cancelAtPeriodEnd && (
                 <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
