@@ -32,7 +32,7 @@ interface AffiliateStats {
   conversions: number;
 }
 
-const BASE_URL = 'https://app.taxaudithelp.com';
+const BASE_URL = 'https://returnshield.com';
 
 export default function AffiliatePortal() {
   const { user, loading: authLoading } = useAuth();
