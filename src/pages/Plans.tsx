@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { FileText, Loader2, Shield, Calendar, ShieldCheck, Briefcase, CheckCircle, ArrowRight, Star } from 'lucide-react';
+import { FileText, Loader2, Shield, Calendar, ShieldCheck, Briefcase, CheckCircle, ArrowRight, Star, CreditCard, AlertCircle, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePurchasePlan, PlanLevel } from '@/hooks/usePurchasePlan';
 
@@ -18,6 +18,17 @@ interface Plan {
   created_at: string;
 }
 
+interface SubscriptionInfo {
+  id: string;
+  status: string;
+  planName: string;
+  priceId: string;
+  productId: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+  last4: string | null;
+}
+
 export default function Plans() {
   const navigate = useNavigate();
   const { user, role, loading, profileId } = useAuth();
@@ -26,6 +37,9 @@ export default function Plans() {
   
   const [plans, setPlans] = useState<Plan[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -39,6 +53,7 @@ export default function Plans() {
   useEffect(() => {
     if (user && role === 'client') {
       fetchPlans();
+      fetchSubscription();
     }
   }, [user, role]);
 
@@ -63,6 +78,40 @@ export default function Plans() {
     }
   };
 
+  const fetchSubscription = async () => {
+    setSubscriptionLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('check-subscription');
+      if (error) throw error;
+      if (data?.subscription) {
+        setSubscription(data.subscription);
+      }
+    } catch (error) {
+      console.error('Failed to fetch subscription:', error);
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal');
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to open billing portal',
+        variant: 'destructive',
+      });
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
   const handlePurchase = async (planLevel: PlanLevel) => {
     if (!profileId) {
       toast({
@@ -75,7 +124,7 @@ export default function Plans() {
 
     const result = await purchasePlan(profileId, planLevel);
     if (result.success) {
-      fetchPlans(); // Refresh the plans list
+      fetchPlans();
     }
   };
 
@@ -89,6 +138,49 @@ export default function Plans() {
       enterprise: 'bg-primary text-primary-foreground',
     };
     return styles[level] || styles.basic;
+  };
+
+  const getStatusBadge = (status: string, cancelAtPeriodEnd: boolean) => {
+    if (cancelAtPeriodEnd) {
+      return (
+        <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800">
+          Canceling
+        </Badge>
+      );
+    }
+    
+    switch (status) {
+      case 'active':
+        return (
+          <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+            Active
+          </Badge>
+        );
+      case 'trialing':
+        return (
+          <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400">
+            Trial
+          </Badge>
+        );
+      case 'past_due':
+        return (
+          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
+            Past Due
+          </Badge>
+        );
+      case 'canceled':
+        return (
+          <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
+            Canceled
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="bg-muted text-muted-foreground border-border">
+            {status}
+          </Badge>
+        );
+    }
   };
 
   if (loading || !user) {
@@ -108,6 +200,94 @@ export default function Plans() {
             View and manage your audit defense coverage
           </p>
         </div>
+
+        {/* Billing & Subscription Card */}
+        {!subscriptionLoading && subscription && (
+          <Card className="border-0 shadow-md">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="font-display text-lg">Billing & Subscription</CardTitle>
+                  <CardDescription>Manage your subscription and payment method</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Current Plan</p>
+                  <p className="font-semibold text-foreground">{subscription.planName}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <div>{getStatusBadge(subscription.status, subscription.cancelAtPeriodEnd)}</div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    {subscription.cancelAtPeriodEnd ? 'Coverage Ends' : 'Next Renewal'}
+                  </p>
+                  <p className="font-semibold text-foreground">
+                    {new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
+              </div>
+              
+              {subscription.last4 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t border-border">
+                  <CreditCard className="h-4 w-4" />
+                  <span>Payment method: •••• {subscription.last4}</span>
+                </div>
+              )}
+
+              {subscription.cancelAtPeriodEnd && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                      Your subscription is set to cancel
+                    </p>
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      You'll retain access until {new Date(subscription.currentPeriodEnd).toLocaleDateString()}. 
+                      You can reactivate anytime before then.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleManageSubscription}
+                  disabled={portalLoading}
+                >
+                  {portalLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                  )}
+                  Manage Subscription
+                </Button>
+                {!subscription.cancelAtPeriodEnd && (
+                  <Button 
+                    variant="ghost" 
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={handleManageSubscription}
+                    disabled={portalLoading}
+                  >
+                    Cancel Auto-Renewal
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {dataLoading ? (
           <div className="flex items-center justify-center py-16">
@@ -244,43 +424,46 @@ export default function Plans() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {plans.map((plan) => (
-              <Card key={plan.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <FileText className="h-6 w-6 text-primary" />
+          <div className="space-y-6">
+            <h2 className="font-display text-xl font-semibold text-foreground">Your Coverage</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {plans.map((plan) => (
+                <Card key={plan.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <FileText className="h-6 w-6 text-primary" />
+                      </div>
+                      <Badge className={getPlanLevelStyle(plan.plan_level)}>
+                        {plan.plan_level}
+                      </Badge>
                     </div>
-                    <Badge className={getPlanLevelStyle(plan.plan_level)}>
-                      {plan.plan_level}
-                    </Badge>
-                  </div>
-                  <CardTitle className="font-display text-xl mt-4">
-                    Tax Year {plan.tax_year}
-                  </CardTitle>
-                  <CardDescription>
-                    Audit defense coverage
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>{new Date(plan.created_at).toLocaleDateString()}</span>
+                    <CardTitle className="font-display text-xl mt-4">
+                      Tax Year {plan.tax_year}
+                    </CardTitle>
+                    <CardDescription>
+                      Audit defense coverage
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>{new Date(plan.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <Badge 
+                        variant="outline"
+                        className={plan.status === 'active' 
+                          ? 'bg-success/10 text-success border-success/20' 
+                          : 'bg-muted text-muted-foreground'}
+                      >
+                        {plan.status}
+                      </Badge>
                     </div>
-                    <Badge 
-                      variant="outline"
-                      className={plan.status === 'active' 
-                        ? 'bg-success/10 text-success border-success/20' 
-                        : 'bg-muted text-muted-foreground'}
-                    >
-                      {plan.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
       </div>
