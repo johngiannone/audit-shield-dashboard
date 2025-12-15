@@ -14,6 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Users, 
@@ -25,7 +30,8 @@ import {
   ExternalLink,
   Banknote,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Pencil
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -68,6 +74,49 @@ export default function AffiliateAdmin() {
   });
   const [dataLoading, setDataLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingRate, setEditingRate] = useState<string | null>(null);
+  const [newRate, setNewRate] = useState<string>('');
+  const [updatingRate, setUpdatingRate] = useState(false);
+
+  const handleUpdateCommissionRate = async (affiliateId: string) => {
+    const rateValue = parseFloat(newRate);
+    if (isNaN(rateValue) || rateValue < 0 || rateValue > 100) {
+      toast({
+        title: 'Invalid rate',
+        description: 'Please enter a value between 0 and 100',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUpdatingRate(true);
+    try {
+      const { error } = await supabase
+        .from('affiliates')
+        .update({ commission_rate: rateValue / 100 })
+        .eq('id', affiliateId);
+
+      if (error) throw error;
+
+      setAffiliates(prev => prev.map(a => 
+        a.id === affiliateId ? { ...a, commission_rate: rateValue / 100 } : a
+      ));
+      
+      toast({
+        title: 'Commission rate updated',
+        description: `Rate changed to ${rateValue}%`,
+      });
+      setEditingRate(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update commission rate',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingRate(false);
+    }
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -306,7 +355,67 @@ export default function AffiliateAdmin() {
                         <TableCell className="text-center">{affiliate.clicks}</TableCell>
                         <TableCell className="text-center">{affiliate.conversions}</TableCell>
                         <TableCell className="text-center">
-                          {(affiliate.commission_rate * 100).toFixed(0)}%
+                          <Popover 
+                            open={editingRate === affiliate.id} 
+                            onOpenChange={(open) => {
+                              if (open) {
+                                setEditingRate(affiliate.id);
+                                setNewRate((affiliate.commission_rate * 100).toString());
+                              } else {
+                                setEditingRate(null);
+                              }
+                            }}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 px-2 gap-1 hover:bg-muted"
+                              >
+                                {(affiliate.commission_rate * 100).toFixed(0)}%
+                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-48 p-3" align="center">
+                              <div className="space-y-3">
+                                <p className="text-sm font-medium">Edit Commission Rate</p>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    value={newRate}
+                                    onChange={(e) => setNewRate(e.target.value)}
+                                    className="h-8"
+                                    placeholder="20"
+                                  />
+                                  <span className="text-sm text-muted-foreground">%</span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1 h-8"
+                                    onClick={() => setEditingRate(null)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="flex-1 h-8"
+                                    onClick={() => handleUpdateCommissionRate(affiliate.id)}
+                                    disabled={updatingRate}
+                                  >
+                                    {updatingRate ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      'Save'
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         </TableCell>
                         <TableCell className="text-right font-semibold text-success">
                           ${affiliate.total_earnings.toFixed(2)}
