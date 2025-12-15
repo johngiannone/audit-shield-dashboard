@@ -11,7 +11,7 @@ interface AuthContextType {
   profileId: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string, role: AppRole) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, role: AppRole, referralCode?: string | null) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName: string, selectedRole: AppRole) => {
+  const signUp = async (email: string, password: string, fullName: string, selectedRole: AppRole, referralCode?: string | null) => {
     const redirectUrl = `${window.location.origin}/`;
 
     const { data, error } = await supabase.auth.signUp({
@@ -123,6 +123,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (roleError) {
         return { error: new Error('Failed to assign role. Please contact support.') };
+      }
+    }
+
+    // Link referrer if referral code provided
+    if (data.user && referralCode) {
+      // Find the profile that owns this referral code
+      const { data: referrerProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('referral_code', referralCode.toUpperCase())
+        .maybeSingle();
+
+      if (referrerProfile) {
+        // Update the new user's profile with the referrer's ID
+        // Small delay to ensure the profile trigger has created the profile
+        setTimeout(async () => {
+          await supabase
+            .from('profiles')
+            .update({ referred_by: referrerProfile.id })
+            .eq('user_id', data.user!.id);
+        }, 500);
       }
     }
 
