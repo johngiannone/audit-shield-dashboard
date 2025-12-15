@@ -23,6 +23,7 @@ import AffiliatePortal from "./pages/AffiliatePortal";
 import AffiliateAdmin from "./pages/AffiliateAdmin";
 import PartnerProgram from "./pages/PartnerProgram";
 import BulkEnroll from "./pages/BulkEnroll";
+import MyClients from "./pages/MyClients";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -60,6 +61,7 @@ const App = () => (
                 <Route path="/admin/affiliates" element={<AffiliateAdmin />} />
                 <Route path="/partner-program" element={<PartnerProgram />} />
                 <Route path="/bulk-enroll" element={<BulkEnroll />} />
+                <Route path="/my-clients" element={<MyClients />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </ReferralTracker>
