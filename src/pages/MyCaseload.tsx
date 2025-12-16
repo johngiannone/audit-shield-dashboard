@@ -46,7 +46,7 @@ export default function MyCaseload() {
   }, [user, loading, role, navigate]);
 
   useEffect(() => {
-    if (user && role === 'agent') {
+    if (user && role === 'enrolled_agent') {
       fetchMyCases();
     }
   }, [user, role]);

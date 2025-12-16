@@ -129,13 +129,13 @@ export default function AffiliateAdmin() {
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
-    } else if (!loading && role !== 'agent') {
+    } else if (!loading && role !== 'enrolled_agent') {
       navigate('/dashboard');
     }
   }, [user, loading, role, navigate]);
 
   useEffect(() => {
-    if (user && role === 'agent') {
+    if (user && role === 'enrolled_agent') {
       fetchData();
     }
   }, [user, role]);
@@ -252,7 +252,7 @@ export default function AffiliateAdmin() {
     });
   };
 
-  if (loading || !user || role !== 'agent') {
+  if (loading || !user || role !== 'enrolled_agent') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

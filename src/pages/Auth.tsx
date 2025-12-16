@@ -22,7 +22,7 @@ const signupSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
   email: z.string().email('Please enter a valid email address').max(255, 'Email is too long'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['client', 'agent'], { required_error: 'Please select a role' }),
+  role: z.enum(['client'], { required_error: 'Please select a role' }),
 });
 
 export default function Auth() {
@@ -34,7 +34,7 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState<'linkedin' | 'google' | 'apple' | null>(null);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
-  const [signupForm, setSignupForm] = useState({ fullName: '', email: '', password: '', role: 'client' as 'client' | 'agent' });
+  const [signupForm, setSignupForm] = useState({ fullName: '', email: '', password: '', role: 'client' as 'client' });
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [showResetPassword, setShowResetPassword] = useState(false);
@@ -563,43 +563,8 @@ export default function Auth() {
                     </div>
                   </div>
 
-                  <div className="space-y-3">
-                    <Label>I am a...</Label>
-                    <RadioGroup
-                      value={signupForm.role}
-                      onValueChange={(value) => setSignupForm({ ...signupForm, role: value as 'client' | 'agent' })}
-                      className="grid grid-cols-2 gap-4"
-                    >
-                      <div>
-                        <RadioGroupItem
-                          value="client"
-                          id="role-client"
-                          className="peer sr-only"
-                        />
-                        <Label
-                          htmlFor="role-client"
-                          className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                        >
-                          <User className="mb-2 h-6 w-6" />
-                          <span className="text-sm font-medium">Client</span>
-                        </Label>
-                      </div>
-                      <div>
-                        <RadioGroupItem
-                          value="agent"
-                          id="role-agent"
-                          className="peer sr-only"
-                        />
-                        <Label
-                          htmlFor="role-agent"
-                          className="flex flex-col items-center justify-between rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                        >
-                          <Shield className="mb-2 h-6 w-6" />
-                          <span className="text-sm font-medium">Agent</span>
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
+                  {/* Role is fixed to client - Tax Preparers need invite codes */}
+                  <input type="hidden" value="client" />
 
                   <Button type="submit" className="w-full" disabled={isSubmitting || isOAuthLoading !== null}>
                     {isSubmitting ? (

@@ -1,4 +1,4 @@
-import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, BarChart3, Users, Handshake, UserPlus, UsersRound } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, BarChart3, Users, Handshake, UserPlus, UsersRound, Network } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -23,7 +23,7 @@ const clientNavItems = [
   { title: 'Report a Notice', url: '/report', icon: AlertTriangle },
 ];
 
-const agentNavItems = [
+const enrolledAgentNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
   { title: 'Case Queue', url: '/queue', icon: Inbox },
   { title: 'My Caseload', url: '/caseload', icon: Briefcase },
@@ -34,13 +34,31 @@ const agentNavItems = [
   { title: 'Partner Program', url: '/partner-program', icon: Handshake },
 ];
 
+const taxPreparerNavItems = [
+  { title: 'Dashboard', url: '/dashboard', icon: Home },
+  { title: 'My Clients', url: '/my-clients', icon: UsersRound },
+  { title: 'Bulk Enroll', url: '/bulk-enroll', icon: UserPlus },
+  { title: 'Referral Network', url: '/referral-network', icon: Network },
+];
+
 export function AppSidebar() {
   const { role } = useAuth();
   const location = useLocation();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
 
-  const navItems = role === 'agent' ? agentNavItems : clientNavItems;
+  const getNavItems = () => {
+    switch (role) {
+      case 'enrolled_agent':
+        return enrolledAgentNavItems;
+      case 'tax_preparer':
+        return taxPreparerNavItems;
+      default:
+        return clientNavItems;
+    }
+  };
+
+  const navItems = getNavItems();
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">

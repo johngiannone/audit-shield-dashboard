@@ -2,7 +2,7 @@ import { useState, useEffect, createContext, useContext, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-type AppRole = 'client' | 'agent' | null;
+export type AppRole = 'client' | 'enrolled_agent' | 'tax_preparer' | null;
 
 interface AuthContextType {
   user: User | null;
@@ -11,7 +11,7 @@ interface AuthContextType {
   profileId: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string, role: AppRole, referralCode?: string | null) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, role: AppRole, referralCode?: string | null, inviteCode?: string | null) => Promise<{ error: Error | null }>;
   signInWithLinkedIn: () => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signInWithApple: () => Promise<{ error: Error | null }>;
@@ -19,6 +19,7 @@ interface AuthContextType {
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
   resendVerificationEmail: (email: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  validateInviteCode: (code: string) => Promise<{ valid: boolean; error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const avatarUrl = session.user.user_metadata?.avatar_url || 
                         session.user.user_metadata?.picture || '';
 
-      // Update profile with LinkedIn data
+      // Update profile with OAuth data
       await supabase
         .from('profiles')
         .update({ 
@@ -208,8 +209,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName: string, selectedRole: AppRole, referralCode?: string | null) => {
+  const validateInviteCode = async (code: string) => {
+    const { data, error } = await supabase
+      .from('invite_codes')
+      .select('id, target_role')
+      .eq('code', code.toUpperCase())
+      .is('used_by', null)
+      .maybeSingle();
+
+    if (error) {
+      return { valid: false, error };
+    }
+    
+    if (!data) {
+      return { valid: false, error: new Error('Invalid or expired invite code') };
+    }
+
+    return { valid: true, error: null };
+  };
+
+  const signUp = async (email: string, password: string, fullName: string, selectedRole: AppRole, referralCode?: string | null, inviteCode?: string | null) => {
     const redirectUrl = `${window.location.origin}/`;
+
+    // If signing up as tax_preparer, validate invite code first
+    if (selectedRole === 'tax_preparer') {
+      if (!inviteCode) {
+        return { error: new Error('Invite code is required for Tax Preparer registration') };
+      }
+      
+      const { valid, error: validateError } = await validateInviteCode(inviteCode);
+      if (!valid) {
+        return { error: validateError || new Error('Invalid invite code') };
+      }
+    }
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -235,6 +267,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (roleError) {
         return { error: new Error('Failed to assign role. Please contact support.') };
+      }
+
+      // Mark invite code as used if this was a tax_preparer signup
+      if (selectedRole === 'tax_preparer' && inviteCode) {
+        await supabase
+          .from('invite_codes')
+          .update({ 
+            used_by: data.user.id, 
+            used_at: new Date().toISOString() 
+          })
+          .eq('code', inviteCode.toUpperCase());
       }
     }
 
@@ -294,7 +337,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, profileId, loading, signIn, signUp, signInWithLinkedIn, signInWithGoogle, signInWithApple, resetPassword, updatePassword, resendVerificationEmail, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, profileId, loading, signIn, signUp, signInWithLinkedIn, signInWithGoogle, signInWithApple, resetPassword, updatePassword, resendVerificationEmail, signOut, validateInviteCode }}>
       {children}
     </AuthContext.Provider>
   );

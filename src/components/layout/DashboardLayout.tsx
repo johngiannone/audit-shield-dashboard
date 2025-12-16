@@ -9,8 +9,23 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  client: 'Client',
+  enrolled_agent: 'Enrolled Agent',
+  tax_preparer: 'Tax Preparer',
+};
+
+const DASHBOARD_TITLES: Record<string, string> = {
+  client: 'Client Portal',
+  enrolled_agent: 'Agent Dashboard',
+  tax_preparer: 'Tax Preparer Portal',
+};
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, role, signOut } = useAuth();
+
+  const roleLabel = role ? ROLE_LABELS[role] || role : '';
+  const dashboardTitle = role ? DASHBOARD_TITLES[role] || 'Dashboard' : 'Dashboard';
 
   return (
     <SidebarProvider>
@@ -23,7 +38,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <SidebarTrigger className="text-foreground hover:bg-secondary" />
               <div className="hidden md:block">
                 <h2 className="text-lg font-semibold text-foreground">
-                  {role === 'agent' ? 'Agent Dashboard' : 'Client Portal'}
+                  {dashboardTitle}
                 </h2>
               </div>
             </div>
@@ -32,8 +47,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <User className="h-4 w-4" />
                 <span className="hidden sm:inline">{user?.email}</span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-accent text-accent-foreground capitalize">
-                  {role}
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-accent text-accent-foreground">
+                  {roleLabel}
                 </span>
               </div>
               <Button

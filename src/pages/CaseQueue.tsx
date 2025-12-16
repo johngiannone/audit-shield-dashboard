@@ -48,7 +48,7 @@ export default function CaseQueue() {
   }, [user, loading, role, navigate]);
 
   useEffect(() => {
-    if (user && role === 'agent') {
+    if (user && role === 'enrolled_agent') {
       fetchProfileAndCases();
     }
   }, [user, role]);
