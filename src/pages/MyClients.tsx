@@ -34,7 +34,7 @@ export default function MyClients() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingClient, setEditingClient] = useState<ManagedClient | null>(null);
-  const [editForm, setEditForm] = useState({ full_name: '', phone: '' });
+  const [editForm, setEditForm] = useState({ full_name: '', email: '', phone: '' });
   const [isSaving, setIsSaving] = useState(false);
 
   // Redirect if not agent
@@ -91,6 +91,7 @@ export default function MyClients() {
     setEditingClient(client);
     setEditForm({
       full_name: client.full_name || '',
+      email: client.email || '',
       phone: client.phone || ''
     });
   };
@@ -104,6 +105,7 @@ export default function MyClients() {
         .from('profiles')
         .update({
           full_name: editForm.full_name.trim() || null,
+          email: editForm.email.trim() || null,
           phone: editForm.phone.trim() || null
         })
         .eq('id', editingClient.id);
@@ -348,6 +350,16 @@ export default function MyClients() {
                 value={editForm.full_name}
                 onChange={(e) => setEditForm(f => ({ ...f, full_name: e.target.value }))}
                 placeholder="Enter full name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="Enter email address"
               />
             </div>
             <div className="space-y-2">
