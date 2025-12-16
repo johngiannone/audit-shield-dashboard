@@ -8,6 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, Download, FileSpreadsheet, Users, AlertCircle, CheckCircle2, Loader2, Shield } from 'lucide-react';
@@ -38,6 +48,13 @@ export default function BulkEnroll() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [agentName, setAgentName] = useState<string>('Your Tax Professional');
   const [selectedPlanLevel, setSelectedPlanLevel] = useState<string>('gold');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+
+  const PLAN_LABELS: Record<string, string> = {
+    silver: 'Silver Shield',
+    gold: 'Gold Shield',
+    platinum: 'Platinum Business',
+  };
 
   // Fetch agent name
   useEffect(() => {
@@ -335,7 +352,7 @@ export default function BulkEnroll() {
               <Button 
                 className="w-full" 
                 disabled={validCount === 0 || isSubmitting}
-                onClick={handleEnrollClients}
+                onClick={() => setShowConfirmDialog(true)}
               >
                 {isSubmitting ? (
                   <>
@@ -349,6 +366,30 @@ export default function BulkEnroll() {
                   </>
                 )}
               </Button>
+
+              <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm Bulk Enrollment</AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-3">
+                        <p>You are about to enroll the following clients:</p>
+                        <div className="rounded-lg bg-muted p-3 space-y-1 text-sm">
+                          <p><strong>Clients:</strong> {validCount}</p>
+                          <p><strong>Plan:</strong> {PLAN_LABELS[selectedPlanLevel]}</p>
+                        </div>
+                        <p>Each client will receive an invitation email with instructions to activate their account.</p>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => { setShowConfirmDialog(false); handleEnrollClients(); }}>
+                      Confirm Enrollment
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
         </div>
