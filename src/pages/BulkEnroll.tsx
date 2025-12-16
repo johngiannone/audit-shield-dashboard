@@ -53,9 +53,9 @@ export default function BulkEnroll() {
     fetchAgentName();
   }, [profileId]);
 
-  // Redirect if not agent or tax_preparer
-  if (!authLoading && (!user || (role !== 'enrolled_agent' && role !== 'tax_preparer'))) {
-    navigate('/auth');
+  // Only tax_preparer can access Bulk Enroll
+  if (!authLoading && (!user || role !== 'tax_preparer')) {
+    navigate('/dashboard');
     return null;
   }
 

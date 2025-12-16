@@ -37,10 +37,10 @@ export default function MyClients() {
   const [editForm, setEditForm] = useState({ full_name: '', email: '', phone: '' });
   const [isSaving, setIsSaving] = useState(false);
 
-  // Redirect if not agent or tax_preparer
+  // Only tax_preparer can access My Clients
   useEffect(() => {
-    if (!authLoading && (!user || (role !== 'enrolled_agent' && role !== 'tax_preparer'))) {
-      navigate('/auth');
+    if (!authLoading && (!user || role !== 'tax_preparer')) {
+      navigate('/dashboard');
     }
   }, [authLoading, user, role, navigate]);
 

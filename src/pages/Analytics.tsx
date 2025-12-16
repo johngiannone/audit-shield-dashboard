@@ -79,13 +79,14 @@ export default function Analytics() {
     if (!loading && !user) {
       navigate('/auth');
     }
-    if (!loading && role === 'client') {
+    // Only tax_preparer should access Analytics
+    if (!loading && role !== 'tax_preparer') {
       navigate('/dashboard');
     }
   }, [user, loading, role, navigate]);
 
   useEffect(() => {
-    if (user && role === 'enrolled_agent') {
+    if (user && role === 'tax_preparer') {
       fetchAnalytics();
     }
   }, [user, role, dateFrom, dateTo]);
