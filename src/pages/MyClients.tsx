@@ -8,10 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, Search, Mail, Phone, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift, Sparkles } from 'lucide-react';
+import { Users, Search, Mail, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift, Sparkles, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ManagedClient {
@@ -139,7 +140,7 @@ export default function MyClients() {
     }
   };
 
-  const handleCompClient = async (client: ManagedClient) => {
+  const handleCompClient = async (client: ManagedClient, planLevel: 'silver' | 'gold' | 'platinum') => {
     setCompingClientId(client.id);
     try {
       const currentYear = new Date().getFullYear();
@@ -148,7 +149,7 @@ export default function MyClients() {
         .from('audit_plans')
         .insert({
           profile_id: client.id,
-          plan_level: 'gold',
+          plan_level: planLevel,
           tax_year: currentYear,
           status: 'active',
           covered_years: [currentYear]
@@ -156,9 +157,10 @@ export default function MyClients() {
 
       if (error) throw error;
 
+      const planNames = { silver: 'Silver', gold: 'Gold', platinum: 'Platinum' };
       toast({
         title: 'Membership granted',
-        description: `${client.full_name || 'Client'} now has complimentary Gold Shield membership.`
+        description: `${client.full_name || 'Client'} now has complimentary ${planNames[planLevel]} Shield membership.`
       });
 
       fetchClients();
@@ -401,22 +403,49 @@ export default function MyClients() {
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             {getClientMembershipStatus(client) === 'none' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleCompClient(client)}
-                                disabled={compingClientId === client.id}
-                                className="text-purple-600 border-purple-200 hover:bg-purple-50"
-                              >
-                                {compingClientId === client.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <Sparkles className="h-4 w-4 mr-1" />
-                                    Comp
-                                  </>
-                                )}
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    disabled={compingClientId === client.id}
+                                    className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                                  >
+                                    {compingClientId === client.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <Sparkles className="h-4 w-4 mr-1" />
+                                        Comp
+                                        <ChevronDown className="h-3 w-3 ml-1" />
+                                      </>
+                                    )}
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
+                                  <DropdownMenuItem 
+                                    onClick={() => handleCompClient(client, 'silver')}
+                                    className="cursor-pointer"
+                                  >
+                                    <span className="text-slate-500 mr-2">🥈</span>
+                                    Silver Shield
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => handleCompClient(client, 'gold')}
+                                    className="cursor-pointer"
+                                  >
+                                    <span className="text-amber-500 mr-2">🥇</span>
+                                    Gold Shield
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => handleCompClient(client, 'platinum')}
+                                    className="cursor-pointer"
+                                  >
+                                    <span className="text-purple-500 mr-2">💎</span>
+                                    Platinum Shield
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             )}
                             <Button 
                               variant="ghost" 
