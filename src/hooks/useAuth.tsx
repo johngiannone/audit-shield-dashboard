@@ -35,11 +35,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', userId)
-      .maybeSingle();
+      .eq('user_id', userId);
 
-    if (!error && data) {
-      setRole(data.role as AppRole);
+    if (!error && data && data.length > 0) {
+      // Prioritize roles: enrolled_agent > tax_preparer > client
+      const roles = data.map(r => r.role as AppRole);
+      if (roles.includes('enrolled_agent')) {
+        setRole('enrolled_agent');
+      } else if (roles.includes('tax_preparer')) {
+        setRole('tax_preparer');
+      } else {
+        setRole(roles[0]);
+      }
     } else {
       setRole(null);
     }
