@@ -27,11 +27,6 @@ const enrolledAgentNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
   { title: 'Case Queue', url: '/queue', icon: Inbox },
   { title: 'My Caseload', url: '/caseload', icon: Briefcase },
-  { title: 'My Clients', url: '/my-clients', icon: UsersRound },
-  { title: 'Bulk Enroll', url: '/bulk-enroll', icon: UserPlus },
-  { title: 'Analytics', url: '/analytics', icon: BarChart3 },
-  { title: 'Affiliates', url: '/admin/affiliates', icon: Users },
-  { title: 'Partner Program', url: '/partner-program', icon: Handshake },
 ];
 
 const taxPreparerNavItems = [
