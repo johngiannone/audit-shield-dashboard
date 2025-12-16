@@ -57,7 +57,8 @@ export default function PartnerProgram() {
       return;
     }
 
-    if (!authLoading && role !== 'enrolled_agent') {
+    // Only tax_preparer can access Partner Program (for building referral network)
+    if (!authLoading && role !== 'tax_preparer') {
       navigate('/dashboard');
       return;
     }

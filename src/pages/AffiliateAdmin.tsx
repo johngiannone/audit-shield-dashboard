@@ -129,13 +129,14 @@ export default function AffiliateAdmin() {
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
-    } else if (!loading && role !== 'enrolled_agent') {
+    } else if (!loading && role !== 'tax_preparer') {
+      // Only tax_preparer can access Affiliate Admin
       navigate('/dashboard');
     }
   }, [user, loading, role, navigate]);
 
   useEffect(() => {
-    if (user && role === 'enrolled_agent') {
+    if (user && role === 'tax_preparer') {
       fetchData();
     }
   }, [user, role]);
@@ -252,7 +253,7 @@ export default function AffiliateAdmin() {
     });
   };
 
-  if (loading || !user || role !== 'enrolled_agent') {
+  if (loading || !user || role !== 'tax_preparer') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
