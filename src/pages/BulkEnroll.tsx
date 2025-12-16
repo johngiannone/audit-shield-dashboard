@@ -6,9 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Upload, Download, FileSpreadsheet, Users, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Upload, Download, FileSpreadsheet, Users, AlertCircle, CheckCircle2, Loader2, Shield } from 'lucide-react';
 import Papa from 'papaparse';
 
 interface ClientRow {
@@ -35,6 +37,7 @@ export default function BulkEnroll() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [agentName, setAgentName] = useState<string>('Your Tax Professional');
+  const [selectedPlanLevel, setSelectedPlanLevel] = useState<string>('gold');
 
   // Fetch agent name
   useEffect(() => {
@@ -170,6 +173,7 @@ export default function BulkEnroll() {
           })),
           agentName,
           agentProfileId: profileId,
+          planLevel: selectedPlanLevel,
         }
       });
 
@@ -295,6 +299,38 @@ export default function BulkEnroll() {
                   <span className="text-sm">{invalidCount} row(s) have errors</span>
                 </div>
               )}
+
+              <div className="space-y-2">
+                <Label htmlFor="plan-select" className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Membership Plan to Assign
+                </Label>
+                <Select value={selectedPlanLevel} onValueChange={setSelectedPlanLevel}>
+                  <SelectTrigger id="plan-select">
+                    <SelectValue placeholder="Select plan level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="silver">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Silver Shield</span>
+                        <span className="text-xs text-muted-foreground">Single year coverage ($49 value)</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="gold">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Gold Shield</span>
+                        <span className="text-xs text-muted-foreground">All open years 2021-2024 ($99 value)</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="platinum">
+                      <div className="flex flex-col">
+                        <span className="font-medium">Platinum Business</span>
+                        <span className="text-xs text-muted-foreground">Business/Schedule C coverage ($199 value)</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               <Button 
                 className="w-full" 
