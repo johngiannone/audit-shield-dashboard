@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, Search, Mail, Phone, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift } from 'lucide-react';
+import { Users, Search, Mail, Phone, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ManagedClient {
@@ -39,6 +39,7 @@ export default function MyClients() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingClient, setEditingClient] = useState<ManagedClient | null>(null);
   const [editForm, setEditForm] = useState({ full_name: '', email: '', phone: '' });
+  const [compingClientId, setCompingClientId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Only tax_preparer can access My Clients
@@ -136,6 +137,48 @@ export default function MyClients() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleCompClient = async (client: ManagedClient) => {
+    setCompingClientId(client.id);
+    try {
+      const currentYear = new Date().getFullYear();
+      
+      const { error } = await supabase
+        .from('audit_plans')
+        .insert({
+          profile_id: client.id,
+          plan_level: 'gold',
+          tax_year: currentYear,
+          status: 'active',
+          covered_years: [currentYear]
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Membership granted',
+        description: `${client.full_name || 'Client'} now has complimentary Gold Shield membership.`
+      });
+
+      fetchClients();
+    } catch (error: any) {
+      console.error('Comp error:', error);
+      toast({
+        title: 'Failed to grant membership',
+        description: error.message || 'Could not comp client.',
+        variant: 'destructive'
+      });
+    } finally {
+      setCompingClientId(null);
+    }
+  };
+
+  const getClientMembershipStatus = (client: ManagedClient) => {
+    const activePlan = client.audit_plans?.find(p => p.status === 'active');
+    if (!activePlan) return 'none';
+    if (activePlan.stripe_subscription_id) return 'purchased';
+    return 'comped';
   };
 
   const filteredClients = clients.filter(client => {
@@ -287,7 +330,7 @@ export default function MyClients() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
+                      <TableHead>Membership</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Enrolled</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -312,14 +355,30 @@ export default function MyClients() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {client.phone ? (
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <Phone className="h-3 w-3" />
-                              {client.phone}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground/50">—</span>
-                          )}
+                          {(() => {
+                            const status = getClientMembershipStatus(client);
+                            if (status === 'purchased') {
+                              return (
+                                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                                  <CreditCard className="h-3 w-3 mr-1" />
+                                  Purchased
+                                </Badge>
+                              );
+                            } else if (status === 'comped') {
+                              return (
+                                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                                  <Gift className="h-3 w-3 mr-1" />
+                                  Comped
+                                </Badge>
+                              );
+                            } else {
+                              return (
+                                <Badge variant="outline" className="bg-muted text-muted-foreground border-muted">
+                                  None
+                                </Badge>
+                              );
+                            }
+                          })()}
                         </TableCell>
                         <TableCell>
                           {client.is_activated ? (
@@ -340,13 +399,33 @@ export default function MyClients() {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleEdit(client)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            {getClientMembershipStatus(client) === 'none' && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleCompClient(client)}
+                                disabled={compingClientId === client.id}
+                                className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                              >
+                                {compingClientId === client.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Sparkles className="h-4 w-4 mr-1" />
+                                    Comp
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEdit(client)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
