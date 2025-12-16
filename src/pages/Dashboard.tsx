@@ -199,26 +199,28 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">
-              {role === 'agent' ? 'Agent Dashboard' : 'Welcome Back'}
+              {role === 'enrolled_agent' ? 'Agent Dashboard' : role === 'tax_preparer' ? 'Tax Preparer Portal' : 'Welcome Back'}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {role === 'agent' 
+              {role === 'enrolled_agent' 
                 ? 'Manage your cases and help clients navigate audits'
+                : role === 'tax_preparer'
+                ? 'Enroll clients and grow your referral network'
                 : 'Your audit defense status at a glance'}
             </p>
           </div>
           <Button 
-            onClick={() => navigate(role === 'agent' ? '/queue' : '/report')}
+            onClick={() => navigate(role === 'enrolled_agent' ? '/queue' : role === 'tax_preparer' ? '/bulk-enroll' : '/report')}
             className="w-full md:w-auto"
           >
-            {role === 'agent' ? 'View Case Queue' : 'Report New Notice'}
+            {role === 'enrolled_agent' ? 'View Case Queue' : role === 'tax_preparer' ? 'Bulk Enroll Clients' : 'Report New Notice'}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {role === 'agent' ? (
+          {role === 'enrolled_agent' ? (
             <>
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -325,7 +327,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="font-display">Recent Cases</CardTitle>
             <CardDescription>
-              {role === 'agent' ? 'Latest cases in the system' : 'Your recent audit cases'}
+              {role === 'enrolled_agent' ? 'Latest cases in the system' : 'Your recent audit cases'}
             </CardDescription>
           </CardHeader>
           <CardContent>

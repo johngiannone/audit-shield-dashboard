@@ -57,7 +57,7 @@ export default function PartnerProgram() {
       return;
     }
 
-    if (!authLoading && role !== 'agent') {
+    if (!authLoading && role !== 'enrolled_agent') {
       navigate('/dashboard');
       return;
     }

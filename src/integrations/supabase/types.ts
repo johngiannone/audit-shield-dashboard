@@ -373,6 +373,39 @@ export type Database = {
           },
         ]
       }
+      invite_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          target_role: Database["public"]["Enums"]["app_role"]
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          target_role?: Database["public"]["Enums"]["app_role"]
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          target_role?: Database["public"]["Enums"]["app_role"]
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
       partner_leads: {
         Row: {
           annual_returns: string
@@ -519,6 +552,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_invite_code: { Args: never; Returns: string }
       generate_referral_code: { Args: never; Returns: string }
       get_profile_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
@@ -531,7 +565,7 @@ export type Database = {
       is_user_activated: { Args: { p_user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "client" | "agent"
+      app_role: "client" | "agent" | "enrolled_agent" | "tax_preparer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -659,7 +693,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["client", "agent"],
+      app_role: ["client", "agent", "enrolled_agent", "tax_preparer"],
     },
   },
 } as const

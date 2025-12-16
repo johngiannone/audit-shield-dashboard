@@ -67,7 +67,7 @@ export default function Plans() {
     if (!loading && !user) {
       navigate('/auth');
     }
-    if (!loading && role === 'agent') {
+    if (!loading && role === 'enrolled_agent') {
       navigate('/dashboard');
     }
   }, [user, loading, role, navigate]);

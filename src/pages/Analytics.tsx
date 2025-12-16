@@ -85,7 +85,7 @@ export default function Analytics() {
   }, [user, loading, role, navigate]);
 
   useEffect(() => {
-    if (user && role === 'agent') {
+    if (user && role === 'enrolled_agent') {
       fetchAnalytics();
     }
   }, [user, role, dateFrom, dateTo]);

@@ -63,7 +63,7 @@ export default function AgentCaseDetail() {
   }, [user, loading, role, navigate]);
 
   useEffect(() => {
-    if (user && role === 'agent' && caseId) {
+    if (user && role === 'enrolled_agent' && caseId) {
       fetchCaseData();
     }
   }, [user, role, caseId]);
