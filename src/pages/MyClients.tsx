@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, Search, Mail, Phone, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock } from 'lucide-react';
+import { Users, Search, Mail, Phone, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ManagedClient {
@@ -23,6 +23,10 @@ interface ManagedClient {
   created_at: string;
   referral_code: string | null;
   is_activated?: boolean;
+  audit_plans?: {
+    status: string;
+    stripe_subscription_id: string | null;
+  }[];
 }
 
 export default function MyClients() {
@@ -52,7 +56,10 @@ export default function MyClients() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, full_name, email, phone, created_at, referral_code')
+        .select(`
+          id, user_id, full_name, email, phone, created_at, referral_code,
+          audit_plans (status, stripe_subscription_id)
+        `)
         .eq('managed_by', profileId)
         .order('created_at', { ascending: false });
 
@@ -173,37 +180,55 @@ export default function MyClients() {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Clients</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-foreground">{clients.length}</p>
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <p className="text-3xl font-bold text-foreground">{clients.length}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">This Month</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Purchased</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-foreground">
-                {clients.filter(c => {
-                  const created = new Date(c.created_at);
-                  const now = new Date();
-                  return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
-                }).length}
-              </p>
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-success" />
+                <p className="text-3xl font-bold text-foreground">
+                  {clients.filter(c => c.audit_plans?.some(p => p.stripe_subscription_id !== null)).length}
+                </p>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">With Phone</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Comped</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-foreground">
-                {clients.filter(c => c.phone).length}
-              </p>
+              <div className="flex items-center gap-2">
+                <Gift className="h-5 w-5 text-info" />
+                <p className="text-3xl font-bold text-foreground">
+                  {clients.filter(c => c.audit_plans?.some(p => p.stripe_subscription_id === null && p.status === 'active')).length}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Activated</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-success" />
+                <p className="text-3xl font-bold text-foreground">
+                  {clients.filter(c => c.is_activated).length}
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>
