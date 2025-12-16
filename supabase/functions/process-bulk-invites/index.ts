@@ -21,6 +21,22 @@ interface BulkInviteRequest {
   clients: ClientRow[];
   agentName: string;
   agentProfileId: string;
+  planLevel: string;
+}
+
+const PLAN_LABELS: Record<string, string> = {
+  silver: "Silver Shield",
+  gold: "Gold Shield",
+  platinum: "Platinum Business",
+};
+
+function getCoveredYears(planLevel: string, taxYear: number): number[] {
+  // Silver covers only the specified year
+  if (planLevel === "silver") {
+    return [taxYear];
+  }
+  // Gold and Platinum cover all open years (2021-2024)
+  return [2021, 2022, 2023, 2024];
 }
 
 interface InviteResult {
@@ -47,9 +63,9 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
-    const { clients, agentName, agentProfileId }: BulkInviteRequest = await req.json();
+    const { clients, agentName, agentProfileId, planLevel }: BulkInviteRequest = await req.json();
 
-    console.log(`Processing bulk invite for ${clients.length} clients from agent: ${agentName}`);
+    console.log(`Processing bulk invite for ${clients.length} clients from agent: ${agentName}, plan: ${planLevel}`);
 
     if (!clients || clients.length === 0) {
       return new Response(
@@ -110,7 +126,7 @@ const handler = async (req: Request): Promise<Response> => {
         console.log(`User created: ${userData.user.id}`);
 
         // Step 2: Create profile with managed_by and email
-        const { error: profileError } = await supabaseAdmin
+        const { data: profileData, error: profileError } = await supabaseAdmin
           .from("profiles")
           .upsert({
             user_id: userData.user.id,
@@ -120,10 +136,35 @@ const handler = async (req: Request): Promise<Response> => {
             managed_by: agentProfileId,
           }, {
             onConflict: "user_id",
-          });
+          })
+          .select("id")
+          .single();
 
         if (profileError) {
           console.error(`Profile creation error for ${client.email}:`, profileError);
+        }
+
+        // Step 2b: Create audit_plans record (comped membership)
+        if (profileData?.id) {
+          const taxYearNum = parseInt(taxYear);
+          const coveredYears = getCoveredYears(planLevel, taxYearNum);
+          
+          const { error: planError } = await supabaseAdmin
+            .from("audit_plans")
+            .insert({
+              profile_id: profileData.id,
+              plan_level: planLevel,
+              tax_year: taxYearNum,
+              covered_years: coveredYears,
+              status: "active",
+              // No stripe_subscription_id = comped plan
+            });
+
+          if (planError) {
+            console.error(`Audit plan creation error for ${client.email}:`, planError);
+          } else {
+            console.log(`Audit plan created for ${client.email}: ${planLevel}`);
+          }
         }
 
         // Step 3: Generate magic link for the user
@@ -173,15 +214,17 @@ const handler = async (req: Request): Promise<Response> => {
                 
                 <p style="font-size: 16px; line-height: 1.6; color: #4a5568;">
                   Great news! Your tax professional <strong>${agentName}</strong> has enrolled you in 
-                  <strong>Return Shield Audit Defense</strong> for the <strong>${taxYear}</strong> tax year.
+                  <strong>Return Shield ${PLAN_LABELS[planLevel] || "Audit Defense"}</strong> for the <strong>${taxYear}</strong> tax year.
                 </p>
                 
                 <div style="background-color: #f0f9ff; border-left: 4px solid #1e3a5f; padding: 20px; margin: 30px 0; border-radius: 0 8px 8px 0;">
-                  <h3 style="color: #1e3a5f; margin: 0 0 10px 0; font-size: 16px;">What This Means For You:</h3>
+                  <h3 style="color: #1e3a5f; margin: 0 0 10px 0; font-size: 16px;">Your ${PLAN_LABELS[planLevel] || "Plan"} Includes:</h3>
                   <ul style="color: #4a5568; margin: 0; padding-left: 20px; line-height: 1.8;">
                     <li>Professional representation if audited by the IRS or state</li>
                     <li>Expert Enrolled Agents handle all correspondence</li>
                     <li>Zero additional fees - everything is covered</li>
+                    ${planLevel !== "silver" ? "<li>Retroactive coverage for tax years 2021-2024</li>" : ""}
+                    ${planLevel === "platinum" ? "<li>Business and Schedule C defense included</li>" : ""}
                     <li>Peace of mind for your tax return</li>
                   </ul>
                 </div>
