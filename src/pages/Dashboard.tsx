@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
-import { FileText, AlertTriangle, CheckCircle, Clock, ArrowRight, Inbox, Briefcase, Loader2, Mail, X } from 'lucide-react';
+import { FileText, AlertTriangle, CheckCircle, Clock, ArrowRight, Inbox, Briefcase, Loader2, Mail, X, Users, CreditCard, Gift } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ReferralPromoCard } from '@/components/dashboard/ReferralPromoCard';
 
@@ -27,6 +27,16 @@ interface Plan {
   plan_level: string;
 }
 
+interface ManagedClient {
+  id: string;
+  full_name: string | null;
+  user_id: string;
+  audit_plans: {
+    status: string;
+    stripe_subscription_id: string | null;
+  }[] | null;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, role, loading, resendVerificationEmail } = useAuth();
@@ -34,6 +44,8 @@ export default function Dashboard() {
   
   const [cases, setCases] = useState<Case[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [managedClients, setManagedClients] = useState<ManagedClient[]>([]);
+  const [activatedCount, setActivatedCount] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
   const [isResending, setIsResending] = useState(false);
   const [dismissedVerificationBanner, setDismissedVerificationBanner] = useState(() => {
@@ -74,26 +86,64 @@ export default function Dashboard() {
   const fetchData = async () => {
     setDataLoading(true);
     try {
-      // Fetch cases
-      const { data: casesData, error: casesError } = await supabase
-        .from('cases')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5);
+      if (role === 'tax_preparer') {
+        // Get tax preparer's profile ID
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user!.id)
+          .single();
 
-      if (casesError) throw casesError;
-      setCases(casesData || []);
+        if (profileError) throw profileError;
 
-      // Fetch plans for clients
-      if (role === 'client') {
-        const { data: plansData, error: plansError } = await supabase
-          .from('audit_plans')
+        // Fetch managed clients with their audit plans
+        const { data: clientsData, error: clientsError } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            full_name,
+            user_id,
+            audit_plans (
+              status,
+              stripe_subscription_id
+            )
+          `)
+          .eq('managed_by', profileData.id);
+
+        if (clientsError) throw clientsError;
+        setManagedClients(clientsData || []);
+
+        // Check activation status for each client
+        let activatedUsers = 0;
+        for (const client of clientsData || []) {
+          const { data: activated } = await supabase.rpc('is_user_activated', {
+            p_user_id: client.user_id
+          });
+          if (activated) activatedUsers++;
+        }
+        setActivatedCount(activatedUsers);
+      } else {
+        // Fetch cases for agents and clients
+        const { data: casesData, error: casesError } = await supabase
+          .from('cases')
           .select('*')
           .order('created_at', { ascending: false })
           .limit(5);
 
-        if (plansError) throw plansError;
-        setPlans(plansData || []);
+        if (casesError) throw casesError;
+        setCases(casesData || []);
+
+        // Fetch plans for clients
+        if (role === 'client') {
+          const { data: plansData, error: plansError } = await supabase
+            .from('audit_plans')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          if (plansError) throw plansError;
+          setPlans(plansData || []);
+        }
       }
     } catch (error) {
       toast({
@@ -105,6 +155,15 @@ export default function Dashboard() {
       setDataLoading(false);
     }
   };
+
+  // Compute tax preparer stats
+  const totalClients = managedClients.length;
+  const purchasedClients = managedClients.filter(c => 
+    c.audit_plans?.some(p => p.stripe_subscription_id !== null)
+  ).length;
+  const compedClients = managedClients.filter(c => 
+    c.audit_plans?.some(p => p.stripe_subscription_id === null && p.status === 'active')
+  ).length;
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -205,7 +264,7 @@ export default function Dashboard() {
               {role === 'enrolled_agent' 
                 ? 'Manage your cases and help clients navigate audits'
                 : role === 'tax_preparer'
-                ? 'Enroll clients and grow your referral network'
+                ? 'Manage client memberships and enrollment'
                 : 'Your audit defense status at a glance'}
             </p>
           </div>
@@ -219,7 +278,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className={`grid grid-cols-1 gap-6 ${role === 'tax_preparer' ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
           {role === 'enrolled_agent' ? (
             <>
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
@@ -264,6 +323,68 @@ export default function Dashboard() {
                     {cases.filter(c => c.status === 'resolved').length}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Successfully closed</p>
+                </CardContent>
+              </Card>
+            </>
+          ) : role === 'tax_preparer' ? (
+            <>
+              <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total Clients
+                  </CardTitle>
+                  <Users className="h-5 w-5 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold font-display">
+                    {dataLoading ? '-' : totalClients}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Enrolled clients</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Purchased
+                  </CardTitle>
+                  <CreditCard className="h-5 w-5 text-success" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold font-display">
+                    {dataLoading ? '-' : purchasedClients}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Paid memberships</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Comped
+                  </CardTitle>
+                  <Gift className="h-5 w-5 text-info" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold font-display">
+                    {dataLoading ? '-' : compedClients}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Free memberships</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Activated
+                  </CardTitle>
+                  <CheckCircle className="h-5 w-5 text-success" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold font-display">
+                    {dataLoading ? '-' : activatedCount}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Logged in at least once</p>
                 </CardContent>
               </Card>
             </>
@@ -317,67 +438,83 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* Quick Actions for Tax Preparer */}
+        {role === 'tax_preparer' && (
+          <div className="flex gap-4">
+            <Button 
+              variant="outline"
+              onClick={() => navigate('/my-clients')}
+              className="flex-1"
+            >
+              <Users className="mr-2 h-4 w-4" />
+              View All Clients
+            </Button>
+          </div>
+        )}
+
         {/* Referral Promo Card - Clients Only */}
         {role === 'client' && user && (
           <ReferralPromoCard userId={user.id} />
         )}
 
-        {/* Recent Activity */}
-        <Card className="border-0 shadow-md">
-          <CardHeader>
-            <CardTitle className="font-display">Recent Cases</CardTitle>
-            <CardDescription>
-              {role === 'enrolled_agent' ? 'Latest cases in the system' : 'Your recent audit cases'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {dataLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : cases.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No cases yet</p>
-                {role === 'client' && (
-                  <Button 
-                    variant="link" 
-                    onClick={() => navigate('/report')}
-                    className="mt-2"
-                  >
-                    Report your first notice
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {cases.map((caseItem) => (
-                  <div 
-                    key={caseItem.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <AlertTriangle className="h-5 w-5 text-primary" />
+        {/* Recent Activity - Not for Tax Preparers */}
+        {role !== 'tax_preparer' && (
+          <Card className="border-0 shadow-md">
+            <CardHeader>
+              <CardTitle className="font-display">Recent Cases</CardTitle>
+              <CardDescription>
+                {role === 'enrolled_agent' ? 'Latest cases in the system' : 'Your recent audit cases'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dataLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : cases.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No cases yet</p>
+                  {role === 'client' && (
+                    <Button 
+                      variant="link" 
+                      onClick={() => navigate('/report')}
+                      className="mt-2"
+                    >
+                      Report your first notice
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {cases.map((caseItem) => (
+                    <div 
+                      key={caseItem.id}
+                      className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <AlertTriangle className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {caseItem.notice_agency} - {caseItem.notice_type}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Tax Year {caseItem.tax_year}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {caseItem.notice_agency} - {caseItem.notice_type}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Tax Year {caseItem.tax_year}
-                        </p>
-                      </div>
+                      <Badge variant="outline" className={getStatusBadge(caseItem.status)}>
+                        {caseItem.status.replace('_', ' ')}
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className={getStatusBadge(caseItem.status)}>
-                      {caseItem.status.replace('_', ' ')}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );

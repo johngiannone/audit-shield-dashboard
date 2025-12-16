@@ -33,7 +33,6 @@ const taxPreparerNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
   { title: 'My Clients', url: '/my-clients', icon: UsersRound },
   { title: 'Bulk Enroll', url: '/bulk-enroll', icon: UserPlus },
-  { title: 'Referral Network', url: '/referral-network', icon: Network },
 ];
 
 export function AppSidebar() {
