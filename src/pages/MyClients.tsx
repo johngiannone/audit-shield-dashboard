@@ -10,9 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, Search, Mail, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift, Sparkles, ChevronDown } from 'lucide-react';
+import { Users, Search, Mail, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift, Sparkles, ChevronDown, Plus, Shield } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ManagedClient {
@@ -42,6 +43,17 @@ export default function MyClients() {
   const [editForm, setEditForm] = useState({ full_name: '', email: '', phone: '' });
   const [compingClientId, setCompingClientId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Manual enrollment state
+  const [showManualEnroll, setShowManualEnroll] = useState(false);
+  const [manualEnrollForm, setManualEnrollForm] = useState({ full_name: '', email: '', planLevel: 'gold' });
+  const [isEnrolling, setIsEnrolling] = useState(false);
+
+  const PLAN_LABELS: Record<string, string> = {
+    silver: 'Silver Shield',
+    gold: 'Gold Shield',
+    platinum: 'Platinum Business',
+  };
 
   // Only tax_preparer can access My Clients
   useEffect(() => {
@@ -183,6 +195,57 @@ export default function MyClients() {
     return 'comped';
   };
 
+  const handleManualEnroll = async () => {
+    if (!manualEnrollForm.email.trim() || !manualEnrollForm.full_name.trim()) {
+      toast({
+        title: 'Missing information',
+        description: 'Please enter both name and email.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsEnrolling(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await supabase.functions.invoke('process-bulk-invites', {
+        body: {
+          clients: [{
+            full_name: manualEnrollForm.full_name.trim(),
+            email: manualEnrollForm.email.trim().toLowerCase()
+          }],
+          planLevel: manualEnrollForm.planLevel
+        }
+      });
+
+      if (response.error) throw response.error;
+
+      const result = response.data;
+      if (result.results?.[0]?.success) {
+        toast({
+          title: 'Client enrolled',
+          description: `${manualEnrollForm.full_name} has been enrolled with ${PLAN_LABELS[manualEnrollForm.planLevel]}.`
+        });
+        setShowManualEnroll(false);
+        setManualEnrollForm({ full_name: '', email: '', planLevel: 'gold' });
+        fetchClients();
+      } else {
+        throw new Error(result.results?.[0]?.error || 'Failed to enroll client');
+      }
+    } catch (error: any) {
+      console.error('Manual enroll error:', error);
+      toast({
+        title: 'Enrollment failed',
+        description: error.message || 'Could not enroll client.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+
   const filteredClients = clients.filter(client => {
     const query = searchQuery.toLowerCase();
     return (
@@ -216,6 +279,10 @@ export default function MyClients() {
             <Button variant="outline" size="sm" onClick={fetchClients}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowManualEnroll(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Client
             </Button>
             <Button size="sm" onClick={() => navigate('/bulk-enroll')}>
               <UserPlus className="h-4 w-4 mr-2" />
@@ -517,6 +584,88 @@ export default function MyClients() {
                 </>
               ) : (
                 'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Enroll Dialog */}
+      <Dialog open={showManualEnroll} onOpenChange={setShowManualEnroll}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Enroll New Client
+            </DialogTitle>
+            <DialogDescription>
+              Add a single client with complimentary audit protection.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="enroll_name">Full Name *</Label>
+              <Input
+                id="enroll_name"
+                value={manualEnrollForm.full_name}
+                onChange={(e) => setManualEnrollForm(f => ({ ...f, full_name: e.target.value }))}
+                placeholder="Enter client's full name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="enroll_email">Email Address *</Label>
+              <Input
+                id="enroll_email"
+                type="email"
+                value={manualEnrollForm.email}
+                onChange={(e) => setManualEnrollForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="Enter client's email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="enroll_plan">Plan Level</Label>
+              <Select
+                value={manualEnrollForm.planLevel}
+                onValueChange={(value) => setManualEnrollForm(f => ({ ...f, planLevel: value }))}
+              >
+                <SelectTrigger id="enroll_plan">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="silver">
+                    <span className="flex items-center gap-2">
+                      <span className="text-slate-500">🥈</span> Silver Shield
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="gold">
+                    <span className="flex items-center gap-2">
+                      <span className="text-amber-500">🥇</span> Gold Shield
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="platinum">
+                    <span className="flex items-center gap-2">
+                      <span className="text-purple-500">💎</span> Platinum Business
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowManualEnroll(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleManualEnroll} disabled={isEnrolling}>
+              {isEnrolling ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enrolling...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Enroll Client
+                </>
               )}
             </Button>
           </DialogFooter>
