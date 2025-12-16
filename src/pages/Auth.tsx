@@ -6,8 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Shield, Mail, Lock, User, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Shield, Mail, Lock, User, Loader2, Ticket, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { LinkedInIcon } from '@/components/icons/LinkedInIcon';
@@ -22,25 +21,32 @@ const signupSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
   email: z.string().email('Please enter a valid email address').max(255, 'Email is too long'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['client'], { required_error: 'Please select a role' }),
+});
+
+const taxPreparerSignupSchema = signupSchema.extend({
+  inviteCode: z.string().min(1, 'Invite code is required'),
 });
 
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signIn, signUp, signInWithLinkedIn, signInWithGoogle, signInWithApple, resetPassword, updatePassword, resendVerificationEmail, user, loading } = useAuth();
+  const { signIn, signUp, signInWithLinkedIn, signInWithGoogle, signInWithApple, resetPassword, updatePassword, resendVerificationEmail, validateInviteCode, user, loading } = useAuth();
   const { toast } = useToast();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState<'linkedin' | 'google' | 'apple' | null>(null);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
-  const [signupForm, setSignupForm] = useState({ fullName: '', email: '', password: '', role: 'client' as 'client' });
+  const [signupForm, setSignupForm] = useState({ fullName: '', email: '', password: '' });
+  const [inviteCode, setInviteCode] = useState('');
+  const [inviteCodeValid, setInviteCodeValid] = useState<boolean | null>(null);
+  const [validatingCode, setValidatingCode] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
+  const [isTaxPreparerSignup, setIsTaxPreparerSignup] = useState(false);
 
   // Check if this is a password reset callback
   useEffect(() => {
@@ -57,11 +63,39 @@ export default function Auth() {
     }
   }, [searchParams]);
 
+  // Check for invite code in URL
+  useEffect(() => {
+    const urlInviteCode = searchParams.get('invite');
+    if (urlInviteCode) {
+      setInviteCode(urlInviteCode);
+      setIsTaxPreparerSignup(true);
+      // Validate the code
+      handleValidateInviteCode(urlInviteCode);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     if (user && !loading) {
       navigate('/dashboard');
     }
   }, [user, loading, navigate]);
+
+  const handleValidateInviteCode = async (code: string) => {
+    if (!code.trim()) {
+      setInviteCodeValid(null);
+      return;
+    }
+
+    setValidatingCode(true);
+    const { valid } = await validateInviteCode(code);
+    setInviteCodeValid(valid);
+    setValidatingCode(false);
+  };
+
+  const handleInviteCodeChange = (value: string) => {
+    setInviteCode(value.toUpperCase());
+    setInviteCodeValid(null);
+  };
 
   const handleLinkedInSignIn = async () => {
     setIsOAuthLoading('linkedin');
@@ -196,7 +230,13 @@ export default function Auth() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const result = signupSchema.safeParse(signupForm);
+    // Use appropriate schema based on signup type
+    const schema = isTaxPreparerSignup ? taxPreparerSignupSchema : signupSchema;
+    const formData = isTaxPreparerSignup 
+      ? { ...signupForm, inviteCode } 
+      : signupForm;
+
+    const result = schema.safeParse(formData);
     if (!result.success) {
       toast({
         title: 'Validation Error',
@@ -206,10 +246,28 @@ export default function Auth() {
       return;
     }
 
+    // For tax preparer signup, validate invite code first
+    if (isTaxPreparerSignup && inviteCodeValid !== true) {
+      toast({
+        title: 'Invalid Invite Code',
+        description: 'Please enter a valid invite code to sign up as a Tax Preparer.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     // Get referral code from sessionStorage
     const referralCode = sessionStorage.getItem('referral_code');
-    const { error } = await signUp(signupForm.email, signupForm.password, signupForm.fullName, signupForm.role, referralCode);
+    const role = isTaxPreparerSignup ? 'tax_preparer' : 'client';
+    const { error } = await signUp(
+      signupForm.email, 
+      signupForm.password, 
+      signupForm.fullName, 
+      role as any,
+      referralCode,
+      isTaxPreparerSignup ? inviteCode : null
+    );
     setIsSubmitting(false);
     
     // Clear referral code after signup attempt
@@ -235,8 +293,10 @@ export default function Auth() {
       }
     } else {
       toast({
-        title: 'Check Your Email',
-        description: 'We sent you a verification link to confirm your account.',
+        title: 'Account Created!',
+        description: isTaxPreparerSignup 
+          ? 'Welcome to Return Shield! You can now log in as a Tax Preparer.'
+          : 'Check your email to verify your account.',
       });
     }
   };
@@ -500,19 +560,87 @@ export default function Auth() {
 
               {/* Signup Tab */}
               <TabsContent value="signup" className="mt-0">
-                <CardTitle className="text-xl mb-2">Create your account</CardTitle>
+                <CardTitle className="text-xl mb-2">
+                  {isTaxPreparerSignup ? 'Join as Tax Preparer' : 'Create your account'}
+                </CardTitle>
                 <CardDescription className="mb-6">
-                  Get started with Return Shield protection
+                  {isTaxPreparerSignup 
+                    ? 'Use your invite code to register as a Tax Preparer'
+                    : 'Get started with Return Shield protection'
+                  }
                 </CardDescription>
-                
-                <GoogleButton disabled={isSubmitting} />
-                <div className="mt-3">
-                  <AppleButton disabled={isSubmitting} />
-                </div>
-                <div className="mt-3">
-                  <LinkedInButton disabled={isSubmitting} />
-                </div>
-                <Divider />
+
+                {/* Toggle for Tax Preparer signup (when no invite code in URL) */}
+                {!searchParams.get('invite') && (
+                  <div className="mb-6 p-3 rounded-lg border border-border bg-muted/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Ticket className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">Have an invite code?</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setIsTaxPreparerSignup(!isTaxPreparerSignup);
+                          setInviteCode('');
+                          setInviteCodeValid(null);
+                        }}
+                      >
+                        {isTaxPreparerSignup ? 'Sign up as Client' : 'Sign up as Tax Preparer'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Invite Code Field for Tax Preparer */}
+                {isTaxPreparerSignup && (
+                  <div className="mb-6 p-4 rounded-lg border border-primary/20 bg-primary/5">
+                    <Label htmlFor="invite-code" className="text-sm font-medium">Invite Code</Label>
+                    <div className="relative mt-2">
+                      <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="invite-code"
+                        type="text"
+                        placeholder="Enter your invite code"
+                        className="pl-10 pr-10 uppercase font-mono"
+                        value={inviteCode}
+                        onChange={(e) => handleInviteCodeChange(e.target.value)}
+                        onBlur={() => inviteCode && handleValidateInviteCode(inviteCode)}
+                        required
+                      />
+                      {validatingCode && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                      {!validatingCode && inviteCodeValid === true && (
+                        <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500" />
+                      )}
+                      {!validatingCode && inviteCodeValid === false && (
+                        <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-destructive" />
+                      )}
+                    </div>
+                    {inviteCodeValid === false && (
+                      <p className="text-xs text-destructive mt-1">Invalid or expired invite code</p>
+                    )}
+                    {inviteCodeValid === true && (
+                      <p className="text-xs text-emerald-500 mt-1">Valid invite code!</p>
+                    )}
+                  </div>
+                )}
+
+                {!isTaxPreparerSignup && (
+                  <>
+                    <GoogleButton disabled={isSubmitting} />
+                    <div className="mt-3">
+                      <AppleButton disabled={isSubmitting} />
+                    </div>
+                    <div className="mt-3">
+                      <LinkedInButton disabled={isSubmitting} />
+                    </div>
+                    <Divider />
+                  </>
+                )}
                 
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
@@ -563,17 +691,18 @@ export default function Auth() {
                     </div>
                   </div>
 
-                  {/* Role is fixed to client - Tax Preparers need invite codes */}
-                  <input type="hidden" value="client" />
-
-                  <Button type="submit" className="w-full" disabled={isSubmitting || isOAuthLoading !== null}>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isSubmitting || isOAuthLoading !== null || (isTaxPreparerSignup && inviteCodeValid !== true)}
+                  >
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Creating account...
                       </>
                     ) : (
-                      'Create Account'
+                      isTaxPreparerSignup ? 'Create Tax Preparer Account' : 'Create Account'
                     )}
                   </Button>
                 </form>
