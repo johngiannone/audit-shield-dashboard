@@ -47,3 +47,9 @@ verify_jwt = true
 
 [functions.process-bulk-invites]
 verify_jwt = true
+
+[functions.activate-client]
+verify_jwt = false
+
+[functions.generate-activation-link]
+verify_jwt = true
