@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, Search, Mail, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift, Sparkles, ChevronDown, Plus, Shield, Copy, RotateCcw, Key, Send } from 'lucide-react';
+import { Users, Search, Mail, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift, Sparkles, ChevronDown, Plus, Shield, Copy, RotateCcw, Key, Send, Link2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ManagedClient {
@@ -53,6 +53,7 @@ export default function MyClients() {
   const [lastEnrolledCode, setLastEnrolledCode] = useState<string | null>(null);
   const [regeneratingCodeId, setRegeneratingCodeId] = useState<string | null>(null);
   const [sendingInviteId, setSendingInviteId] = useState<string | null>(null);
+  const [copyingLinkId, setCopyingLinkId] = useState<string | null>(null);
   const [taxPreparerName, setTaxPreparerName] = useState<string>('');
 
   const PLAN_LABELS: Record<string, string> = {
@@ -339,6 +340,34 @@ ${senderName}`;
       }
     } finally {
       setSendingInviteId(null);
+    }
+  };
+
+  const handleCopyLink = async (client: ManagedClient) => {
+    setCopyingLinkId(client.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-activation-link', {
+        body: { profile_id: client.id }
+      });
+
+      if (error) throw error;
+      if (!data?.activation_url) throw new Error('No activation URL received');
+
+      await navigator.clipboard.writeText(data.activation_url);
+      
+      toast({
+        title: 'Activation link copied to clipboard',
+        description: 'You can paste it into WhatsApp, SMS, or any messaging app.'
+      });
+    } catch (error: any) {
+      console.error('Copy link error:', error);
+      toast({
+        title: 'Failed to copy link',
+        description: error.message || 'Could not generate activation link.',
+        variant: 'destructive'
+      });
+    } finally {
+      setCopyingLinkId(null);
     }
   };
 
@@ -710,23 +739,41 @@ ${senderName}`;
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             )}
-                            {!client.is_activated && client.email && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleSendInvite(client)}
-                                disabled={sendingInviteId === client.id}
-                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                              >
-                                {sendingInviteId === client.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <Send className="h-4 w-4 mr-1" />
-                                    Send Invite
-                                  </>
+                            {!client.is_activated && (
+                              <>
+                                {client.email && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleSendInvite(client)}
+                                    disabled={sendingInviteId === client.id}
+                                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  >
+                                    {sendingInviteId === client.id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <Send className="h-4 w-4 mr-1" />
+                                        Send Invite
+                                      </>
+                                    )}
+                                  </Button>
                                 )}
-                              </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleCopyLink(client)}
+                                  disabled={copyingLinkId === client.id}
+                                  className="h-8 w-8 p-0 text-muted-foreground border-border hover:bg-muted"
+                                  title="Copy activation link"
+                                >
+                                  {copyingLinkId === client.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Link2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </>
                             )}
                             <Button 
                               variant="ghost" 
