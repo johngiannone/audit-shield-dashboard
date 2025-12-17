@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, Search, Mail, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift, Sparkles, ChevronDown, Plus, Shield, Copy, RotateCcw, Key } from 'lucide-react';
+import { Users, Search, Mail, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift, Sparkles, ChevronDown, Plus, Shield, Copy, RotateCcw, Key, Send } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ManagedClient {
@@ -52,6 +52,8 @@ export default function MyClients() {
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [lastEnrolledCode, setLastEnrolledCode] = useState<string | null>(null);
   const [regeneratingCodeId, setRegeneratingCodeId] = useState<string | null>(null);
+  const [sendingInviteId, setSendingInviteId] = useState<string | null>(null);
+  const [taxPreparerName, setTaxPreparerName] = useState<string>('');
 
   const PLAN_LABELS: Record<string, string> = {
     silver: 'Silver Shield',
@@ -123,6 +125,17 @@ export default function MyClients() {
   useEffect(() => {
     if (profileId) {
       fetchClients();
+      // Fetch tax preparer's name for email signature
+      supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', profileId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.full_name) {
+            setTaxPreparerName(data.full_name);
+          }
+        });
     }
   }, [profileId]);
 
@@ -261,6 +274,71 @@ export default function MyClients() {
       });
     } finally {
       setRegeneratingCodeId(null);
+    }
+  };
+
+  const handleSendInvite = async (client: ManagedClient) => {
+    if (!client.email) {
+      toast({
+        title: 'No email address',
+        description: 'This client does not have an email address on file.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setSendingInviteId(client.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-activation-link', {
+        body: { profile_id: client.id }
+      });
+
+      if (error) throw error;
+      if (!data?.activation_url) throw new Error('No activation URL received');
+
+      const clientName = client.full_name || 'there';
+      const senderName = taxPreparerName || 'Your Tax Professional';
+      
+      const subject = 'Action Required: Activate your Audit Protection';
+      const body = `Hi ${clientName},
+
+I have set up your audit protection plan. Please click the link below to activate your account and view your coverage details:
+
+${data.activation_url}
+
+Let me know if you have any questions.
+
+Best,
+${senderName}`;
+
+      // URL encode subject and body
+      const mailtoUrl = `mailto:${encodeURIComponent(client.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      
+      window.location.href = mailtoUrl;
+
+      toast({
+        title: 'Email client opened',
+        description: 'Your default email app should open with the invite pre-filled.'
+      });
+    } catch (error: any) {
+      console.error('Send invite error:', error);
+      
+      // Handle specific errors
+      if (error.message?.includes('already activated')) {
+        toast({
+          title: 'Already activated',
+          description: 'This client has already activated their account.',
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Failed to generate invite',
+          description: error.message || 'Could not generate activation link.',
+          variant: 'destructive'
+        });
+      }
+    } finally {
+      setSendingInviteId(null);
     }
   };
 
@@ -631,6 +709,24 @@ export default function MyClients() {
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
+                            )}
+                            {!client.is_activated && client.email && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSendInvite(client)}
+                                disabled={sendingInviteId === client.id}
+                                className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                              >
+                                {sendingInviteId === client.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Send className="h-4 w-4 mr-1" />
+                                    Send Invite
+                                  </>
+                                )}
+                              </Button>
                             )}
                             <Button 
                               variant="ghost" 
