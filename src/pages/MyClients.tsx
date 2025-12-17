@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, Search, Mail, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift, Sparkles, ChevronDown, Plus, Shield } from 'lucide-react';
+import { Users, Search, Mail, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift, Sparkles, ChevronDown, Plus, Shield, Copy, RotateCcw, Key } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface ManagedClient {
@@ -25,6 +25,8 @@ interface ManagedClient {
   created_at: string;
   referral_code: string | null;
   is_activated?: boolean;
+  activation_code?: string | null;
+  activation_code_id?: string | null;
   audit_plans?: {
     status: string;
     stripe_subscription_id: string | null;
@@ -48,6 +50,8 @@ export default function MyClients() {
   const [showManualEnroll, setShowManualEnroll] = useState(false);
   const [manualEnrollForm, setManualEnrollForm] = useState({ full_name: '', email: '', planLevel: 'gold' });
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [lastEnrolledCode, setLastEnrolledCode] = useState<string | null>(null);
+  const [regeneratingCodeId, setRegeneratingCodeId] = useState<string | null>(null);
 
   const PLAN_LABELS: Record<string, string> = {
     silver: 'Silver Shield',
@@ -79,13 +83,27 @@ export default function MyClients() {
 
       if (error) throw error;
       
-      // Check activation status for each client
+      // Check activation status and fetch activation codes for each client
       const clientsWithStatus = await Promise.all(
         (data || []).map(async (client) => {
-          const { data: activated } = await supabase.rpc('is_user_activated', { 
-            p_user_id: client.user_id 
-          });
-          return { ...client, is_activated: activated ?? false };
+          const [activatedResult, codeResult] = await Promise.all([
+            supabase.rpc('is_user_activated', { p_user_id: client.user_id }),
+            supabase
+              .from('client_activation_codes')
+              .select('id, code, used_at')
+              .eq('profile_id', client.id)
+              .is('used_at', null)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+          ]);
+          
+          return { 
+            ...client, 
+            is_activated: activatedResult.data ?? false,
+            activation_code: codeResult.data?.code || null,
+            activation_code_id: codeResult.data?.id || null
+          };
         })
       );
       
@@ -195,6 +213,57 @@ export default function MyClients() {
     return 'comped';
   };
 
+  const copyActivationCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast({
+      title: 'Code copied',
+      description: `Activation code ${code} copied to clipboard.`
+    });
+  };
+
+  const regenerateCode = async (client: ManagedClient) => {
+    if (!profileId) return;
+    
+    setRegeneratingCodeId(client.id);
+    try {
+      // Generate new code
+      const { data: newCode, error: codeGenError } = await supabase.rpc('generate_client_activation_code');
+      if (codeGenError) throw codeGenError;
+
+      // Insert new activation code
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
+      const { error: insertError } = await supabase
+        .from('client_activation_codes')
+        .insert({
+          code: newCode,
+          profile_id: client.id,
+          user_id: client.user_id,
+          created_by: profileId,
+          expires_at: expiresAt.toISOString()
+        });
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: 'New code generated',
+        description: `New activation code: ${newCode}`
+      });
+      
+      fetchClients();
+    } catch (error: any) {
+      console.error('Regenerate code error:', error);
+      toast({
+        title: 'Failed to generate code',
+        description: error.message || 'Could not generate new code.',
+        variant: 'destructive'
+      });
+    } finally {
+      setRegeneratingCodeId(null);
+    }
+  };
+
   const handleManualEnroll = async () => {
     if (!manualEnrollForm.email.trim() || !manualEnrollForm.full_name.trim()) {
       toast({
@@ -224,12 +293,14 @@ export default function MyClients() {
 
       const result = response.data;
       if (result.results?.[0]?.success) {
+        const activationCode = result.results[0].activationCode;
+        setLastEnrolledCode(activationCode);
         toast({
           title: 'Client enrolled',
-          description: `${manualEnrollForm.full_name} has been enrolled with ${PLAN_LABELS[manualEnrollForm.planLevel]}.`
+          description: activationCode 
+            ? `Activation code: ${activationCode}` 
+            : `${manualEnrollForm.full_name} has been enrolled.`
         });
-        setShowManualEnroll(false);
-        setManualEnrollForm({ full_name: '', email: '', planLevel: 'gold' });
         fetchClients();
       } else {
         throw new Error(result.results?.[0]?.error || 'Failed to enroll client');
@@ -401,6 +472,7 @@ export default function MyClients() {
                       <TableHead>Email</TableHead>
                       <TableHead>Membership</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Activation Code</TableHead>
                       <TableHead>Enrolled</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -460,6 +532,52 @@ export default function MyClients() {
                               <Clock className="h-3 w-3 mr-1" />
                               Pending
                             </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {!client.is_activated && client.activation_code ? (
+                            <div className="flex items-center gap-1">
+                              <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+                                {client.activation_code}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                onClick={() => copyActivationCode(client.activation_code!)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                onClick={() => regenerateCode(client)}
+                                disabled={regeneratingCodeId === client.id}
+                              >
+                                {regeneratingCodeId === client.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <RotateCcw className="h-3 w-3" />
+                                )}
+                              </Button>
+                            </div>
+                          ) : !client.is_activated ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => regenerateCode(client)}
+                              disabled={regeneratingCodeId === client.id}
+                            >
+                              {regeneratingCodeId === client.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              ) : (
+                                <Key className="h-3 w-3 mr-1" />
+                              )}
+                              Generate
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
                         <TableCell>
