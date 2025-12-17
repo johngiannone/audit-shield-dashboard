@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Users, Search, Mail, Edit2, Loader2, UserPlus, RefreshCw, CheckCircle2, Clock, CreditCard, Gift, Sparkles, ChevronDown, Plus, Shield, Copy, RotateCcw, Key, Send, Link2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -759,20 +760,28 @@ ${senderName}`;
                                     )}
                                   </Button>
                                 )}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleCopyLink(client)}
-                                  disabled={copyingLinkId === client.id}
-                                  className="h-8 w-8 p-0 text-muted-foreground border-border hover:bg-muted"
-                                  title="Copy activation link"
-                                >
-                                  {copyingLinkId === client.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Link2 className="h-4 w-4" />
-                                  )}
-                                </Button>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleCopyLink(client)}
+                                        disabled={copyingLinkId === client.id}
+                                        className="h-8 w-8 p-0 text-muted-foreground border-border hover:bg-muted"
+                                      >
+                                        {copyingLinkId === client.id ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <Link2 className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Copy link for WhatsApp, SMS, or other apps</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </>
                             )}
                             <Button 
