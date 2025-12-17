@@ -10,17 +10,18 @@ const corsHeaders = {
 };
 
 interface ClientRow {
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
+  full_name?: string;
   email: string;
-  phone: string;
-  taxYear: string;
+  phone?: string;
+  taxYear?: string;
 }
 
 interface BulkInviteRequest {
   clients: ClientRow[];
-  agentName: string;
-  agentProfileId: string;
+  agentName?: string;
+  agentProfileId?: string;
   planLevel: string;
 }
 
@@ -31,11 +32,9 @@ const PLAN_LABELS: Record<string, string> = {
 };
 
 function getCoveredYears(planLevel: string, taxYear: number): number[] {
-  // Silver covers only the specified year
   if (planLevel === "silver") {
     return [taxYear];
   }
-  // Gold and Platinum cover all open years (2021-2024)
   return [2021, 2022, 2023, 2024];
 }
 
@@ -43,10 +42,10 @@ interface InviteResult {
   email: string;
   success: boolean;
   error?: string;
+  activationCode?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -54,8 +53,8 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     
-    // Create admin client with service role key
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
@@ -63,13 +62,47 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
+    // Get the caller's profile ID from the auth header
+    const authHeader = req.headers.get("Authorization");
+    let callerProfileId: string | null = null;
+    let callerName = "Your Tax Professional";
+
+    if (authHeader) {
+      const supabaseClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("id, full_name")
+          .eq("user_id", user.id)
+          .single();
+        if (profile) {
+          callerProfileId = profile.id;
+          callerName = profile.full_name || callerName;
+        }
+      }
+    }
+
     const { clients, agentName, agentProfileId, planLevel }: BulkInviteRequest = await req.json();
 
-    console.log(`Processing bulk invite for ${clients.length} clients from agent: ${agentName}, plan: ${planLevel}`);
+    // Use provided agentProfileId/agentName or fall back to caller's info
+    const effectiveProfileId = agentProfileId || callerProfileId;
+    const effectiveName = agentName || callerName;
+
+    console.log(`Processing bulk invite for ${clients.length} clients from: ${effectiveName}, plan: ${planLevel}`);
 
     if (!clients || clients.length === 0) {
       return new Response(
         JSON.stringify({ error: "No clients provided" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!effectiveProfileId) {
+      return new Response(
+        JSON.stringify({ error: "Could not determine tax preparer profile" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -79,35 +112,34 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const client of clients) {
       try {
-        const fullName = `${client.firstName} ${client.lastName}`.trim();
+        // Support both firstName/lastName and full_name formats
+        const fullName = client.full_name || `${client.firstName || ''} ${client.lastName || ''}`.trim();
+        const firstName = client.firstName || fullName.split(' ')[0] || 'Client';
         const taxYear = client.taxYear || new Date().getFullYear().toString();
 
         console.log(`Processing invite for: ${client.email}`);
 
-        // Step 1: Create user with Supabase Admin API (no email sent)
+        // Step 1: Create user with Supabase Admin API
         const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
           email: client.email,
-          email_confirm: false, // Don't auto-confirm, we'll send magic link
+          email_confirm: false,
           user_metadata: {
             full_name: fullName,
-            invited_by: agentProfileId,
+            invited_by: effectiveProfileId,
           },
         });
 
         if (createError) {
-          // Check if user already exists
           if (createError.message.includes("already been registered")) {
-            console.log(`User ${client.email} already exists, generating invite link`);
+            console.log(`User ${client.email} already exists`);
             
-            // Get existing user and generate magic link
             const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
             const existingUser = existingUsers?.users?.find(u => u.email === client.email);
             
             if (existingUser) {
-              // Update profile with managed_by if not set
               await supabaseAdmin
                 .from("profiles")
-                .update({ managed_by: agentProfileId })
+                .update({ managed_by: effectiveProfileId })
                 .eq("user_id", existingUser.id)
                 .is("managed_by", null);
             }
@@ -125,7 +157,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         console.log(`User created: ${userData.user.id}`);
 
-        // Step 2: Create profile with managed_by and email
+        // Step 2: Create profile
         const { data: profileData, error: profileError } = await supabaseAdmin
           .from("profiles")
           .upsert({
@@ -133,7 +165,7 @@ const handler = async (req: Request): Promise<Response> => {
             full_name: fullName,
             email: client.email,
             phone: client.phone || null,
-            managed_by: agentProfileId,
+            managed_by: effectiveProfileId,
           }, {
             onConflict: "user_id",
           })
@@ -144,7 +176,7 @@ const handler = async (req: Request): Promise<Response> => {
           console.error(`Profile creation error for ${client.email}:`, profileError);
         }
 
-        // Step 2b: Create audit_plans record (comped membership)
+        // Step 3: Create audit_plans record
         if (profileData?.id) {
           const taxYearNum = parseInt(taxYear);
           const coveredYears = getCoveredYears(planLevel, taxYearNum);
@@ -157,7 +189,6 @@ const handler = async (req: Request): Promise<Response> => {
               tax_year: taxYearNum,
               covered_years: coveredYears,
               status: "active",
-              // No stripe_subscription_id = comped plan
             });
 
           if (planError) {
@@ -167,7 +198,36 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
 
-        // Step 3: Generate magic link for the user
+        // Step 4: Generate activation code
+        const { data: activationCode, error: codeGenError } = await supabaseAdmin.rpc('generate_client_activation_code');
+        
+        if (codeGenError) {
+          console.error(`Activation code generation error for ${client.email}:`, codeGenError);
+        }
+
+        // Step 5: Store activation code
+        if (activationCode && profileData?.id) {
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 30); // 30 days expiration
+
+          const { error: codeInsertError } = await supabaseAdmin
+            .from("client_activation_codes")
+            .insert({
+              code: activationCode,
+              profile_id: profileData.id,
+              user_id: userData.user.id,
+              created_by: effectiveProfileId,
+              expires_at: expiresAt.toISOString(),
+            });
+
+          if (codeInsertError) {
+            console.error(`Activation code insert error for ${client.email}:`, codeInsertError);
+          } else {
+            console.log(`Activation code stored for ${client.email}: ${activationCode}`);
+          }
+        }
+
+        // Step 6: Generate magic link
         const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
           type: "magiclink",
           email: client.email,
@@ -189,11 +249,13 @@ const handler = async (req: Request): Promise<Response> => {
 
         console.log(`Magic link generated for ${client.email}`);
 
-        // Step 4: Send branded email via Resend
+        // Step 7: Send branded email with activation code as fallback
+        const activationUrl = `${siteUrl}/activate?code=${activationCode}`;
+        
         const { error: emailError } = await resend.emails.send({
           from: "Return Shield <onboarding@resend.dev>",
           to: [client.email],
-          subject: `Audit Defense Activated: Compliments of ${agentName}`,
+          subject: `Audit Defense Activated: Compliments of ${effectiveName}`,
           html: `
             <!DOCTYPE html>
             <html>
@@ -209,11 +271,11 @@ const handler = async (req: Request): Promise<Response> => {
               
               <div style="background-color: #ffffff; padding: 40px 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                 <p style="font-size: 18px; color: #1e3a5f; margin-bottom: 20px;">
-                  Hello ${client.firstName},
+                  Hello ${firstName},
                 </p>
                 
                 <p style="font-size: 16px; line-height: 1.6; color: #4a5568;">
-                  Great news! Your tax professional <strong>${agentName}</strong> has enrolled you in 
+                  Great news! Your tax professional <strong>${effectiveName}</strong> has enrolled you in 
                   <strong>Return Shield ${PLAN_LABELS[planLevel] || "Audit Defense"}</strong> for the <strong>${taxYear}</strong> tax year.
                 </p>
                 
@@ -238,8 +300,16 @@ const handler = async (req: Request): Promise<Response> => {
                   </a>
                 </div>
                 
+                <div style="background-color: #fef3cd; border: 1px solid #ffc107; padding: 15px 20px; margin: 25px 0; border-radius: 8px;">
+                  <p style="font-size: 14px; color: #856404; margin: 0;">
+                    <strong>Link not working?</strong> Use this activation code instead:<br>
+                    <span style="font-size: 20px; font-weight: bold; letter-spacing: 2px; color: #1e3a5f;">${activationCode}</span><br>
+                    Visit <a href="${activationUrl}" style="color: #1e3a5f;">${siteUrl}/activate</a> and enter your code.
+                  </p>
+                </div>
+                
                 <p style="font-size: 14px; color: #718096; text-align: center;">
-                  This link will expire in 24 hours. If you have any questions, contact your tax professional.
+                  This link will expire in 24 hours. The activation code expires in 30 days.
                 </p>
               </div>
               
@@ -254,12 +324,18 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (emailError) {
           console.error(`Email send error for ${client.email}:`, emailError);
-          results.push({ email: client.email, success: false, error: "Email send failed" });
+          // Still mark as success since we have the activation code as fallback
+          results.push({ 
+            email: client.email, 
+            success: true, 
+            activationCode,
+            error: "Email delivery may have failed - use activation code"
+          });
           continue;
         }
 
         console.log(`Invite email sent to ${client.email}`);
-        results.push({ email: client.email, success: true });
+        results.push({ email: client.email, success: true, activationCode });
 
       } catch (error: any) {
         console.error(`Error processing ${client.email}:`, error);

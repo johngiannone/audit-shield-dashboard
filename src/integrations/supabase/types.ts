@@ -319,6 +319,54 @@ export type Database = {
           },
         ]
       }
+      client_activation_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          profile_id: string | null
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          profile_id?: string | null
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          profile_id?: string | null
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_activation_codes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_activation_codes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_requests: {
         Row: {
           case_id: string
@@ -552,6 +600,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_client_activation_code: { Args: never; Returns: string }
       generate_invite_code: { Args: never; Returns: string }
       generate_referral_code: { Args: never; Returns: string }
       get_profile_id: { Args: { _user_id: string }; Returns: string }
