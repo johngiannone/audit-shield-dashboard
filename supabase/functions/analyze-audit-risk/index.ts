@@ -37,6 +37,14 @@ interface ExtractedData {
   fullAddress: string | null; // Full street address for property lookup
   // Charity list from Schedule A
   charityList: CharityDonation[];
+  // S-Corp (1120-S) specific fields
+  officerCompensation: number | null;
+  ordinaryBusinessIncome: number | null;
+  distributions: number | null;
+  // C-Corp (1120) specific fields
+  totalIncome: number | null;
+  costOfGoodsSold: number | null;
+  otherDeductions: number | null;
 }
 
 interface LifestyleData {
@@ -105,10 +113,52 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log('Step A: Extracting data from Form 1040 PDF...');
+    console.log(`Step A: Extracting data from ${returnType} PDF...`);
     
-    // Step A: Extract data using Lovable AI (Gemini) - includes Schedule C, occupation, and address fields
-    const extractionPrompt = `Analyze this Form 1040 tax return PDF and extract the following information. Return ONLY a JSON object with these exact fields:
+    // Step A: Extract data using Lovable AI (Gemini) - form-specific prompts
+    let extractionPrompt: string;
+    
+    if (returnType === '1120-S') {
+      // S-Corp Form 1120-S extraction prompt
+      extractionPrompt = `Analyze this Form 1120-S (S Corporation) tax return PDF and extract the following information. Return ONLY a JSON object with these exact fields:
+
+{
+  "grossReceipts": <number or null>, // Gross Receipts or Sales (Line 1a)
+  "officerCompensation": <number or null>, // Compensation of Officers (Line 7)
+  "ordinaryBusinessIncome": <number or null>, // Ordinary Business Income/Loss (Line 21) - can be negative
+  "distributions": <number or null>, // Distributions from Schedule K, Line 16d
+  "taxYear": <number or null>, // Tax year from the form header
+  "stateCode": <string or null>, // 2-letter state code from address
+  "fullAddress": <string or null> // Full address from the form
+}
+
+Important:
+- Extract exact dollar amounts as numbers (no $ signs or commas)
+- If a field is not present or cannot be found, use null
+- Ordinary Business Income can be negative (a loss)
+- Only return the JSON object, no other text`;
+    } else if (returnType === '1120') {
+      // C-Corp Form 1120 extraction prompt
+      extractionPrompt = `Analyze this Form 1120 (C Corporation) tax return PDF and extract the following information. Return ONLY a JSON object with these exact fields:
+
+{
+  "grossReceipts": <number or null>, // Gross Receipts or Sales (Line 1a)
+  "costOfGoodsSold": <number or null>, // Cost of Goods Sold (Line 2)
+  "totalIncome": <number or null>, // Total Income (Line 11)
+  "officerCompensation": <number or null>, // Compensation of Officers (Line 12)
+  "otherDeductions": <number or null>, // Other Deductions (Line 26)
+  "taxYear": <number or null>, // Tax year from the form header
+  "stateCode": <string or null>, // 2-letter state code from address
+  "fullAddress": <string or null> // Full address from the form
+}
+
+Important:
+- Extract exact dollar amounts as numbers (no $ signs or commas)
+- If a field is not present or cannot be found, use null
+- Only return the JSON object, no other text`;
+    } else {
+      // Individual Form 1040 extraction prompt (default)
+      extractionPrompt = `Analyze this Form 1040 tax return PDF and extract the following information. Return ONLY a JSON object with these exact fields:
 
 {
   "agi": <number or null>, // Adjusted Gross Income (Line 11 on Form 1040)
@@ -136,6 +186,7 @@ Important:
 - fullAddress should be the complete address including street, city, state and zip if visible
 - charityList should be an array of objects with "name" (charity organization name) and "amount" (donation amount) extracted from Schedule A charitable contributions section. Return empty array [] if no charities found.
 - Only return the JSON object, no other text`;
+    }
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -194,7 +245,30 @@ Important:
       // Try to find JSON in the response
       const jsonMatch = extractionContent.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        extractedData = JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        // Normalize to full ExtractedData structure
+        extractedData = {
+          agi: parsed.agi ?? null,
+          businessIncome: parsed.businessIncome ?? null,
+          charitableContributions: parsed.charitableContributions ?? null,
+          totalItemizedDeductions: parsed.totalItemizedDeductions ?? null,
+          taxYear: parsed.taxYear ?? null,
+          naicsCode: parsed.naicsCode ?? null,
+          grossReceipts: parsed.grossReceipts ?? null,
+          netProfit: parsed.netProfit ?? null,
+          occupation: parsed.occupation ?? null,
+          wagesIncome: parsed.wagesIncome ?? null,
+          stateCode: parsed.stateCode ?? null,
+          fullAddress: parsed.fullAddress ?? null,
+          charityList: parsed.charityList ?? [],
+          // Corporate fields
+          officerCompensation: parsed.officerCompensation ?? null,
+          ordinaryBusinessIncome: parsed.ordinaryBusinessIncome ?? null,
+          distributions: parsed.distributions ?? null,
+          totalIncome: parsed.totalIncome ?? null,
+          costOfGoodsSold: parsed.costOfGoodsSold ?? null,
+          otherDeductions: parsed.otherDeductions ?? null,
+        };
       } else {
         throw new Error('No JSON found in response');
       }
@@ -213,7 +287,13 @@ Important:
         wagesIncome: null,
         stateCode: null,
         fullAddress: null,
-        charityList: []
+        charityList: [],
+        officerCompensation: null,
+        ordinaryBusinessIncome: null,
+        distributions: null,
+        totalIncome: null,
+        costOfGoodsSold: null,
+        otherDeductions: null,
       };
     }
     
@@ -284,6 +364,82 @@ Important:
     console.log('Step C: Analyzing risk flags...');
     
     const flags: RiskFlag[] = [];
+
+    // ========== CORPORATE FORM RISK LOGIC ==========
+    
+    // S-Corp (1120-S) specific risk checks
+    if (returnType === '1120-S') {
+      console.log('Applying S-Corp (1120-S) risk logic...');
+      
+      // Risk Logic A: The Salary Trap - Unreasonable Compensation
+      if (extractedData.ordinaryBusinessIncome !== null && extractedData.ordinaryBusinessIncome > 50000) {
+        const officerComp = extractedData.officerCompensation ?? 0;
+        const compRatio = officerComp / extractedData.ordinaryBusinessIncome;
+        
+        if (officerComp === 0) {
+          flags.push({
+            flag: 'Unreasonable Compensation Risk (IRS Priority)',
+            severity: 'high',
+            details: `S-Corp has Ordinary Business Income of $${extractedData.ordinaryBusinessIncome.toLocaleString()} but $0 Officer Compensation. This is a critical IRS audit trigger - shareholders cannot avoid payroll taxes by taking all income as distributions.`
+          });
+        } else if (compRatio < 0.10) {
+          flags.push({
+            flag: 'Unreasonable Compensation Risk (IRS Priority)',
+            severity: 'high',
+            details: `Officer Compensation ($${officerComp.toLocaleString()}) is less than 10% of Ordinary Business Income ($${extractedData.ordinaryBusinessIncome.toLocaleString()}). This is a critical IRS audit trigger for S-Corps attempting to minimize payroll taxes.`
+          });
+        }
+      }
+      
+      // Risk Logic B: Operating Loss with High Gross Receipts
+      if (extractedData.ordinaryBusinessIncome !== null && 
+          extractedData.ordinaryBusinessIncome < 0 && 
+          extractedData.grossReceipts !== null && 
+          extractedData.grossReceipts > 100000) {
+        flags.push({
+          flag: 'Operating Loss Flag',
+          severity: 'medium',
+          details: `S-Corp shows a loss of $${Math.abs(extractedData.ordinaryBusinessIncome).toLocaleString()} despite Gross Receipts of $${extractedData.grossReceipts.toLocaleString()}. Large losses relative to revenue may attract IRS scrutiny.`
+        });
+      }
+    }
+    
+    // C-Corp (1120) specific risk checks
+    if (returnType === '1120') {
+      console.log('Applying C-Corp (1120) risk logic...');
+      
+      // Risk Logic A: The "Other" Trap - High Other Deductions
+      if (extractedData.totalIncome !== null && 
+          extractedData.totalIncome > 0 && 
+          extractedData.otherDeductions !== null) {
+        const otherDeductionRatio = extractedData.otherDeductions / extractedData.totalIncome;
+        
+        if (otherDeductionRatio > 0.20) {
+          flags.push({
+            flag: 'High "Other" Deductions (Audit Magnet)',
+            severity: 'high',
+            details: `Other Deductions ($${extractedData.otherDeductions.toLocaleString()}) are ${(otherDeductionRatio * 100).toFixed(1)}% of Total Income - exceeding the 20% threshold. The IRS frequently scrutinizes vague "Other" categories for personal expenses disguised as business deductions.`
+          });
+        }
+      }
+      
+      // Risk Logic B: Abnormally High COGS Ratio
+      if (extractedData.grossReceipts !== null && 
+          extractedData.grossReceipts > 0 && 
+          extractedData.costOfGoodsSold !== null) {
+        const cogsRatio = extractedData.costOfGoodsSold / extractedData.grossReceipts;
+        
+        if (cogsRatio > 0.75) {
+          flags.push({
+            flag: 'Abnormally High COGS',
+            severity: 'medium',
+            details: `Cost of Goods Sold ($${extractedData.costOfGoodsSold.toLocaleString()}) is ${(cogsRatio * 100).toFixed(1)}% of Gross Receipts - exceeding the 75% threshold. This may indicate inventory valuation issues or inflated costs.`
+          });
+        }
+      }
+    }
+
+    // ========== INDIVIDUAL (1040) RISK LOGIC ==========
 
     // High Charity/Income Ratio check
     if (extractedData.agi !== null && extractedData.charitableContributions !== null) {
