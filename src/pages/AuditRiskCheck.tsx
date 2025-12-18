@@ -26,6 +26,19 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
+interface CharityDonation {
+  name: string;
+  amount: number | null;
+}
+
+interface CharityValidation {
+  name: string;
+  amount: number | null;
+  verified: boolean;
+  matchedName: string | null;
+  ein: string | null;
+}
+
 interface ExtractedData {
   agi: number | null;
   businessIncome: number | null;
@@ -39,6 +52,7 @@ interface ExtractedData {
   wagesIncome: number | null;
   stateCode: string | null;
   fullAddress: string | null;
+  charityList: CharityDonation[];
 }
 
 interface LifestyleData {
@@ -73,6 +87,7 @@ interface RiskAssessment {
     isHighRisk: boolean;
   } | null;
   lifestyleData: LifestyleData | null;
+  charityValidations: CharityValidation[];
 }
 
 // Calculate individual risk factor scores from assessment data
@@ -545,6 +560,67 @@ export default function AuditRiskCheck() {
                       ))}
                     </div>
                   </div>
+                )}
+
+                {/* Charity Validation Section */}
+                {assessment.charityValidations && assessment.charityValidations.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <CheckCircle className="h-4 w-4" />
+                        Charity Verification
+                      </CardTitle>
+                      <CardDescription>
+                        Validation against IRS Pub 78 registered 501(c)(3) organizations
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {assessment.charityValidations.map((charity, index) => (
+                          <div 
+                            key={index} 
+                            className={cn(
+                              "flex items-center justify-between p-3 rounded-lg border",
+                              charity.verified 
+                                ? "bg-green-500/10 border-green-500/20" 
+                                : "bg-amber-500/10 border-amber-500/20"
+                            )}
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                {charity.verified ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                                ) : (
+                                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                                )}
+                                <span className={cn(
+                                  "font-medium text-sm",
+                                  charity.verified ? "text-green-700" : "text-amber-700"
+                                )}>
+                                  {charity.name}
+                                </span>
+                              </div>
+                              {charity.verified && charity.matchedName && charity.matchedName !== charity.name && (
+                                <p className="text-xs text-muted-foreground ml-6">
+                                  Matched: {charity.matchedName}
+                                </p>
+                              )}
+                              {!charity.verified && (
+                                <p className="text-xs text-amber-600 ml-6">
+                                  ⚠️ Could not verify as a 501(c)(3). Ensure this is a registered non-profit.
+                                </p>
+                              )}
+                            </div>
+                            {charity.amount && (
+                              <span className="font-medium text-sm">
+                                {formatCurrency(charity.amount)}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
 
                 {assessment.flags.length === 0 && (

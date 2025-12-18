@@ -865,6 +865,33 @@ export type Database = {
         }
         Relationships: []
       }
+      valid_charities: {
+        Row: {
+          city: string | null
+          created_at: string
+          ein: string | null
+          id: string
+          organization_name: string
+          state: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          ein?: string | null
+          id?: string
+          organization_name: string
+          state?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          ein?: string | null
+          id?: string
+          organization_name?: string
+          state?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
