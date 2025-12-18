@@ -561,6 +561,27 @@ export type Database = {
           },
         ]
       }
+      occupation_wages: {
+        Row: {
+          avg_annual_wage: number
+          created_at: string
+          id: string
+          job_title_keyword: string
+        }
+        Insert: {
+          avg_annual_wage: number
+          created_at?: string
+          id?: string
+          job_title_keyword: string
+        }
+        Update: {
+          avg_annual_wage?: number
+          created_at?: string
+          id?: string
+          job_title_keyword?: string
+        }
+        Relationships: []
+      }
       onboarding_steps: {
         Row: {
           action_url: string

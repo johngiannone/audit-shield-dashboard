@@ -16,6 +16,9 @@ interface ExtractedData {
   naicsCode: string | null;
   grossReceipts: number | null;
   netProfit: number | null;
+  // Occupation field from signature block
+  occupation: string | null;
+  wagesIncome: number | null; // W-2 wages from Line 1
 }
 
 interface RiskFlag {
@@ -58,7 +61,7 @@ serve(async (req) => {
 
     console.log('Step A: Extracting data from Form 1040 PDF...');
     
-    // Step A: Extract data using Lovable AI (Gemini) - now includes Schedule C fields
+    // Step A: Extract data using Lovable AI (Gemini) - includes Schedule C and occupation fields
     const extractionPrompt = `Analyze this Form 1040 tax return PDF and extract the following information. Return ONLY a JSON object with these exact fields:
 
 {
@@ -69,7 +72,9 @@ serve(async (req) => {
   "taxYear": <number or null>, // Tax year from the form header
   "naicsCode": <string or null>, // NAICS code from Schedule C (6-digit code like "541110")
   "grossReceipts": <number or null>, // Gross Receipts from Schedule C Line 1
-  "netProfit": <number or null> // Net Profit from Schedule C Line 31 (can be negative)
+  "netProfit": <number or null>, // Net Profit from Schedule C Line 31 (can be negative)
+  "occupation": <string or null>, // Occupation from Page 2 signature block (taxpayer's occupation field)
+  "wagesIncome": <number or null> // Wages, salaries, tips from Line 1 (W-2 income)
 }
 
 Important:
@@ -77,6 +82,7 @@ Important:
 - If a field is not present or cannot be found, use null
 - Business income and net profit can be negative (a loss)
 - NAICS code should be a 6-digit string if found
+- Occupation should be the text from the occupation field near signature
 - Only return the JSON object, no other text`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -150,7 +156,9 @@ Important:
         taxYear: null,
         naicsCode: null,
         grossReceipts: null,
-        netProfit: null
+        netProfit: null,
+        occupation: null,
+        wagesIncome: null
       };
     }
 
@@ -305,6 +313,72 @@ Important:
             severity: 'medium',
             details: `Your profit margin (${userProfitMargin.toFixed(1)}%) is below the ${industryBenchmark.industryName} industry average of ${industryAvg}%.`
           });
+        }
+      }
+    }
+
+    // NEW: Income Reasonability Check based on Occupation
+    let occupationMatch = null;
+    if (extractedData.occupation && extractedData.wagesIncome !== null) {
+      console.log('Step C2: Checking income reasonability for occupation:', extractedData.occupation);
+      
+      const occupationLower = extractedData.occupation.toLowerCase().trim();
+      
+      // Query occupation wages with fuzzy matching
+      const { data: occupationData, error: occupationError } = await supabase
+        .from('occupation_wages')
+        .select('*');
+      
+      if (!occupationError && occupationData) {
+        // Find best matching occupation using keyword matching
+        let bestMatch = null;
+        let bestScore = 0;
+        
+        for (const occ of occupationData) {
+          const keyword = occ.job_title_keyword.toLowerCase();
+          // Check if occupation contains the keyword or keyword contains occupation
+          if (occupationLower.includes(keyword) || keyword.includes(occupationLower)) {
+            // Score based on how close the match is
+            const score = keyword === occupationLower ? 100 : 
+                         occupationLower.includes(keyword) ? 80 :
+                         keyword.includes(occupationLower) ? 60 : 0;
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = occ;
+            }
+          }
+          // Also check individual words
+          const occupationWords = occupationLower.split(/\s+/);
+          const keywordWords = keyword.split(/\s+/);
+          for (const word of occupationWords) {
+            if (word.length > 3 && keywordWords.some((kw: string) => kw.includes(word) || word.includes(kw))) {
+              if (bestScore < 50) {
+                bestScore = 50;
+                bestMatch = occ;
+              }
+            }
+          }
+        }
+        
+        if (bestMatch) {
+          occupationMatch = {
+            matchedOccupation: bestMatch.job_title_keyword,
+            avgWage: bestMatch.avg_annual_wage,
+            reportedIncome: extractedData.wagesIncome
+          };
+          console.log('Matched occupation:', occupationMatch);
+          
+          const threshold = bestMatch.avg_annual_wage * 0.30; // 30% of average
+          
+          if (extractedData.wagesIncome < threshold) {
+            flags.push({
+              flag: 'Income Mismatch for Occupation',
+              severity: 'medium',
+              details: `Reported W-2 income ($${extractedData.wagesIncome.toLocaleString()}) is less than 30% of the average wage for "${bestMatch.job_title_keyword}" ($${bestMatch.avg_annual_wage.toLocaleString()}). This may indicate underreported income or part-time employment not clearly documented.`
+            });
+          }
+        } else {
+          console.log('No occupation match found for:', extractedData.occupation);
         }
       }
     }
