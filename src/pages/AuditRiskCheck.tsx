@@ -16,6 +16,12 @@ import { DefenseUpsellBanner } from '@/components/audit/DefenseUpsellBanner';
 import { RiskFactorBreakdown } from '@/components/audit/RiskFactorBreakdown';
 import { cn } from '@/lib/utils';
 import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { 
   Upload, 
   FileText, 
   CheckCircle, 
@@ -23,7 +29,9 @@ import {
   Loader2,
   DollarSign,
   Info,
-  AlertTriangle
+  AlertTriangle,
+  MapPin,
+  HelpCircle
 } from 'lucide-react';
 
 interface CharityDonation {
@@ -61,6 +69,14 @@ interface LifestyleData {
   source: 'api' | 'manual' | null;
 }
 
+interface NeighborhoodData {
+  zipCode: string;
+  medianIncome: number;
+  userAgi: number;
+  incomeRatio: number;
+  isOutlier: boolean;
+}
+
 interface RiskFlag {
   flag: string;
   severity: 'high' | 'medium' | 'low';
@@ -88,6 +104,7 @@ interface RiskAssessment {
   } | null;
   lifestyleData: LifestyleData | null;
   charityValidations: CharityValidation[];
+  neighborhoodData: NeighborhoodData | null;
 }
 
 // Calculate individual risk factor scores from assessment data
@@ -529,6 +546,34 @@ export default function AuditRiskCheck() {
                             </div>
                           )}
                         </>
+                      )}
+                      {assessment.neighborhoodData && (
+                        <div className="flex justify-between items-center">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-muted-foreground flex items-center gap-1 cursor-help">
+                                  <MapPin className="h-3 w-3" />
+                                  Neighborhood
+                                  <HelpCircle className="h-3 w-3" />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="text-sm">
+                                  Your reported income is compared to the median household income for ZIP code {assessment.neighborhoodData.zipCode}. 
+                                  Significant differences can sometimes trigger an IRS "economic reality" review.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <span className={cn(
+                            "font-medium",
+                            assessment.neighborhoodData.isOutlier && "text-amber-600"
+                          )}>
+                            {assessment.neighborhoodData.incomeRatio}% of median
+                            {assessment.neighborhoodData.isOutlier && " ⚠️"}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </CardContent>

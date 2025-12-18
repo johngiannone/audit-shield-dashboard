@@ -892,6 +892,27 @@ export type Database = {
         }
         Relationships: []
       }
+      zip_code_economics: {
+        Row: {
+          created_at: string
+          id: string
+          median_household_income: number
+          zip_code: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          median_household_income: number
+          zip_code: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          median_household_income?: number
+          zip_code?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

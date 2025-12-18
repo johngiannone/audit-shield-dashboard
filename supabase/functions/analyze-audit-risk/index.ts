@@ -45,6 +45,14 @@ interface LifestyleData {
   source: 'api' | 'manual' | null;
 }
 
+interface NeighborhoodData {
+  zipCode: string;
+  medianIncome: number;
+  userAgi: number;
+  incomeRatio: number; // User AGI as percentage of median
+  isOutlier: boolean;
+}
+
 interface RiskFlag {
   flag: string;
   severity: 'high' | 'medium' | 'low';
@@ -72,6 +80,7 @@ interface RiskAssessment {
   } | null;
   lifestyleData: LifestyleData | null;
   charityValidations: CharityValidation[];
+  neighborhoodData: NeighborhoodData | null;
 }
 
 serve(async (req) => {
@@ -647,6 +656,55 @@ Important:
       }
     }
 
+    // NEW: Neighborhood Outlier Check
+    console.log('Step C5: Checking neighborhood income outlier...');
+    
+    let neighborhoodData: NeighborhoodData | null = null;
+    
+    if (extractedData.fullAddress && extractedData.agi && extractedData.agi > 0) {
+      // Extract zip code from address
+      const zipMatch = extractedData.fullAddress.match(/\b(\d{5})(?:-\d{4})?\b/);
+      const zipCode = zipMatch?.[1] || null;
+      
+      if (zipCode) {
+        console.log('Looking up zip code economics for:', zipCode);
+        
+        const { data: zipData, error: zipError } = await supabase
+          .from('zip_code_economics')
+          .select('median_household_income')
+          .eq('zip_code', zipCode)
+          .maybeSingle();
+        
+        if (!zipError && zipData) {
+          const medianIncome = zipData.median_household_income;
+          const incomeRatio = (extractedData.agi / medianIncome) * 100;
+          const isOutlier = incomeRatio < 30; // AGI is less than 30% of zip median
+          
+          neighborhoodData = {
+            zipCode,
+            medianIncome,
+            userAgi: extractedData.agi,
+            incomeRatio: Math.round(incomeRatio),
+            isOutlier
+          };
+          
+          console.log('Neighborhood data:', neighborhoodData);
+          
+          // Rule: If AGI < 30% of median, flag as outlier
+          // Note: Age check would require extracting age from return, which is not currently extracted
+          if (isOutlier) {
+            flags.push({
+              flag: 'Statistical Low-Income Outlier',
+              severity: 'medium',
+              details: `Your reported income ($${extractedData.agi.toLocaleString()}) is only ${Math.round(incomeRatio)}% of the median household income ($${medianIncome.toLocaleString()}) for your ZIP code (${zipCode}). This can sometimes trigger an IRS 'economic reality' review.`
+            });
+          }
+        } else {
+          console.log('No zip code data found for:', zipCode);
+        }
+      }
+    }
+
     // Step D: Calculate risk score
     console.log('Step D: Calculating risk score...');
     
@@ -681,7 +739,8 @@ Important:
       } : null,
       geoRisk,
       lifestyleData,
-      charityValidations
+      charityValidations,
+      neighborhoodData
     };
 
     console.log('Final risk assessment:', assessment);
