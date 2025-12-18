@@ -19,6 +19,8 @@ interface ExtractedData {
   // Occupation field from signature block
   occupation: string | null;
   wagesIncome: number | null; // W-2 wages from Line 1
+  // Address field for geographic risk
+  stateCode: string | null; // 2-letter state code from address
 }
 
 interface RiskFlag {
@@ -39,6 +41,12 @@ interface RiskAssessment {
     industryName: string;
     avgProfitMargin: number;
     userProfitMargin: number;
+  } | null;
+  geoRisk: {
+    stateCode: string;
+    stateName: string;
+    auditRate: number;
+    isHighRisk: boolean;
   } | null;
 }
 
@@ -61,7 +69,7 @@ serve(async (req) => {
 
     console.log('Step A: Extracting data from Form 1040 PDF...');
     
-    // Step A: Extract data using Lovable AI (Gemini) - includes Schedule C and occupation fields
+    // Step A: Extract data using Lovable AI (Gemini) - includes Schedule C, occupation, and address fields
     const extractionPrompt = `Analyze this Form 1040 tax return PDF and extract the following information. Return ONLY a JSON object with these exact fields:
 
 {
@@ -74,7 +82,8 @@ serve(async (req) => {
   "grossReceipts": <number or null>, // Gross Receipts from Schedule C Line 1
   "netProfit": <number or null>, // Net Profit from Schedule C Line 31 (can be negative)
   "occupation": <string or null>, // Occupation from Page 2 signature block (taxpayer's occupation field)
-  "wagesIncome": <number or null> // Wages, salaries, tips from Line 1 (W-2 income)
+  "wagesIncome": <number or null>, // Wages, salaries, tips from Line 1 (W-2 income)
+  "stateCode": <string or null> // 2-letter state code from taxpayer's address (e.g., "CA", "NY", "TX")
 }
 
 Important:
@@ -83,6 +92,7 @@ Important:
 - Business income and net profit can be negative (a loss)
 - NAICS code should be a 6-digit string if found
 - Occupation should be the text from the occupation field near signature
+- stateCode should be the 2-letter US state abbreviation from the address at the top of the form
 - Only return the JSON object, no other text`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -158,7 +168,8 @@ Important:
         grossReceipts: null,
         netProfit: null,
         occupation: null,
-        wagesIncome: null
+        wagesIncome: null,
+        stateCode: null
       };
     }
 
@@ -317,6 +328,50 @@ Important:
       }
     }
 
+    // NEW: Geographic Risk Check based on State
+    let geoRisk = null;
+    if (extractedData.stateCode) {
+      console.log('Checking geographic risk for state:', extractedData.stateCode);
+      
+      // Fetch all geo risk factors to determine top 10%
+      const { data: allGeoData, error: allGeoError } = await supabase
+        .from('geo_risk_factors')
+        .select('*')
+        .order('audit_rate_per_1000', { ascending: false });
+      
+      if (!allGeoError && allGeoData && allGeoData.length > 0) {
+        // Find the user's state
+        const userStateData = allGeoData.find(
+          (g: any) => g.state_code.toUpperCase() === extractedData.stateCode?.toUpperCase()
+        );
+        
+        if (userStateData) {
+          // Calculate top 10% threshold (top 5-6 states out of 51)
+          const top10PercentIndex = Math.ceil(allGeoData.length * 0.1);
+          const top10PercentThreshold = allGeoData[top10PercentIndex - 1]?.audit_rate_per_1000 || 0;
+          
+          const isHighRisk = Number(userStateData.audit_rate_per_1000) >= Number(top10PercentThreshold);
+          
+          geoRisk = {
+            stateCode: userStateData.state_code,
+            stateName: userStateData.state_name,
+            auditRate: Number(userStateData.audit_rate_per_1000),
+            isHighRisk
+          };
+          
+          console.log('Geographic risk data:', geoRisk, 'Threshold:', top10PercentThreshold);
+          
+          if (isHighRisk) {
+            flags.push({
+              flag: 'Location High-Activity Zone',
+              severity: 'medium',
+              details: `You are located in ${userStateData.state_name}, which has an audit rate of ${userStateData.audit_rate_per_1000} per 1,000 returns - one of the highest in the nation. This geographic factor adds to your overall risk profile.`
+            });
+          }
+        }
+      }
+    }
+
     // NEW: Income Reasonability Check based on Occupation
     let occupationMatch = null;
     if (extractedData.occupation && extractedData.wagesIncome !== null) {
@@ -387,6 +442,13 @@ Important:
     console.log('Step D: Calculating risk score...');
     
     let riskScore = 0;
+    
+    // Add 10 points for geographic high-risk zone
+    if (geoRisk?.isHighRisk) {
+      riskScore += 10;
+      console.log('Added 10 points for geographic high-risk zone');
+    }
+    
     for (const flag of flags) {
       if (flag.severity === 'high') {
         riskScore += 30;
@@ -407,7 +469,8 @@ Important:
         industryName: industryBenchmark.industryName,
         avgProfitMargin: industryBenchmark.avgProfitMargin,
         userProfitMargin: userProfitMargin
-      } : null
+      } : null,
+      geoRisk
     };
 
     console.log('Final risk assessment:', assessment);

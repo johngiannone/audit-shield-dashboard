@@ -424,6 +424,30 @@ export type Database = {
           },
         ]
       }
+      geo_risk_factors: {
+        Row: {
+          audit_rate_per_1000: number
+          created_at: string
+          id: string
+          state_code: string
+          state_name: string
+        }
+        Insert: {
+          audit_rate_per_1000: number
+          created_at?: string
+          id?: string
+          state_code: string
+          state_name: string
+        }
+        Update: {
+          audit_rate_per_1000?: number
+          created_at?: string
+          id?: string
+          state_code?: string
+          state_name?: string
+        }
+        Relationships: []
+      }
       industry_benchmarks: {
         Row: {
           avg_cogs_percentage: number | null
