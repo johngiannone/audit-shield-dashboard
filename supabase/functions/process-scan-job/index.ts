@@ -1,0 +1,261 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface RiskFlag {
+  flag: string;
+  severity: 'high' | 'medium' | 'low';
+  details: string;
+}
+
+interface ExtractedData {
+  clientName: string | null;
+  taxYear: number | null;
+  agi: number | null;
+  scheduleCNetProfit: number | null;
+  totalItemizedDeductions: number | null;
+  charitableContributions: number | null;
+  businessIncome: number | null;
+  stateCode: string | null;
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { jobId } = await req.json();
+
+    if (!jobId) {
+      throw new Error('Job ID is required');
+    }
+
+    const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
+    if (!OPENROUTER_API_KEY) {
+      throw new Error('OPENROUTER_API_KEY is not configured');
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    console.log(`Processing scan job: ${jobId}`);
+
+    // Fetch the job
+    const { data: job, error: jobError } = await supabase
+      .from('audit_scan_jobs')
+      .select('*')
+      .eq('id', jobId)
+      .single();
+
+    if (jobError || !job) {
+      console.error('Job not found:', jobError);
+      throw new Error('Job not found');
+    }
+
+    if (job.status !== 'pending') {
+      console.log(`Job ${jobId} is not pending (status: ${job.status})`);
+      return new Response(JSON.stringify({ message: 'Job already processed' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Update status to processing
+    await supabase
+      .from('audit_scan_jobs')
+      .update({ status: 'processing' })
+      .eq('id', jobId);
+
+    // Download the PDF from storage
+    console.log(`Downloading file from: ${job.file_path}`);
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('scan-queue')
+      .download(job.file_path);
+
+    if (downloadError || !fileData) {
+      console.error('Failed to download file:', downloadError);
+      await supabase
+        .from('audit_scan_jobs')
+        .update({ 
+          status: 'error', 
+          error_message: 'Failed to download file from storage' 
+        })
+        .eq('id', jobId);
+      throw new Error('Failed to download file');
+    }
+
+    // Convert to base64
+    const arrayBuffer = await fileData.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const base64 = btoa(String.fromCharCode(...uint8Array));
+
+    console.log('Sending PDF to Claude 3.5 Sonnet via OpenRouter...');
+
+    // Call Claude 3.5 Sonnet via OpenRouter
+    const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': supabaseUrl,
+        'X-Title': 'Return Shield Batch Scan',
+      },
+      body: JSON.stringify({
+        model: 'anthropic/claude-3.5-sonnet',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Analyze this Form 1040 tax return PDF and extract data, then identify audit risks.
+
+EXTRACTION: Return a JSON object with:
+{
+  "clientName": <string or null>, // Taxpayer name from the form
+  "taxYear": <number or null>, // Tax year from the form header
+  "agi": <number or null>, // Adjusted Gross Income (Line 11)
+  "scheduleCNetProfit": <number or null>, // Net Profit from Schedule C Line 31
+  "totalItemizedDeductions": <number or null>, // Total from Schedule A
+  "charitableContributions": <number or null>, // Charitable gifts from Schedule A
+  "businessIncome": <number or null>, // Business Income from Schedule 1/C
+  "stateCode": <string or null> // 2-letter state code from address
+}
+
+RISK ANALYSIS: Identify specific audit risk flags based on these rules:
+1. HIGH RISK - Charity/Income Ratio > 15%: If charitable contributions exceed 15% of AGI
+2. HIGH RISK - Hobby Loss Rule: If Schedule C shows loss (negative net profit)
+3. MEDIUM RISK - Round Number Anomalies: If key amounts are round numbers (multiples of $1000)
+4. HIGH RISK - High Itemized Deductions: If total itemized deductions > 30% of AGI
+5. MEDIUM RISK - Low Profit Margin: If Schedule C net profit < 20% of gross receipts
+6. HIGH RISK - Housing Cost Mismatch: If detected housing costs > 25% of AGI
+7. MEDIUM RISK - Neighborhood Outlier: If income appears significantly below area median
+
+Return as JSON:
+{
+  "extractedData": { ... },
+  "riskFlags": [
+    {
+      "flag": "Flag Name",
+      "severity": "high" | "medium" | "low",
+      "details": "Explanation of the risk"
+    }
+  ],
+  "riskScore": <number 0-100> // Overall risk score based on flags
+}
+
+Only return valid JSON, no other text.`
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:application/pdf;base64,${base64}`
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 4096,
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('OpenRouter API error:', aiResponse.status, errorText);
+      
+      await supabase
+        .from('audit_scan_jobs')
+        .update({ 
+          status: 'error', 
+          error_message: `AI analysis failed: ${aiResponse.status}` 
+        })
+        .eq('id', jobId);
+      
+      throw new Error(`AI analysis failed: ${aiResponse.status}`);
+    }
+
+    const aiData = await aiResponse.json();
+    const content = aiData.choices?.[0]?.message?.content || '';
+    console.log('AI response received:', content.substring(0, 200));
+
+    // Parse the AI response
+    let result: {
+      extractedData: ExtractedData;
+      riskFlags: RiskFlag[];
+      riskScore: number;
+    };
+
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON found in response');
+      }
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', parseError);
+      
+      // Default result if parsing fails
+      result = {
+        extractedData: {
+          clientName: null,
+          taxYear: null,
+          agi: null,
+          scheduleCNetProfit: null,
+          totalItemizedDeductions: null,
+          charitableContributions: null,
+          businessIncome: null,
+          stateCode: null,
+        },
+        riskFlags: [{
+          flag: 'Analysis Error',
+          severity: 'low',
+          details: 'Could not fully analyze the document. Manual review recommended.'
+        }],
+        riskScore: 0,
+      };
+    }
+
+    // Update the job with results
+    const { error: updateError } = await supabase
+      .from('audit_scan_jobs')
+      .update({
+        status: 'completed',
+        risk_score: result.riskScore,
+        extracted_data: result.extractedData,
+        detected_issues: result.riskFlags,
+        processed_at: new Date().toISOString(),
+      })
+      .eq('id', jobId);
+
+    if (updateError) {
+      console.error('Failed to update job:', updateError);
+      throw new Error('Failed to save results');
+    }
+
+    console.log(`Job ${jobId} completed successfully with score: ${result.riskScore}`);
+
+    return new Response(JSON.stringify({
+      success: true,
+      jobId,
+      riskScore: result.riskScore,
+      flagCount: result.riskFlags.length,
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Error in process-scan-job:', error);
+    return new Response(JSON.stringify({ 
+      error: error instanceof Error ? error.message : 'Unknown error occurred' 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});

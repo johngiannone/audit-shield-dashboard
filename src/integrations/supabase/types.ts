@@ -94,6 +94,56 @@ export type Database = {
           },
         ]
       }
+      audit_scan_jobs: {
+        Row: {
+          created_at: string
+          detected_issues: Json | null
+          error_message: string | null
+          extracted_data: Json | null
+          file_path: string
+          id: string
+          original_filename: string
+          processed_at: string | null
+          profile_id: string
+          risk_score: number | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          detected_issues?: Json | null
+          error_message?: string | null
+          extracted_data?: Json | null
+          file_path: string
+          id?: string
+          original_filename: string
+          processed_at?: string | null
+          profile_id: string
+          risk_score?: number | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          detected_issues?: Json | null
+          error_message?: string | null
+          extracted_data?: Json | null
+          file_path?: string
+          id?: string
+          original_filename?: string
+          processed_at?: string | null
+          profile_id?: string
+          risk_score?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_scan_jobs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       case_documents: {
         Row: {
           case_id: string
