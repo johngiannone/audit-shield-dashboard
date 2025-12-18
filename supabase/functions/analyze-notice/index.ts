@@ -73,10 +73,11 @@ You MUST respond with valid JSON only, no markdown, no explanation. The JSON mus
   "notice_type": the notice code or type (e.g., "CP2000", "CP501", "Notice of Deficiency"),
   "tax_year": the tax year as a number (e.g., 2023),
   "client_name_on_notice": the taxpayer name shown on the notice,
+  "response_due_date": the deadline/due date for response in YYYY-MM-DD format (look for phrases like "respond by", "due date", "deadline", "must reply by", "within 30 days of this notice dated"),
   "summary": a 3-sentence summary of what this notice is about, what action is required, and any deadlines
 }
 
-If you cannot determine a field, use null for that field.`;
+If you cannot determine a field, use null for that field. For response_due_date, carefully look for any deadline mentioned in the notice - this is critical for compliance.`;
 
     const userContent = [
       {

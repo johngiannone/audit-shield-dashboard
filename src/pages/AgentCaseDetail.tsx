@@ -24,6 +24,7 @@ import { CaseNotes } from '@/components/cases/CaseNotes';
 import { CaseTimeline } from '@/components/cases/CaseTimeline';
 import { DocumentRequests } from '@/components/cases/DocumentRequests';
 import { ResponseDrafter } from '@/components/cases/ResponseDrafter';
+import { DeadlineBadge } from '@/components/cases/DeadlineBadge';
 
 interface CaseDetail {
   id: string;
@@ -34,6 +35,7 @@ interface CaseDetail {
   summary: string | null;
   file_path: string | null;
   tax_return_path: string | null;
+  response_due_date: string | null;
   created_at: string;
   client_id: string;
   client_name: string | null;
@@ -409,6 +411,22 @@ export default function AgentCaseDetail() {
                     <p className="text-sm font-medium">{caseDetail.tax_year}</p>
                   </div>
                 </div>
+
+                {caseDetail.response_due_date && caseDetail.status !== 'resolved' && (
+                  <div className="p-3 rounded-lg bg-secondary/50 border">
+                    <p className="text-xs text-muted-foreground mb-1">Response Deadline</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">
+                        {new Date(caseDetail.response_due_date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </p>
+                      <DeadlineBadge dueDate={caseDetail.response_due_date} status={caseDetail.status} />
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-start gap-3">
                   <Building className="h-4 w-4 text-primary mt-1" />

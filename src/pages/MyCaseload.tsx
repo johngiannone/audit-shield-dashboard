@@ -12,6 +12,8 @@ import { Briefcase, Loader2, AlertTriangle, CheckCircle, Clock, Eye, Zap, Hourgl
 import { useToast } from '@/hooks/use-toast';
 import { differenceInDays } from 'date-fns';
 
+import { DeadlineBadge } from '@/components/cases/DeadlineBadge';
+
 interface Case {
   id: string;
   status: string;
@@ -23,6 +25,7 @@ interface Case {
   updated_at: string;
   assigned_agent_id: string | null;
   client_name?: string | null;
+  response_due_date?: string | null;
 }
 
 export default function MyCaseload() {
@@ -260,6 +263,12 @@ export default function MyCaseload() {
               <span>{caseItem.client_name || 'Unknown Client'}</span>
               <span>•</span>
               <span>Tax Year {caseItem.tax_year}</span>
+              {caseItem.response_due_date && caseItem.status !== 'resolved' && (
+                <>
+                  <span>•</span>
+                  <DeadlineBadge dueDate={caseItem.response_due_date} status={caseItem.status} />
+                </>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Assigned {new Date(caseItem.created_at).toLocaleDateString()}
