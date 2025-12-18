@@ -10,9 +10,10 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Wand2, Loader2, Copy, Download, RefreshCw, Check } from 'lucide-react';
+import { Wand2, Loader2, Copy, Download, RefreshCw, Check, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
 
 interface ResponseDrafterProps {
   caseId: string;
@@ -98,6 +99,97 @@ export function ResponseDrafter({
     toast.success('Downloaded as text file');
   };
 
+  const downloadAsPdf = () => {
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'letter',
+    });
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 25;
+    const contentWidth = pageWidth - margin * 2;
+    let yPosition = margin;
+
+    // Letterhead
+    pdf.setFontSize(18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Return Shield', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 7;
+
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Professional Audit Defense Services', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 5;
+    pdf.text('Enrolled Agent Representation', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 8;
+
+    // Divider line
+    pdf.setDrawColor(200, 200, 200);
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 10;
+
+    // Date
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(11);
+    const today = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    pdf.text(today, margin, yPosition);
+    yPosition += 12;
+
+    // Reference info
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`RE: ${noticeType} - Tax Year ${taxYear}`, margin, yPosition);
+    yPosition += 5;
+    if (clientName) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Client: ${clientName}`, margin, yPosition);
+      yPosition += 10;
+    } else {
+      yPosition += 5;
+    }
+
+    // Body content
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(11);
+
+    // Clean up markdown formatting for PDF
+    const cleanedDraft = draft
+      .replace(/#{1,6}\s/g, '')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/`(.*?)`/g, '$1')
+      .replace(/---/g, '')
+      .trim();
+
+    const lines = pdf.splitTextToSize(cleanedDraft, contentWidth);
+
+    for (const line of lines) {
+      if (yPosition > pageHeight - margin - 20) {
+        pdf.addPage();
+        yPosition = margin;
+      }
+      pdf.text(line, margin, yPosition);
+      yPosition += 5.5;
+    }
+
+    // Footer
+    yPosition = pageHeight - 15;
+    pdf.setFontSize(8);
+    pdf.setTextColor(150, 150, 150);
+    pdf.text('This document was prepared by Return Shield on behalf of the client.', pageWidth / 2, yPosition, { align: 'center' });
+
+    pdf.save(`response-${noticeType}-${taxYear}.pdf`);
+    toast.success('Downloaded as PDF');
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
@@ -155,12 +247,20 @@ export function ResponseDrafter({
             {copied ? 'Copied!' : 'Copy'}
           </Button>
           <Button
-            variant="default"
+            variant="outline"
             onClick={downloadAsTxt}
             disabled={!draft || loading}
           >
             <Download className="h-4 w-4 mr-2" />
-            Download
+            Text
+          </Button>
+          <Button
+            variant="default"
+            onClick={downloadAsPdf}
+            disabled={!draft || loading}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Export PDF
           </Button>
         </DialogFooter>
       </DialogContent>
