@@ -1,6 +1,7 @@
-import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, BarChart3, Users, Handshake, UserPlus, UsersRound, Network } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useBranding } from '@/hooks/useBranding';
 import {
   Sidebar,
   SidebarContent,
@@ -33,10 +34,12 @@ const taxPreparerNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
   { title: 'My Clients', url: '/my-clients', icon: UsersRound },
   { title: 'Bulk Enroll', url: '/bulk-enroll', icon: UserPlus },
+  { title: 'Branding', url: '/branding', icon: Palette },
 ];
 
 export function AppSidebar() {
   const { role } = useAuth();
+  const { branding, isWhiteLabeled } = useBranding();
   const location = useLocation();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
@@ -54,19 +57,38 @@ export function AppSidebar() {
 
   const navItems = getNavItems();
 
+  // Determine logo and firm name based on branding
+  const showCustomLogo = role === 'client' && isWhiteLabeled && branding.logoUrl;
+  const firmName = role === 'client' && isWhiteLabeled && branding.firmName 
+    ? branding.firmName 
+    : 'Return Shield';
+  const tagline = role === 'client' && isWhiteLabeled 
+    ? 'Client Portal' 
+    : 'Tax Defense Portal';
+
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center shadow-md">
-            <Shield className="h-5 w-5 text-primary-foreground" />
-          </div>
+          {showCustomLogo ? (
+            <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
+              <img 
+                src={branding.logoUrl!} 
+                alt="Logo" 
+                className="w-full h-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center shadow-md">
+              <Shield className="h-5 w-5 text-primary-foreground" />
+            </div>
+          )}
           {!collapsed && (
             <div className="animate-fade-in">
-              <h1 className="font-display text-lg font-semibold text-sidebar-foreground">
-                Return Shield
+              <h1 className="font-display text-lg font-semibold text-sidebar-foreground truncate max-w-[140px]">
+                {firmName}
               </h1>
-              <p className="text-xs text-sidebar-foreground/70">Tax Defense Portal</p>
+              <p className="text-xs text-sidebar-foreground/70">{tagline}</p>
             </div>
           )}
         </div>
@@ -111,7 +133,7 @@ export function AppSidebar() {
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         {!collapsed && (
           <div className="text-xs text-sidebar-foreground/60 text-center">
-            © 2024 Return Shield
+            {role === 'client' && isWhiteLabeled ? `Powered by Return Shield` : '© 2024 Return Shield'}
           </div>
         )}
       </SidebarFooter>
