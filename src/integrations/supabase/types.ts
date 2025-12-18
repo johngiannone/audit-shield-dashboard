@@ -454,6 +454,47 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          link_url: string | null
+          message: string
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link_url?: string | null
+          message: string
+          title: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link_url?: string | null
+          message?: string
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       onboarding_steps: {
         Row: {
           action_url: string
@@ -653,6 +694,7 @@ export type Database = {
     }
     Enums: {
       app_role: "client" | "agent" | "enrolled_agent" | "tax_preparer"
+      notification_type: "info" | "warning" | "success"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -781,6 +823,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["client", "agent", "enrolled_agent", "tax_preparer"],
+      notification_type: ["info", "warning", "success"],
     },
   },
 } as const
