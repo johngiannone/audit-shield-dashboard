@@ -457,6 +457,39 @@ export type Database = {
         }
         Relationships: []
       }
+      irs_benchmarks: {
+        Row: {
+          avg_charitable_deduction: number
+          avg_medical_expense: number | null
+          avg_mortgage_interest: number | null
+          created_at: string
+          id: string
+          income_range_max: number | null
+          income_range_min: number
+          tax_year: number
+        }
+        Insert: {
+          avg_charitable_deduction: number
+          avg_medical_expense?: number | null
+          avg_mortgage_interest?: number | null
+          created_at?: string
+          id?: string
+          income_range_max?: number | null
+          income_range_min: number
+          tax_year: number
+        }
+        Update: {
+          avg_charitable_deduction?: number
+          avg_medical_expense?: number | null
+          avg_mortgage_interest?: number | null
+          created_at?: string
+          id?: string
+          income_range_max?: number | null
+          income_range_min?: number
+          tax_year?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -664,6 +697,41 @@ export type Database = {
           visitor_ip_hash?: string
         }
         Relationships: []
+      }
+      risk_assessments: {
+        Row: {
+          analyzed_at: string
+          created_at: string
+          id: string
+          profile_id: string
+          red_flags: Json | null
+          risk_score: number
+        }
+        Insert: {
+          analyzed_at?: string
+          created_at?: string
+          id?: string
+          profile_id: string
+          red_flags?: Json | null
+          risk_score: number
+        }
+        Update: {
+          analyzed_at?: string
+          created_at?: string
+          id?: string
+          profile_id?: string
+          red_flags?: Json | null
+          risk_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_assessments_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       security_logs: {
         Row: {
