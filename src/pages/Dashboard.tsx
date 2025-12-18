@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { FileText, AlertTriangle, CheckCircle, Clock, ArrowRight, Inbox, Briefcase, Loader2, Mail, X, Users, CreditCard, Gift } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ReferralPromoCard } from '@/components/dashboard/ReferralPromoCard';
+import { OnboardingWidget } from '@/components/dashboard/OnboardingWidget';
 
 interface Case {
   id: string;
@@ -254,6 +255,10 @@ export default function Dashboard() {
             </button>
           </Alert>
         )}
+
+        {/* Onboarding Widget for Clients */}
+        {role === 'client' && <OnboardingWidget />}
+
         {/* Welcome Section */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
