@@ -25,6 +25,7 @@ import { CaseTimeline } from '@/components/cases/CaseTimeline';
 import { DocumentRequests } from '@/components/cases/DocumentRequests';
 import { ResponseDrafter } from '@/components/cases/ResponseDrafter';
 import { DeadlineBadge } from '@/components/cases/DeadlineBadge';
+import { CaseRiskAssessment } from '@/components/cases/CaseRiskAssessment';
 import { securityLog } from '@/hooks/useSecurityLog';
 
 interface CaseDetail {
@@ -491,14 +492,22 @@ export default function AgentCaseDetail() {
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Tax Return</span>
                       {caseDetail.tax_return_path && taxReturnUrl ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewDocument('Tax Return', taxReturnUrl)}
-                        >
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <CaseRiskAssessment
+                            caseId={caseDetail.id}
+                            clientId={caseDetail.client_id}
+                            taxReturnUrl={taxReturnUrl}
+                            clientName={caseDetail.client_name}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDocument('Tax Return', taxReturnUrl)}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 text-xs">
