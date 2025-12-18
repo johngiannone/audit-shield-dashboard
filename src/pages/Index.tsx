@@ -103,7 +103,7 @@ export default function Index() {
         </script>
       </Helmet>
       {/* Header with String Lights */}
-      <header className="container mx-auto px-6 py-6 flex items-center justify-between relative">
+      <header className="container mx-auto px-6 py-4 flex items-center justify-between relative">
         <StringLights />
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center shadow-md relative">
@@ -111,14 +111,18 @@ export default function Index() {
             {/* Santa hat on shield */}
             <span className="absolute -top-2 -right-1 text-lg transform rotate-12">🎅</span>
           </div>
-          <span className="font-display text-xl font-semibold text-foreground">Return Shield</span>
+          <span className="font-display text-xl font-semibold text-foreground hidden sm:inline">Return Shield</span>
         </div>
-        <div className="flex items-center gap-4">
+        
+        {/* E-Filing Countdown in Header */}
+        <HolidayCountdown />
+        
+        <div className="flex items-center gap-2 md:gap-4">
           <Link to="/partners">
-            <Button variant="ghost">For Tax Pros</Button>
+            <Button variant="ghost" size="sm" className="hidden md:inline-flex">For Tax Pros</Button>
           </Link>
           <Link to="/auth">
-            <Button variant="outline">Sign In</Button>
+            <Button variant="outline" size="sm">Sign In</Button>
           </Link>
         </div>
       </header>
@@ -162,10 +166,6 @@ export default function Index() {
               </Button>
             </div>
 
-            {/* Holiday Countdown Timer */}
-            <div className="mb-8">
-              <HolidayCountdown />
-            </div>
 
             {/* Trust Signals */}
             <div className="flex flex-wrap gap-6 pt-6 border-t border-border">

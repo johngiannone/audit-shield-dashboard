@@ -40,37 +40,34 @@ export const HolidayCountdown = () => {
 
   const TimeUnit = ({ value, label }: { value: number; label: string }) => (
     <div className="flex flex-col items-center">
-      <div className="bg-gradient-to-b from-blue-600 to-blue-700 text-white rounded-lg px-3 py-2 min-w-[60px] shadow-lg border border-blue-500/50">
-        <span className="font-display text-2xl md:text-3xl font-bold tabular-nums">
+      <div className="bg-gradient-to-b from-blue-600 to-blue-700 text-white rounded px-2 py-1 min-w-[36px] shadow-md">
+        <span className="font-display text-sm md:text-base font-bold tabular-nums">
           {String(value).padStart(2, '0')}
         </span>
       </div>
-      <span className="text-xs text-muted-foreground mt-1 uppercase tracking-wide font-medium">
+      <span className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide font-medium">
         {label}
       </span>
     </div>
   );
 
   return (
-    <div className="bg-card/80 backdrop-blur-sm rounded-xl border border-border p-4 shadow-lg">
-      <div className="flex items-center justify-center gap-1 mb-3">
-        <span className="text-lg">📋</span>
-        <p className="text-sm font-medium text-foreground">
-          IRS E-Filing Opens In
+    <div className="bg-card/90 backdrop-blur-sm rounded-lg border border-border px-3 py-2 shadow-md">
+      <div className="flex items-center gap-2">
+        <span className="text-sm hidden sm:inline">📋</span>
+        <p className="text-xs font-medium text-foreground whitespace-nowrap hidden md:block">
+          IRS E-Filing Opens:
         </p>
+        <div className="flex items-center gap-1">
+          <TimeUnit value={timeLeft.days} label="D" />
+          <span className="text-sm font-bold text-blue-600">:</span>
+          <TimeUnit value={timeLeft.hours} label="H" />
+          <span className="text-sm font-bold text-blue-600">:</span>
+          <TimeUnit value={timeLeft.minutes} label="M" />
+          <span className="text-sm font-bold text-blue-600">:</span>
+          <TimeUnit value={timeLeft.seconds} label="S" />
+        </div>
       </div>
-      <div className="flex items-center justify-center gap-2 md:gap-3">
-        <TimeUnit value={timeLeft.days} label="Days" />
-        <span className="text-2xl font-bold text-blue-600 mt-[-20px]">:</span>
-        <TimeUnit value={timeLeft.hours} label="Hours" />
-        <span className="text-2xl font-bold text-blue-600 mt-[-20px]">:</span>
-        <TimeUnit value={timeLeft.minutes} label="Mins" />
-        <span className="text-2xl font-bold text-blue-600 mt-[-20px]">:</span>
-        <TimeUnit value={timeLeft.seconds} label="Secs" />
-      </div>
-      <p className="text-xs text-center text-muted-foreground mt-3">
-        🛡️ Get protected before tax season begins!
-      </p>
     </div>
   );
 };
