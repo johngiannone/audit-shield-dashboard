@@ -70,6 +70,7 @@ interface ExtractedData {
   stateCode: string | null;
   fullAddress: string | null;
   charityList: CharityDonation[];
+  hasScheduleC: boolean;
 }
 
 interface LifestyleData {
@@ -210,6 +211,12 @@ export default function AuditRiskCheck() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [assessment, setAssessment] = useState<RiskAssessment | null>(null);
   const [hasActivePlan, setHasActivePlan] = useState<boolean | null>(null);
+  
+  // Schedule C (business) specific fields for 1040
+  const [businessYearsActive, setBusinessYearsActive] = useState<number>(0);
+  const [profitableYears, setProfitableYears] = useState<number>(0);
+  const [hasMileageLog, setHasMileageLog] = useState<'yes' | 'no' | ''>('');
+  const [scheduleCDetected, setScheduleCDetected] = useState(false);
 
   // Check if user has an active plan
   useEffect(() => {
@@ -242,6 +249,7 @@ export default function AuditRiskCheck() {
       }
       setFile(selectedFile);
       setAssessment(null);
+      setScheduleCDetected(false);
     }
   };
 
@@ -286,7 +294,11 @@ export default function AuditRiskCheck() {
             priorYearLosses: priorYearLosses > 0 ? priorYearLosses : undefined,
             manualHousingCost: manualHousingCost > 0 ? manualHousingCost : undefined,
             activeShareholders: formType === '1120-S' && activeShareholders > 0 ? activeShareholders : undefined,
-            totalAssets: formType === '1120' && totalAssets > 0 ? totalAssets : undefined
+            totalAssets: formType === '1120' && totalAssets > 0 ? totalAssets : undefined,
+            // Schedule C business fields
+            businessYearsActive: formType === '1040' && businessYearsActive > 0 ? businessYearsActive : undefined,
+            profitableYears: formType === '1040' && profitableYears > 0 ? profitableYears : undefined,
+            hasMileageLog: formType === '1040' && hasMileageLog ? hasMileageLog : undefined
           }),
         }
       );
@@ -298,6 +310,11 @@ export default function AuditRiskCheck() {
 
       const result: RiskAssessment = await response.json();
       setAssessment(result);
+      
+      // Check if Schedule C was detected in 1040
+      if (formType === '1040' && result.extractedData?.hasScheduleC) {
+        setScheduleCDetected(true);
+      }
 
       toast({
         title: 'Analysis Complete',
@@ -440,6 +457,75 @@ export default function AuditRiskCheck() {
                     />
                   </div>
                 </div>
+              )}
+
+              {/* Schedule C Business Risk Card - shown when Schedule C is detected in 1040 */}
+              {formType === '1040' && scheduleCDetected && (
+                <Card className="border-amber-500/30 bg-amber-500/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                      <AlertTriangle className="h-5 w-5" />
+                      Business Audit Risk Detected
+                    </CardTitle>
+                    <CardDescription>
+                      Schedule C detected on your 1040. Please provide additional business information for accurate risk analysis.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="business-years">
+                        How many years has this business been active?
+                      </Label>
+                      <Input
+                        id="business-years"
+                        type="number"
+                        min="1"
+                        max="50"
+                        placeholder="e.g., 3"
+                        value={businessYearsActive || ''}
+                        onChange={(e) => setBusinessYearsActive(parseInt(e.target.value) || 0)}
+                        className="w-24 mt-2"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="profitable-years">
+                        How many of the last 5 years showed a profit?
+                      </Label>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Critical for Hobby Loss rules - IRS requires profit in 3 of 5 years
+                      </p>
+                      <Input
+                        id="profitable-years"
+                        type="number"
+                        min="0"
+                        max="5"
+                        placeholder="0-5"
+                        value={profitableYears || ''}
+                        onChange={(e) => setProfitableYears(Math.min(5, parseInt(e.target.value) || 0))}
+                        className="w-24"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label>Do you have a mileage log for vehicle expenses claimed?</Label>
+                      <Select value={hasMileageLog} onValueChange={(value: 'yes' | 'no') => setHasMileageLog(value)}>
+                        <SelectTrigger className="w-32 mt-2">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="yes">Yes</SelectItem>
+                          <SelectItem value="no">No</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {hasMileageLog === 'no' && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          Without a mileage log, vehicle expense deductions may be disallowed in an audit.
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
               <div>
