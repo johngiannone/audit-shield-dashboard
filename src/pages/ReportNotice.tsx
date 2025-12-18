@@ -18,6 +18,7 @@ interface AnalysisResult {
   notice_type: string | null;
   tax_year: number | null;
   client_name_on_notice: string | null;
+  response_due_date: string | null;
   summary: string | null;
 }
 
@@ -380,6 +381,7 @@ export default function ReportNotice() {
           notice_type: analysisResult.notice_type || 'Unknown',
           tax_year: effectiveTaxYear,
           summary: analysisResult.summary || null,
+          response_due_date: analysisResult.response_due_date || null,
           file_path: uploadedFilePath,
           tax_return_path: skipTaxReturn ? null : taxReturnFilePath,
           status: 'triage',
@@ -836,6 +838,20 @@ export default function ReportNotice() {
                   </p>
                 </div>
               </div>
+
+              {analysisResult.response_due_date && (
+                <div className="space-y-1 p-3 rounded-lg bg-warning/10 border border-warning/20">
+                  <Label className="text-warning text-xs uppercase font-semibold">Response Deadline</Label>
+                  <p className="font-medium text-foreground">
+                    {new Date(analysisResult.response_due_date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-1">
                 <Label className="text-muted-foreground text-xs uppercase">Summary</Label>

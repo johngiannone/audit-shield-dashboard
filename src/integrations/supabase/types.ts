@@ -268,6 +268,7 @@ export type Database = {
           id: string
           notice_agency: string
           notice_type: string
+          response_due_date: string | null
           status: string
           summary: string | null
           tax_return_path: string | null
@@ -282,6 +283,7 @@ export type Database = {
           id?: string
           notice_agency: string
           notice_type: string
+          response_due_date?: string | null
           status?: string
           summary?: string | null
           tax_return_path?: string | null
@@ -296,6 +298,7 @@ export type Database = {
           id?: string
           notice_agency?: string
           notice_type?: string
+          response_due_date?: string | null
           status?: string
           summary?: string | null
           tax_return_path?: string | null

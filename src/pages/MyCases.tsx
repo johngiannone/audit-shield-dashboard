@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Briefcase, Loader2, ChevronRight, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ActionRequiredCard } from '@/components/cases/ActionRequiredCard';
+import { DeadlineBadge } from '@/components/cases/DeadlineBadge';
 
 interface Case {
   id: string;
@@ -19,6 +20,7 @@ interface Case {
   summary: string | null;
   created_at: string;
   agent_name: string | null;
+  response_due_date?: string | null;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -210,6 +212,9 @@ export default function MyCases() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      {caseItem.response_due_date && caseItem.status !== 'resolved' && (
+                        <DeadlineBadge dueDate={caseItem.response_due_date} status={caseItem.status} />
+                      )}
                       <Badge variant="outline" className={getStatusBadge(caseItem.status)}>
                         {STATUS_LABELS[caseItem.status] || caseItem.status}
                       </Badge>
