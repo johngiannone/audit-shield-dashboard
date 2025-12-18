@@ -26,6 +26,7 @@ import BulkEnroll from "./pages/BulkEnroll";
 import MyClients from "./pages/MyClients";
 import ReferralNetwork from "./pages/ReferralNetwork";
 import Activate from "./pages/Activate";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,6 +67,8 @@ const App = () => (
                 <Route path="/my-clients" element={<MyClients />} />
                 <Route path="/referral-network" element={<ReferralNetwork />} />
                 <Route path="/activate" element={<Activate />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="*" element={<NotFound />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </ReferralTracker>

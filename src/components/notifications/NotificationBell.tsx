@@ -214,7 +214,7 @@ export function NotificationBell() {
                 className="w-full text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   setIsOpen(false);
-                  // Could navigate to a full notifications page if needed
+                  navigate('/notifications');
                 }}
               >
                 View all notifications
