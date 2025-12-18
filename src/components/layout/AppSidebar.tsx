@@ -31,6 +31,7 @@ const enrolledAgentNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
   { title: 'Case Queue', url: '/queue', icon: Inbox },
   { title: 'My Caseload', url: '/caseload', icon: Briefcase },
+  { title: 'Risk Assessments', url: '/risk-assessments', icon: ScanSearch },
 ];
 
 const taxPreparerNavItems = [
