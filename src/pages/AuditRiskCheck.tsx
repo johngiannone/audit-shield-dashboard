@@ -548,6 +548,16 @@ export default function AuditRiskCheck() {
                             ? 'Schedule Corporate Compliance Review' 
                             : 'Protect Now'}
                         </Button>
+                        {(formType === '1120' || formType === '1120-S') && totalScore > 50 && (
+                          <Button
+                            onClick={() => navigate(`/corporate-compliance-review?type=${formType}`)}
+                            variant="outline"
+                            size="sm"
+                            className="mt-2"
+                          >
+                            View Consultation Details
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
