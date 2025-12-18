@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,7 +20,35 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Drafting response for:", { noticeType, taxYear, clientName, agency });
+    // Initialize Supabase to fetch model config
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Fetch AI model configuration for response_drafting task
+    const { data: modelConfig, error: configError } = await supabase
+      .from('ai_model_config')
+      .select('*')
+      .eq('task_name', 'response_drafting')
+      .eq('is_active', true)
+      .single();
+
+    if (configError) {
+      console.warn('Could not fetch model config, using defaults:', configError.message);
+    }
+
+    // Map OpenRouter model IDs to Lovable AI model IDs
+    const modelMap: Record<string, string> = {
+      'google/gemini-flash-1.5': 'google/gemini-2.5-flash',
+      'google/gemini-pro-1.5': 'google/gemini-2.5-pro',
+      'anthropic/claude-3.5-sonnet': 'google/gemini-2.5-flash', // Lovable AI uses Gemini
+    };
+
+    const configModelId = modelConfig?.model_id || 'google/gemini-2.5-flash';
+    const modelId = modelMap[configModelId] || 'google/gemini-2.5-flash';
+    const maxTokens = modelConfig?.max_tokens || 8192;
+
+    console.log(`Drafting response for: ${noticeType}, using model: ${modelId}`);
 
     const systemPrompt = `You are an expert Enrolled Agent with extensive experience responding to IRS and state tax agency notices. Your responses are professional, formal, and follow proper IRS correspondence format.
 
@@ -54,11 +83,12 @@ Output the letter in Markdown format with proper formatting.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: modelId,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
+        max_tokens: maxTokens,
       }),
     });
 

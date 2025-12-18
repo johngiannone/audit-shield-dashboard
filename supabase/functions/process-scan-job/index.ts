@@ -86,6 +86,25 @@ serve(async (req) => {
 
     console.log(`Processing scan job: ${jobId}`);
 
+    // Fetch AI model configuration for batch_scan task
+    const { data: modelConfig, error: configError } = await supabase
+      .from('ai_model_config')
+      .select('*')
+      .eq('task_name', 'batch_scan')
+      .eq('is_active', true)
+      .single();
+
+    if (configError) {
+      console.warn('Could not fetch model config, using defaults:', configError.message);
+    }
+
+    const primaryModel = modelConfig?.model_id || 'google/gemini-flash-1.5';
+    const fallbackModel = modelConfig?.fallback_model_id || 'anthropic/claude-3.5-sonnet';
+    const maxTokens = modelConfig?.max_tokens || 4096;
+    const temperature = modelConfig?.temperature || 0;
+
+    console.log(`Using model config: primary=${primaryModel}, fallback=${fallbackModel}, maxTokens=${maxTokens}`);
+
     // Fetch the job
     const { data: job, error: jobError } = await supabase
       .from('audit_scan_jobs')
@@ -185,8 +204,8 @@ Remember: NO SSN data anywhere in your response.`;
     ];
 
     // Helper function to call OpenRouter with a specific model
-    async function callOpenRouter(model: string): Promise<Response> {
-      console.log(`Calling OpenRouter with model: ${model}`);
+    async function callOpenRouter(model: string, tokens: number, temp: number): Promise<Response> {
+      console.log(`Calling OpenRouter with model: ${model}, maxTokens: ${tokens}, temp: ${temp}`);
       return fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -201,22 +220,23 @@ Remember: NO SSN data anywhere in your response.`;
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userContent }
           ],
-          max_tokens: 4096,
+          max_tokens: tokens,
+          temperature: temp,
           response_format: { type: 'json_object' }, // Force JSON output
         }),
       });
     }
 
-    // Primary model: Gemini Flash 1.5 (cost-effective with large context window)
-    console.log('Sending PDF to Gemini Flash 1.5 via OpenRouter...');
-    let aiResponse = await callOpenRouter('google/gemini-flash-1.5');
+    // Primary model from config
+    console.log(`Sending PDF to ${primaryModel} via OpenRouter...`);
+    let aiResponse = await callOpenRouter(primaryModel, maxTokens, temperature);
 
-    // Fallback to Claude 3.5 Sonnet if Gemini fails
-    if (!aiResponse.ok) {
-      const geminiError = await aiResponse.text();
-      console.warn('Gemini Flash failed, falling back to Claude 3.5 Sonnet:', aiResponse.status, geminiError);
+    // Fallback if primary fails
+    if (!aiResponse.ok && fallbackModel) {
+      const primaryError = await aiResponse.text();
+      console.warn(`${primaryModel} failed, falling back to ${fallbackModel}:`, aiResponse.status, primaryError);
       
-      aiResponse = await callOpenRouter('anthropic/claude-3.5-sonnet');
+      aiResponse = await callOpenRouter(fallbackModel, maxTokens, temperature);
     }
 
     if (!aiResponse.ok) {

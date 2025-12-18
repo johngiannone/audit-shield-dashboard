@@ -1,4 +1,4 @@
-import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette, ShieldCheck, ScanSearch, Files } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette, ShieldCheck, ScanSearch, Files, Bot } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useBranding } from '@/hooks/useBranding';
@@ -44,6 +44,7 @@ const taxPreparerNavItems = [
 
 const superAdminNavItems = [
   { title: 'Compliance', url: '/compliance', icon: ShieldCheck },
+  { title: 'AI Models', url: '/admin/model-config', icon: Bot },
 ];
 
 export function AppSidebar() {
