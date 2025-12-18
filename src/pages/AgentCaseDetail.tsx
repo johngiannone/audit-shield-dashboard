@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CaseNotes } from '@/components/cases/CaseNotes';
 import { CaseTimeline } from '@/components/cases/CaseTimeline';
 import { DocumentRequests } from '@/components/cases/DocumentRequests';
+import { ResponseDrafter } from '@/components/cases/ResponseDrafter';
 
 interface CaseDetail {
   id: string;
@@ -301,7 +302,7 @@ export default function AgentCaseDetail() {
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate('/caseload')}>
               <ArrowLeft className="h-5 w-5" />
@@ -315,40 +316,50 @@ export default function AgentCaseDetail() {
               </p>
             </div>
           </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="outline"
-                disabled={unassigning}
-                className="text-destructive hover:bg-destructive/10"
-              >
-                {unassigning ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <UserMinus className="h-4 w-4 mr-2" />
-                )}
-                Unassign Case
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Unassign this case?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will return the case to the queue where it can be picked up by another agent. 
-                  Any notes you've added will remain on the case.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={unassignCase}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          <div className="flex items-center gap-3">
+            <ResponseDrafter
+              caseId={caseDetail.id}
+              noticeType={caseDetail.notice_type}
+              taxYear={caseDetail.tax_year}
+              clientName={caseDetail.client_name}
+              summary={caseDetail.summary}
+              agency={caseDetail.notice_agency}
+            />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  disabled={unassigning}
+                  className="text-destructive hover:bg-destructive/10"
                 >
+                  {unassigning ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <UserMinus className="h-4 w-4 mr-2" />
+                  )}
                   Unassign Case
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Unassign this case?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will return the case to the queue where it can be picked up by another agent. 
+                    Any notes you've added will remain on the case.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={unassignCase}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Unassign Case
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
 
         {/* 3-Column Layout */}
