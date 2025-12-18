@@ -8,8 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useBranding } from '@/hooks/useBranding';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { generateRiskScorecardPDF } from '@/components/batch-scan/RiskScorecardPDF';
 import { 
   Upload, 
   FileText, 
@@ -19,7 +21,9 @@ import {
   Shield,
   Trash2,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Download,
+  UserPlus
 } from 'lucide-react';
 
 interface ScanJob {
@@ -46,6 +50,7 @@ interface FileQueueItem {
 export default function BatchRiskScan() {
   const { toast } = useToast();
   const { role, user, profileId } = useAuth();
+  const { branding } = useBranding();
   const navigate = useNavigate();
   const [fileQueue, setFileQueue] = useState<FileQueueItem[]>([]);
   const [jobs, setJobs] = useState<ScanJob[]>([]);
@@ -54,6 +59,9 @@ export default function BatchRiskScan() {
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [viewingJob, setViewingJob] = useState<ScanJob | null>(null);
+
+  // Get firm name from branding or default
+  const firmName = branding.firmName || 'Return Shield';
 
   // Redirect non-tax-preparers
   useEffect(() => {
@@ -309,6 +317,21 @@ export default function BatchRiskScan() {
     return <Badge variant="outline" className="text-xs text-green-600 border-green-300 bg-green-50">Low ({score}%)</Badge>;
   };
 
+  const handleDownloadPDF = (job: ScanJob) => {
+    generateRiskScorecardPDF({ job, firmName });
+    toast({
+      title: 'PDF Downloaded',
+      description: 'Risk scorecard has been downloaded.',
+    });
+  };
+
+  const handleEnrollClient = (job: ScanJob) => {
+    // Navigate to plans page with client data pre-filled
+    const clientName = job.extracted_data?.clientName || '';
+    const taxYear = job.extracted_data?.taxYear || new Date().getFullYear();
+    navigate(`/plans?client=${encodeURIComponent(clientName)}&year=${taxYear}&source=batch-scan`);
+  };
+
   const pendingCount = jobs.filter(j => j.status === 'pending').length;
   const processingCount = jobs.filter(j => j.status === 'processing').length;
   const completedCount = jobs.filter(j => j.status === 'completed').length;
@@ -445,7 +468,7 @@ export default function BatchRiskScan() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       {job.status === 'completed' && (
                         <>
                           {getRiskBadge(job.risk_score)}
@@ -456,8 +479,25 @@ export default function BatchRiskScan() {
                             onClick={() => setViewingJob(job)}
                           >
                             <ExternalLink className="h-4 w-4 mr-1" />
-                            View Report
+                            View
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownloadPDF(job)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          {(job.risk_score || 0) >= 65 && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleEnrollClient(job)}
+                            >
+                              <UserPlus className="h-4 w-4 mr-1" />
+                              Enroll
+                            </Button>
+                          )}
                         </>
                       )}
                       
@@ -495,9 +535,29 @@ export default function BatchRiskScan() {
                     }
                   </CardDescription>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setViewingJob(null)}>
-                  Close
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleDownloadPDF(viewingJob)}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Download Risk Scorecard
+                  </Button>
+                  {(viewingJob.risk_score || 0) >= 65 && (
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => handleEnrollClient(viewingJob)}
+                    >
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      Enroll Client
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="sm" onClick={() => setViewingJob(null)}>
+                    Close
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
