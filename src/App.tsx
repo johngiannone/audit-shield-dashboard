@@ -30,6 +30,7 @@ import Activate from "./pages/Activate";
 import Notifications from "./pages/Notifications";
 import BrandingSettings from "./pages/BrandingSettings";
 import Compliance from "./pages/Compliance";
+import AuditRiskCheck from "./pages/AuditRiskCheck";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -74,6 +75,7 @@ const App = () => (
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/branding" element={<BrandingSettings />} />
                   <Route path="/compliance" element={<Compliance />} />
+                  <Route path="/audit-risk" element={<AuditRiskCheck />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </ReferralTracker>
