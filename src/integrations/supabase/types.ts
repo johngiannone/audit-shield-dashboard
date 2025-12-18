@@ -424,6 +424,36 @@ export type Database = {
           },
         ]
       }
+      industry_benchmarks: {
+        Row: {
+          avg_cogs_percentage: number | null
+          avg_profit_margin: number
+          created_at: string
+          high_risk_expense_categories: string[] | null
+          id: string
+          industry_name: string
+          naics_code: string
+        }
+        Insert: {
+          avg_cogs_percentage?: number | null
+          avg_profit_margin: number
+          created_at?: string
+          high_risk_expense_categories?: string[] | null
+          id?: string
+          industry_name: string
+          naics_code: string
+        }
+        Update: {
+          avg_cogs_percentage?: number | null
+          avg_profit_margin?: number
+          created_at?: string
+          high_risk_expense_categories?: string[] | null
+          id?: string
+          industry_name?: string
+          naics_code?: string
+        }
+        Relationships: []
+      }
       invite_codes: {
         Row: {
           code: string

@@ -12,6 +12,10 @@ interface ExtractedData {
   charitableContributions: number | null;
   totalItemizedDeductions: number | null;
   taxYear: number | null;
+  // Schedule C fields
+  naicsCode: string | null;
+  grossReceipts: number | null;
+  netProfit: number | null;
 }
 
 interface RiskFlag {
@@ -27,6 +31,11 @@ interface RiskAssessment {
   benchmarks: {
     avgCharitableDeduction: number | null;
     avgMortgageInterest: number | null;
+  } | null;
+  industryBenchmark: {
+    industryName: string;
+    avgProfitMargin: number;
+    userProfitMargin: number;
   } | null;
 }
 
@@ -49,7 +58,7 @@ serve(async (req) => {
 
     console.log('Step A: Extracting data from Form 1040 PDF...');
     
-    // Step A: Extract data using Lovable AI (Gemini)
+    // Step A: Extract data using Lovable AI (Gemini) - now includes Schedule C fields
     const extractionPrompt = `Analyze this Form 1040 tax return PDF and extract the following information. Return ONLY a JSON object with these exact fields:
 
 {
@@ -57,13 +66,17 @@ serve(async (req) => {
   "businessIncome": <number or null>, // Business Income/Loss from Schedule 1 or Schedule C (can be negative)
   "charitableContributions": <number or null>, // Charitable Contributions from Schedule A
   "totalItemizedDeductions": <number or null>, // Total Itemized Deductions from Schedule A
-  "taxYear": <number or null> // Tax year from the form header
+  "taxYear": <number or null>, // Tax year from the form header
+  "naicsCode": <string or null>, // NAICS code from Schedule C (6-digit code like "541110")
+  "grossReceipts": <number or null>, // Gross Receipts from Schedule C Line 1
+  "netProfit": <number or null> // Net Profit from Schedule C Line 31 (can be negative)
 }
 
 Important:
 - Extract exact dollar amounts as numbers (no $ signs or commas)
 - If a field is not present or cannot be found, use null
-- Business income can be negative (a loss)
+- Business income and net profit can be negative (a loss)
+- NAICS code should be a 6-digit string if found
 - Only return the JSON object, no other text`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -134,19 +147,23 @@ Important:
         businessIncome: null,
         charitableContributions: null,
         totalItemizedDeductions: null,
-        taxYear: null
+        taxYear: null,
+        naicsCode: null,
+        grossReceipts: null,
+        netProfit: null
       };
     }
 
     console.log('Extracted data:', extractedData);
 
-    // Step B: Fetch IRS benchmarks
-    console.log('Step B: Fetching IRS benchmarks...');
-    
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Step B: Fetch IRS benchmarks
+    console.log('Step B: Fetching IRS benchmarks...');
+    
     let benchmarks = null;
     if (extractedData.agi !== null) {
       const taxYear = extractedData.taxYear || new Date().getFullYear() - 1;
@@ -165,9 +182,33 @@ Important:
           avgCharitableDeduction: Number(benchmarkData.avg_charitable_deduction),
           avgMortgageInterest: Number(benchmarkData.avg_mortgage_interest),
         };
-        console.log('Found benchmarks:', benchmarks);
+        console.log('Found IRS benchmarks:', benchmarks);
       } else {
-        console.log('No benchmarks found for AGI:', extractedData.agi);
+        console.log('No IRS benchmarks found for AGI:', extractedData.agi);
+      }
+    }
+
+    // Step B2: Fetch Industry benchmarks if NAICS code is available
+    console.log('Step B2: Fetching industry benchmarks...');
+    
+    let industryBenchmark = null;
+    if (extractedData.naicsCode) {
+      const { data: industryData, error: industryError } = await supabase
+        .from('industry_benchmarks')
+        .select('*')
+        .eq('naics_code', extractedData.naicsCode)
+        .single();
+
+      if (!industryError && industryData) {
+        industryBenchmark = {
+          industryName: industryData.industry_name,
+          avgProfitMargin: Number(industryData.avg_profit_margin),
+          avgCogsPercentage: Number(industryData.avg_cogs_percentage),
+          highRiskExpenseCategories: industryData.high_risk_expense_categories || []
+        };
+        console.log('Found industry benchmark:', industryBenchmark);
+      } else {
+        console.log('No industry benchmark found for NAICS:', extractedData.naicsCode);
       }
     }
 
@@ -242,6 +283,32 @@ Important:
       }
     }
 
+    // NEW: Industry Profitability Analysis
+    let userProfitMargin: number | null = null;
+    if (extractedData.grossReceipts !== null && extractedData.grossReceipts > 0 && extractedData.netProfit !== null) {
+      userProfitMargin = (extractedData.netProfit / extractedData.grossReceipts) * 100;
+      console.log('Calculated user profit margin:', userProfitMargin.toFixed(2) + '%');
+
+      if (industryBenchmark) {
+        const industryAvg = industryBenchmark.avgProfitMargin;
+        const threshold = industryAvg * 0.5; // 50% of industry average
+
+        if (userProfitMargin < threshold) {
+          flags.push({
+            flag: 'Abnormally Low Profitability for Industry',
+            severity: 'high',
+            details: `Your profit margin (${userProfitMargin.toFixed(1)}%) is less than 50% of the ${industryBenchmark.industryName} industry average (${industryAvg}%). This suggests potential underreported income or inflated expenses and may trigger IRS scrutiny.`
+          });
+        } else if (userProfitMargin < industryAvg * 0.75) {
+          flags.push({
+            flag: 'Below Average Industry Profitability',
+            severity: 'medium',
+            details: `Your profit margin (${userProfitMargin.toFixed(1)}%) is below the ${industryBenchmark.industryName} industry average of ${industryAvg}%.`
+          });
+        }
+      }
+    }
+
     // Step D: Calculate risk score
     console.log('Step D: Calculating risk score...');
     
@@ -261,7 +328,12 @@ Important:
       score: riskScore,
       flags,
       extractedData,
-      benchmarks
+      benchmarks,
+      industryBenchmark: industryBenchmark && userProfitMargin !== null ? {
+        industryName: industryBenchmark.industryName,
+        avgProfitMargin: industryBenchmark.avgProfitMargin,
+        userProfitMargin: userProfitMargin
+      } : null
     };
 
     console.log('Final risk assessment:', assessment);
