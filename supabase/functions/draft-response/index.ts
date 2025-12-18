@@ -6,6 +6,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Model pricing per 1M tokens (USD) - Lovable AI uses Gemini
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  'google/gemini-2.5-flash': { input: 0.075, output: 0.30 },
+  'google/gemini-2.5-pro': { input: 1.25, output: 5.00 },
+};
+
+function calculateCost(model: string, inputTokens: number, outputTokens: number): number {
+  const pricing = MODEL_PRICING[model] || { input: 0.075, output: 0.30 };
+  const inputCost = (inputTokens / 1_000_000) * pricing.input;
+  const outputCost = (outputTokens / 1_000_000) * pricing.output;
+  return inputCost + outputCost;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -13,7 +26,7 @@ serve(async (req) => {
   }
 
   try {
-    const { noticeType, taxYear, clientName, summary, agency } = await req.json();
+    const { noticeType, taxYear, clientName, summary, agency, caseId, profileId } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -114,6 +127,33 @@ Output the letter in Markdown format with proper formatting.`;
 
     const data = await response.json();
     const draftedResponse = data.choices?.[0]?.message?.content;
+
+    // Extract token usage
+    const inputTokens = data.usage?.prompt_tokens || 0;
+    const outputTokens = data.usage?.completion_tokens || 0;
+    const totalTokens = data.usage?.total_tokens || inputTokens + outputTokens;
+    const estimatedCost = calculateCost(modelId, inputTokens, outputTokens);
+
+    console.log(`Token usage - input: ${inputTokens}, output: ${outputTokens}, cost: $${estimatedCost.toFixed(6)}`);
+
+    // Log AI usage
+    await supabase.from('ai_usage_logs').insert({
+      task_name: 'response_drafting',
+      model_id: modelId,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      total_tokens: totalTokens,
+      estimated_cost: estimatedCost,
+      profile_id: profileId || null,
+      resource_type: 'case',
+      resource_id: caseId || null,
+      metadata: {
+        notice_type: noticeType,
+        tax_year: taxYear,
+        agency: agency,
+        max_tokens_configured: maxTokens,
+      },
+    });
 
     if (!draftedResponse) {
       throw new Error("No response generated from AI");

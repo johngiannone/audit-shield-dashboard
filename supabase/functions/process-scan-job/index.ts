@@ -23,6 +23,22 @@ interface ExtractedData {
   stateCode: string | null;
 }
 
+// Model pricing per 1M tokens (USD)
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  'google/gemini-flash-1.5': { input: 0.075, output: 0.30 },
+  'google/gemini-pro-1.5': { input: 1.25, output: 5.00 },
+  'anthropic/claude-3.5-sonnet': { input: 3.00, output: 15.00 },
+  'google/gemini-2.5-flash': { input: 0.075, output: 0.30 },
+  'google/gemini-2.5-pro': { input: 1.25, output: 5.00 },
+};
+
+function calculateCost(model: string, inputTokens: number, outputTokens: number): number {
+  const pricing = MODEL_PRICING[model] || { input: 0.10, output: 0.30 }; // Default pricing
+  const inputCost = (inputTokens / 1_000_000) * pricing.input;
+  const outputCost = (outputTokens / 1_000_000) * pricing.output;
+  return inputCost + outputCost;
+}
+
 /**
  * Redact Social Security Numbers from text for privacy protection.
  * Matches patterns like: 123-45-6789, 123 45 6789, 123456789
@@ -54,13 +70,6 @@ function redactSSN(text: string): { text: string; count: number } {
   redacted = redacted.replace(noSeparatorPattern, '[REDACTED-SSN]');
   
   return { text: redacted, count };
-}
-
-/**
- * Simple redact for individual fields (returns just the string)
- */
-function redactSSNSimple(text: string): string {
-  return redactSSN(text).text;
 }
 
 serve(async (req) => {
@@ -203,6 +212,10 @@ Remember: NO SSN data anywhere in your response.`;
       }
     ];
 
+    // Track which model was actually used
+    let usedModel = primaryModel;
+    let usedFallback = false;
+
     // Helper function to call OpenRouter with a specific model
     async function callOpenRouter(model: string, tokens: number, temp: number): Promise<Response> {
       console.log(`Calling OpenRouter with model: ${model}, maxTokens: ${tokens}, temp: ${temp}`);
@@ -237,6 +250,8 @@ Remember: NO SSN data anywhere in your response.`;
       console.warn(`${primaryModel} failed, falling back to ${fallbackModel}:`, aiResponse.status, primaryError);
       
       aiResponse = await callOpenRouter(fallbackModel, maxTokens, temperature);
+      usedModel = fallbackModel;
+      usedFallback = true;
     }
 
     if (!aiResponse.ok) {
@@ -256,6 +271,32 @@ Remember: NO SSN data anywhere in your response.`;
 
     const aiData = await aiResponse.json();
     let content = aiData.choices?.[0]?.message?.content || '';
+    
+    // Extract token usage from OpenRouter response
+    const inputTokens = aiData.usage?.prompt_tokens || 0;
+    const outputTokens = aiData.usage?.completion_tokens || 0;
+    const totalTokens = aiData.usage?.total_tokens || inputTokens + outputTokens;
+    const estimatedCost = calculateCost(usedModel, inputTokens, outputTokens);
+
+    console.log(`Token usage - input: ${inputTokens}, output: ${outputTokens}, cost: $${estimatedCost.toFixed(6)}`);
+
+    // Log AI usage
+    await supabase.from('ai_usage_logs').insert({
+      task_name: 'batch_scan',
+      model_id: usedModel,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      total_tokens: totalTokens,
+      estimated_cost: estimatedCost,
+      profile_id: job.profile_id,
+      resource_type: 'audit_scan_job',
+      resource_id: jobId,
+      metadata: {
+        fallback_used: usedFallback,
+        filename: job.original_filename,
+        max_tokens_configured: maxTokens,
+      },
+    });
     
     // PRIVACY: Redact any SSNs that may have slipped through in the AI response
     const redactionResult = redactSSN(content);

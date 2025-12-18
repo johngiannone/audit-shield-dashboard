@@ -8,6 +8,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Model pricing per 1M tokens (USD) - Lovable AI uses Gemini
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  'google/gemini-2.5-flash': { input: 0.075, output: 0.30 },
+  'google/gemini-2.5-pro': { input: 1.25, output: 5.00 },
+};
+
+function calculateCost(model: string, inputTokens: number, outputTokens: number): number {
+  const pricing = MODEL_PRICING[model] || { input: 0.075, output: 0.30 };
+  const inputCost = (inputTokens / 1_000_000) * pricing.input;
+  const outputCost = (outputTokens / 1_000_000) * pricing.output;
+  return inputCost + outputCost;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -159,6 +172,30 @@ If you cannot determine a field, use null for that field. For response_due_date,
 
     const data = await response.json();
     console.log('Lovable AI response received');
+    
+    // Extract token usage
+    const inputTokens = data.usage?.prompt_tokens || 0;
+    const outputTokens = data.usage?.completion_tokens || 0;
+    const totalTokens = data.usage?.total_tokens || inputTokens + outputTokens;
+    const estimatedCost = calculateCost(modelId, inputTokens, outputTokens);
+
+    console.log(`Token usage - input: ${inputTokens}, output: ${outputTokens}, cost: $${estimatedCost.toFixed(6)}`);
+
+    // Log AI usage (no profile_id available in this context)
+    await supabase.from('ai_usage_logs').insert({
+      task_name: 'ocr_extraction',
+      model_id: modelId,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      total_tokens: totalTokens,
+      estimated_cost: estimatedCost,
+      resource_type: 'notice_analysis',
+      metadata: {
+        filename: file.name,
+        file_size: file.size,
+        media_type: mediaType,
+      },
+    });
     
     const content = data.choices?.[0]?.message?.content;
     if (!content) {
