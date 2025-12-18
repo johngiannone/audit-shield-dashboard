@@ -128,4 +128,18 @@ export const securityLog = {
       resourceType: 'page',
       resourceId: page,
     }),
+
+  loginSuccess: (email: string) =>
+    logSecurityEvent({
+      action: 'login_success',
+      resourceType: 'auth',
+      metadata: { email },
+    }),
+
+  loginFailed: (email: string, reason?: string) =>
+    logSecurityEvent({
+      action: 'login_failed',
+      resourceType: 'auth',
+      metadata: { email, reason: reason || 'Invalid credentials' },
+    }),
 };

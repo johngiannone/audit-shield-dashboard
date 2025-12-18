@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { LinkedInIcon } from '@/components/icons/LinkedInIcon';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { securityLog } from '@/hooks/useSecurityLog';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -154,6 +155,8 @@ export default function Auth() {
     setIsSubmitting(false);
 
     if (error) {
+      // Log failed login attempt
+      securityLog.loginFailed(loginForm.email, error.message);
       toast({
         title: 'Login Failed',
         description: error.message === 'Invalid login credentials' 
@@ -161,6 +164,9 @@ export default function Auth() {
           : error.message,
         variant: 'destructive',
       });
+    } else {
+      // Log successful login
+      securityLog.loginSuccess(loginForm.email);
     }
   };
 
