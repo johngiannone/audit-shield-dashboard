@@ -8,6 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Helmet } from 'react-helmet-async';
 import { PricingCard } from '@/components/landing/PricingCard';
 import { Snowfall, StringLights, HolidayBadge, SnowflakeDecor } from '@/components/landing/HolidayDecorations';
+import { HolidayCountdown } from '@/components/landing/HolidayCountdown';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -159,6 +160,11 @@ export default function Index() {
               >
                 View Membership Plans
               </Button>
+            </div>
+
+            {/* Holiday Countdown Timer */}
+            <div className="mb-8">
+              <HolidayCountdown />
             </div>
 
             {/* Trust Signals */}
