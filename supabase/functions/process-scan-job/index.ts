@@ -23,6 +23,27 @@ interface ExtractedData {
   stateCode: string | null;
 }
 
+/**
+ * Redact Social Security Numbers from text for privacy protection.
+ * Matches patterns like: 123-45-6789, 123 45 6789, 123456789
+ */
+function redactSSN(text: string): string {
+  // Pattern for SSN with dashes: ###-##-####
+  const dashPattern = /\b\d{3}-\d{2}-\d{4}\b/g;
+  // Pattern for SSN with spaces: ### ## ####
+  const spacePattern = /\b\d{3}\s\d{2}\s\d{4}\b/g;
+  // Pattern for SSN without separators: ######### (9 consecutive digits, but be careful not to match other numbers)
+  // Using word boundaries and context to reduce false positives
+  const noSeparatorPattern = /\b(?<!\d)\d{9}(?!\d)\b/g;
+  
+  let redacted = text;
+  redacted = redacted.replace(dashPattern, '[REDACTED-SSN]');
+  redacted = redacted.replace(spacePattern, '[REDACTED-SSN]');
+  redacted = redacted.replace(noSeparatorPattern, '[REDACTED-SSN]');
+  
+  return redacted;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -115,9 +136,11 @@ serve(async (req) => {
                 type: 'text',
                 text: `Analyze this Form 1040 tax return PDF and extract data, then identify audit risks.
 
+IMPORTANT PRIVACY RULE: Do NOT extract, include, or reference any Social Security Numbers (SSN) in your response. Ignore any SSN fields completely.
+
 EXTRACTION: Return a JSON object with:
 {
-  "clientName": <string or null>, // Taxpayer name from the form
+  "clientName": <string or null>, // Taxpayer name from the form (first and last name only, NO SSN)
   "taxYear": <number or null>, // Tax year from the form header
   "agi": <number or null>, // Adjusted Gross Income (Line 11)
   "scheduleCNetProfit": <number or null>, // Net Profit from Schedule C Line 31
@@ -143,13 +166,13 @@ Return as JSON:
     {
       "flag": "Flag Name",
       "severity": "high" | "medium" | "low",
-      "details": "Explanation of the risk"
+      "details": "Explanation of the risk (DO NOT include any SSN or sensitive identifiers)"
     }
   ],
   "riskScore": <number 0-100> // Overall risk score based on flags
 }
 
-Only return valid JSON, no other text.`
+Only return valid JSON, no other text. Remember: NO SSN data anywhere in your response.`
               },
               {
                 type: 'image_url',
@@ -180,8 +203,11 @@ Only return valid JSON, no other text.`
     }
 
     const aiData = await aiResponse.json();
-    const content = aiData.choices?.[0]?.message?.content || '';
-    console.log('AI response received:', content.substring(0, 200));
+    let content = aiData.choices?.[0]?.message?.content || '';
+    
+    // PRIVACY: Redact any SSNs that may have slipped through in the AI response
+    content = redactSSN(content);
+    console.log('AI response received (SSNs redacted):', content.substring(0, 200));
 
     // Parse the AI response
     let result: {
@@ -194,6 +220,16 @@ Only return valid JSON, no other text.`
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         result = JSON.parse(jsonMatch[0]);
+        
+        // Double-check: redact any SSNs in string fields of the result
+        if (result.extractedData.clientName) {
+          result.extractedData.clientName = redactSSN(result.extractedData.clientName);
+        }
+        result.riskFlags = result.riskFlags.map(flag => ({
+          ...flag,
+          flag: redactSSN(flag.flag),
+          details: redactSSN(flag.details),
+        }));
       } else {
         throw new Error('No JSON found in response');
       }
