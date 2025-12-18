@@ -25,6 +25,7 @@ import { CaseTimeline } from '@/components/cases/CaseTimeline';
 import { DocumentRequests } from '@/components/cases/DocumentRequests';
 import { ResponseDrafter } from '@/components/cases/ResponseDrafter';
 import { DeadlineBadge } from '@/components/cases/DeadlineBadge';
+import { securityLog } from '@/hooks/useSecurityLog';
 
 interface CaseDetail {
   id: string;
@@ -222,6 +223,9 @@ export default function AgentCaseDetail() {
         description: 'Client has been notified of the status change.',
       });
 
+      // Log security event
+      securityLog.statusChanged(caseDetail.id, oldStatus, newStatus);
+
       setCaseDetail({ ...caseDetail, status: newStatus });
     } catch (error) {
       toast({
@@ -256,6 +260,9 @@ export default function AgentCaseDetail() {
         changed_by: profileId,
       });
 
+      // Log security event
+      securityLog.caseUnassigned(caseDetail.id);
+
       toast({
         title: 'Case Unassigned',
         description: 'Case has been returned to the queue.',
@@ -271,6 +278,12 @@ export default function AgentCaseDetail() {
     } finally {
       setUnassigning(false);
     }
+  };
+
+  const handleViewDocument = (documentType: string, url: string) => {
+    // Log security event
+    securityLog.viewedDocument(caseDetail?.id || '', documentType);
+    window.open(url, '_blank');
   };
 
   const getStatusColor = (status: string) => {
@@ -464,7 +477,7 @@ export default function AgentCaseDetail() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(noticeUrl, '_blank')}
+                          onClick={() => handleViewDocument('Notice', noticeUrl)}
                         >
                           <ExternalLink className="h-3 w-3 mr-1" />
                           View
@@ -481,7 +494,7 @@ export default function AgentCaseDetail() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(taxReturnUrl, '_blank')}
+                          onClick={() => handleViewDocument('Tax Return', taxReturnUrl)}
                         >
                           <ExternalLink className="h-3 w-3 mr-1" />
                           View

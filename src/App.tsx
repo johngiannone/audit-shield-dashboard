@@ -29,6 +29,7 @@ import ReferralNetwork from "./pages/ReferralNetwork";
 import Activate from "./pages/Activate";
 import Notifications from "./pages/Notifications";
 import BrandingSettings from "./pages/BrandingSettings";
+import Compliance from "./pages/Compliance";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const App = () => (
                   <Route path="/activate" element={<Activate />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/branding" element={<BrandingSettings />} />
+                  <Route path="/compliance" element={<Compliance />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </ReferralTracker>
