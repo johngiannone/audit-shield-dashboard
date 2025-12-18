@@ -38,6 +38,13 @@ interface ExtractedData {
   occupation: string | null;
   wagesIncome: number | null;
   stateCode: string | null;
+  fullAddress: string | null;
+}
+
+interface LifestyleData {
+  propertyTax: number | null;
+  homeValue: number | null;
+  source: 'api' | 'manual' | null;
 }
 
 interface RiskFlag {
@@ -65,6 +72,7 @@ interface RiskAssessment {
     auditRate: number;
     isHighRisk: boolean;
   } | null;
+  lifestyleData: LifestyleData | null;
 }
 
 // Calculate individual risk factor scores from assessment data
@@ -154,6 +162,7 @@ export default function AuditRiskCheck() {
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [priorYearLosses, setPriorYearLosses] = useState<number>(0);
+  const [manualHousingCost, setManualHousingCost] = useState<number>(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [assessment, setAssessment] = useState<RiskAssessment | null>(null);
   const [hasActivePlan, setHasActivePlan] = useState<boolean | null>(null);
@@ -229,7 +238,8 @@ export default function AuditRiskCheck() {
           },
           body: JSON.stringify({ 
             pdfBase64,
-            priorYearLosses: priorYearLosses > 0 ? priorYearLosses : undefined
+            priorYearLosses: priorYearLosses > 0 ? priorYearLosses : undefined,
+            manualHousingCost: manualHousingCost > 0 ? manualHousingCost : undefined
           }),
         }
       );
@@ -336,6 +346,29 @@ export default function AuditRiskCheck() {
                   onChange={(e) => setPriorYearLosses(parseInt(e.target.value) || 0)}
                   className="w-24"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="housing-cost">
+                  Monthly Housing Cost (optional)
+                </Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Enter mortgage/rent if you want lifestyle mismatch analysis
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">$</span>
+                  <Input
+                    id="housing-cost"
+                    type="number"
+                    min="0"
+                    step="100"
+                    placeholder="2,500"
+                    value={manualHousingCost || ''}
+                    onChange={(e) => setManualHousingCost(parseInt(e.target.value) || 0)}
+                    className="w-32"
+                  />
+                  <span className="text-xs text-muted-foreground">/month</span>
+                </div>
               </div>
 
               <Button 
@@ -463,6 +496,24 @@ export default function AuditRiskCheck() {
                           <span className="text-muted-foreground">Industry</span>
                           <span className="font-medium">{assessment.industryBenchmark.industryName}</span>
                         </div>
+                      )}
+                      {assessment.lifestyleData && (
+                        <>
+                          {assessment.lifestyleData.propertyTax && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">
+                                {assessment.lifestyleData.source === 'manual' ? 'Housing Cost (Annual)' : 'Property Tax'}
+                              </span>
+                              <span className="font-medium">{formatCurrency(assessment.lifestyleData.propertyTax)}</span>
+                            </div>
+                          )}
+                          {assessment.lifestyleData.homeValue && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Home Value</span>
+                              <span className="font-medium">{formatCurrency(assessment.lifestyleData.homeValue)}</span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </CardContent>
