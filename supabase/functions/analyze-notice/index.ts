@@ -1,6 +1,7 @@
 // Import the safe Base64 encoder from Deno Standard Library
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,6 +20,35 @@ serve(async (req) => {
       console.error('LOVABLE_API_KEY is not configured');
       throw new Error('LOVABLE_API_KEY is not configured');
     }
+
+    // Initialize Supabase to fetch model config
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Fetch AI model configuration for ocr_extraction task
+    const { data: modelConfig, error: configError } = await supabase
+      .from('ai_model_config')
+      .select('*')
+      .eq('task_name', 'ocr_extraction')
+      .eq('is_active', true)
+      .single();
+
+    if (configError) {
+      console.warn('Could not fetch model config, using defaults:', configError.message);
+    }
+
+    // Map OpenRouter model IDs to Lovable AI model IDs
+    const modelMap: Record<string, string> = {
+      'google/gemini-flash-1.5': 'google/gemini-2.5-flash',
+      'google/gemini-pro-1.5': 'google/gemini-2.5-pro',
+      'anthropic/claude-3.5-sonnet': 'google/gemini-2.5-flash',
+    };
+
+    const configModelId = modelConfig?.model_id || 'google/gemini-2.5-flash';
+    const modelId = modelMap[configModelId] || 'google/gemini-2.5-flash';
+
+    console.log(`Using model for OCR extraction: ${modelId}`);
 
     const formData = await req.formData();
     const file = formData.get('file') as File;
@@ -63,7 +93,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Sending to Lovable AI (Gemini) with media type: ${mediaType}`);
+    console.log(`Sending to Lovable AI (${modelId}) with media type: ${mediaType}`);
 
     const systemPrompt = `You are an expert tax document analyzer. Your job is to analyze IRS and state tax notices and extract key information.
 
@@ -99,7 +129,7 @@ If you cannot determine a field, use null for that field. For response_due_date,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: modelId,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userContent }

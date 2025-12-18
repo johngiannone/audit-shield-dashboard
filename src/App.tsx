@@ -33,6 +33,7 @@ import Compliance from "./pages/Compliance";
 import AuditRiskCheck from "./pages/AuditRiskCheck";
 import RiskAssessments from "./pages/RiskAssessments";
 import BatchRiskScan from "./pages/BatchRiskScan";
+import ModelConfig from "./pages/ModelConfig";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -80,6 +81,7 @@ const App = () => (
                   <Route path="/audit-risk" element={<AuditRiskCheck />} />
                   <Route path="/risk-assessments" element={<RiskAssessments />} />
                   <Route path="/batch-risk-scan" element={<BatchRiskScan />} />
+                  <Route path="/admin/model-config" element={<ModelConfig />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </ReferralTracker>

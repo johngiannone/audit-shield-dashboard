@@ -47,6 +47,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_model_config: {
+        Row: {
+          created_at: string
+          description: string | null
+          fallback_model_id: string | null
+          id: string
+          is_active: boolean
+          max_tokens: number | null
+          model_id: string
+          provider: string
+          task_name: string
+          temperature: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          fallback_model_id?: string | null
+          id?: string
+          is_active?: boolean
+          max_tokens?: number | null
+          model_id: string
+          provider?: string
+          task_name: string
+          temperature?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          fallback_model_id?: string | null
+          id?: string
+          is_active?: boolean
+          max_tokens?: number | null
+          model_id?: string
+          provider?: string
+          task_name?: string
+          temperature?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_plans: {
         Row: {
           covered_years: number[]
