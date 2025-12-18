@@ -70,16 +70,16 @@ const BrandingSettings = () => {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/brand-logo.${fileExt}`;
 
-      // Upload to storage
+      // Upload to brand-logos bucket
       const { error: uploadError } = await supabase.storage
-        .from('audit-notices')
+        .from('brand-logos')
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       // Get public URL
       const { data: urlData } = supabase.storage
-        .from('audit-notices')
+        .from('brand-logos')
         .getPublicUrl(fileName);
 
       setLogoUrl(urlData.publicUrl);
