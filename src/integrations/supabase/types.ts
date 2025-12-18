@@ -454,6 +454,44 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_steps: {
+        Row: {
+          action_url: string
+          created_at: string
+          id: string
+          is_completed: boolean
+          profile_id: string
+          step_name: string
+          updated_at: string
+        }
+        Insert: {
+          action_url: string
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          profile_id: string
+          step_name: string
+          updated_at?: string
+        }
+        Update: {
+          action_url?: string
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          profile_id?: string
+          step_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_steps_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_leads: {
         Row: {
           annual_returns: string
