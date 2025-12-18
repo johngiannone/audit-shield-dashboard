@@ -1,4 +1,4 @@
-import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette, ShieldCheck, ScanSearch } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette, ShieldCheck, ScanSearch, Files } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useBranding } from '@/hooks/useBranding';
@@ -38,6 +38,7 @@ const taxPreparerNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
   { title: 'My Clients', url: '/my-clients', icon: UsersRound },
   { title: 'Bulk Enroll', url: '/bulk-enroll', icon: UserPlus },
+  { title: 'Batch Risk Scan', url: '/batch-risk-scan', icon: Files },
   { title: 'Branding', url: '/branding', icon: Palette },
 ];
 
