@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Users, Gavel, CheckCircle, Calendar, Briefcase, Star, X, Clock, DollarSign, Frown, Smile, ChevronUp } from 'lucide-react';
+import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Users, Gavel, CheckCircle, Calendar, Briefcase, Star, X, Clock, DollarSign, Frown, Smile, ChevronUp, Gift } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Helmet } from 'react-helmet-async';
 import { PricingCard } from '@/components/landing/PricingCard';
+import { Snowfall, StringLights, HolidayBadge, SnowflakeDecor } from '@/components/landing/HolidayDecorations';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -91,17 +92,23 @@ export default function Index() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Holiday Snowfall Background */}
+      <Snowfall />
+      
       <Helmet>
         <script type="application/ld+json">
           {JSON.stringify(faqSchema)}
         </script>
       </Helmet>
-      {/* Header */}
-      <header className="container mx-auto px-6 py-6 flex items-center justify-between">
+      {/* Header with String Lights */}
+      <header className="container mx-auto px-6 py-6 flex items-center justify-between relative">
+        <StringLights />
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center shadow-md">
+          <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center shadow-md relative">
             <Shield className="h-5 w-5 text-primary-foreground" />
+            {/* Santa hat on shield */}
+            <span className="absolute -top-2 -right-1 text-lg transform rotate-12">🎅</span>
           </div>
           <span className="font-display text-xl font-semibold text-foreground">Return Shield</span>
         </div>
@@ -119,14 +126,19 @@ export default function Index() {
       <main className="container mx-auto px-6 py-12 lg:py-20">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left Side - Copy */}
-          <div className="animate-slide-up">
-            <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-4 py-1.5 rounded-full text-sm font-medium mb-6">
-              <CheckCircle className="h-4 w-4" />
-              Limited Time: Lock in 2024 Rates
-            </div>
-            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-6">
+          <div className="animate-slide-up relative z-10">
+            {/* Holiday Badge */}
+            <HolidayBadge>
+              Holiday Special: Lock in 2024 Rates
+            </HolidayBadge>
+            
+            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-4">
               Audit Protection for Your Tax Return. <span className="text-primary">Just $99/Year.</span>
             </h1>
+            <p className="text-lg text-green-600 dark:text-green-400 font-medium mb-4 flex items-center gap-2">
+              <Gift className="h-5 w-5" />
+              Give yourself peace of mind this holiday season
+            </p>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
               The IRS is hiring thousands of new agents. Lock in your defense team now. If you get audited, we handle everything for <span className="font-semibold text-foreground">$0 extra fees</span>.
             </p>
@@ -174,17 +186,32 @@ export default function Index() {
 
           {/* Right Side - Protected Status UI */}
           <div className="relative animate-fade-in lg:order-last">
+            {/* Snowflake decorations around card */}
+            <SnowflakeDecor className="-top-4 -left-4" />
+            <SnowflakeDecor className="-top-2 right-8" />
+            <SnowflakeDecor className="bottom-10 -right-4" />
+            
             <div className="relative bg-card rounded-2xl shadow-2xl border border-border overflow-hidden">
-              {/* Status Card Header */}
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
-                <div className="flex items-center justify-between">
+              {/* Holiday ribbon */}
+              <div className="absolute -top-2 -right-2 z-20">
+                <div className="bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg transform rotate-12 flex items-center gap-1">
+                  <span>🎁</span>
+                  Holiday Deal!
+                </div>
+              </div>
+              
+              {/* Status Card Header - Holiday themed */}
+              <div className="bg-gradient-to-r from-red-600 via-green-600 to-red-600 px-6 py-4 relative overflow-hidden">
+                {/* Animated gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+                <div className="flex items-center justify-between relative z-10">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
                       <ShieldCheck className="h-7 w-7 text-white" />
                     </div>
                     <div>
                       <p className="text-white/80 text-sm font-medium">Protection Status</p>
-                      <p className="text-white text-xl font-bold">ACTIVE</p>
+                      <p className="text-white text-xl font-bold">ACTIVE ✨</p>
                     </div>
                   </div>
                   <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
@@ -512,30 +539,38 @@ export default function Index() {
         </div>
       </main>
 
-      {/* Pre-Footer CTA */}
-      <section className="bg-primary py-16 md:py-20">
-        <div className="container mx-auto px-6 text-center">
+      {/* Pre-Footer CTA - Holiday Themed */}
+      <section className="bg-gradient-to-r from-red-700 via-primary to-green-800 py-16 md:py-20 relative overflow-hidden">
+        {/* Holiday decorative elements */}
+        <div className="absolute top-4 left-10 text-4xl opacity-20">🎄</div>
+        <div className="absolute top-8 right-16 text-3xl opacity-20">❄️</div>
+        <div className="absolute bottom-6 left-1/4 text-3xl opacity-20">🎁</div>
+        <div className="absolute bottom-4 right-1/3 text-4xl opacity-20">⭐</div>
+        
+        <div className="container mx-auto px-6 text-center relative z-10">
           <div className="max-w-3xl mx-auto animate-fade-in">
+            <div className="text-4xl mb-4">🎄 🎁 ❄️</div>
             <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
-              The IRS Clock is Ticking.
+              Start the New Year Protected
             </h2>
             <p className="text-primary-foreground/80 text-lg md:text-xl mb-8 leading-relaxed">
-              Most notices have strict deadlines. Delaying can lead to penalties and interest.
+              Don't let tax worries spoil your holidays. Lock in protection before the year ends.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/auth">
                 <Button 
                   size="lg" 
                   variant="secondary"
-                  className="w-full sm:w-auto text-base px-10 font-semibold"
+                  className="w-full sm:w-auto text-base px-10 font-semibold group"
                 >
-                  Start My Defense Now
+                  <Gift className="mr-2 h-5 w-5 group-hover:animate-bounce" />
+                  Get Your Holiday Protection
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
             </div>
             <p className="text-primary-foreground/60 text-sm mt-6">
-              No commitment required. Get a free case review today.
+              🎅 Special holiday pricing available through December 31st
             </p>
           </div>
         </div>
