@@ -37,6 +37,9 @@ interface ExtractedData {
   fullAddress: string | null; // Full street address for property lookup
   // Charity list from Schedule A
   charityList: CharityDonation[];
+  // Schedule C detection
+  hasScheduleC: boolean;
+  vehicleExpenses: number | null;
   // S-Corp (1120-S) specific fields
   officerCompensation: number | null;
   ordinaryBusinessIncome: number | null;
@@ -97,7 +100,7 @@ serve(async (req) => {
   }
 
   try {
-    const { pdfBase64, formType, priorYearLosses, manualHousingCost, activeShareholders, totalAssets } = await req.json();
+    const { pdfBase64, formType, priorYearLosses, manualHousingCost, activeShareholders, totalAssets, businessYearsActive, profitableYears, hasMileageLog } = await req.json();
 
     if (!pdfBase64) {
       throw new Error('PDF data is required');
@@ -106,7 +109,7 @@ serve(async (req) => {
     // Log the form type being analyzed
     const returnType = formType || '1040';
     console.log(`Analyzing ${returnType} return...`);
-    console.log('Additional params:', { priorYearLosses, manualHousingCost, activeShareholders, totalAssets });
+    console.log('Additional params:', { priorYearLosses, manualHousingCost, activeShareholders, totalAssets, businessYearsActive, profitableYears, hasMileageLog });
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -173,7 +176,9 @@ Important:
   "wagesIncome": <number or null>, // Wages, salaries, tips from Line 1 (W-2 income)
   "stateCode": <string or null>, // 2-letter state code from taxpayer's address (e.g., "CA", "NY", "TX")
   "fullAddress": <string or null>, // Full street address from the form (e.g., "123 Main St, Los Angeles, CA 90001")
-  "charityList": [{"name": <string>, "amount": <number or null>}, ...] // List of charitable donations from Schedule A with organization names and amounts
+  "charityList": [{"name": <string>, "amount": <number or null>}, ...], // List of charitable donations from Schedule A with organization names and amounts
+  "hasScheduleC": <boolean>, // true if Schedule C (Profit or Loss From Business) pages are present in the PDF, false otherwise
+  "vehicleExpenses": <number or null> // Vehicle, machinery, and equipment expenses from Schedule C Line 13 or Part IV
 }
 
 Important:
@@ -185,6 +190,8 @@ Important:
 - stateCode should be the 2-letter US state abbreviation from the address at the top of the form
 - fullAddress should be the complete address including street, city, state and zip if visible
 - charityList should be an array of objects with "name" (charity organization name) and "amount" (donation amount) extracted from Schedule A charitable contributions section. Return empty array [] if no charities found.
+- hasScheduleC should be true if you find any Schedule C pages (titled "Schedule C - Profit or Loss From Business") in the document
+- vehicleExpenses should include car and truck expenses, mileage deductions, or vehicle depreciation from Schedule C
 - Only return the JSON object, no other text`;
     }
 
@@ -261,6 +268,9 @@ Important:
           stateCode: parsed.stateCode ?? null,
           fullAddress: parsed.fullAddress ?? null,
           charityList: parsed.charityList ?? [],
+          // Schedule C detection
+          hasScheduleC: parsed.hasScheduleC ?? false,
+          vehicleExpenses: parsed.vehicleExpenses ?? null,
           // Corporate fields
           officerCompensation: parsed.officerCompensation ?? null,
           ordinaryBusinessIncome: parsed.ordinaryBusinessIncome ?? null,
@@ -288,6 +298,8 @@ Important:
         stateCode: null,
         fullAddress: null,
         charityList: [],
+        hasScheduleC: false,
+        vehicleExpenses: null,
         officerCompensation: null,
         ordinaryBusinessIncome: null,
         distributions: null,
@@ -436,6 +448,63 @@ Important:
             details: `Cost of Goods Sold ($${extractedData.costOfGoodsSold.toLocaleString()}) is ${(cogsRatio * 100).toFixed(1)}% of Gross Receipts - exceeding the 75% threshold. This may indicate inventory valuation issues or inflated costs.`
           });
         }
+      }
+    }
+
+    // ========== SCHEDULE C (SELF-EMPLOYMENT) RISK LOGIC FOR 1040 ==========
+    
+    if (returnType === '1040' && extractedData.hasScheduleC) {
+      console.log('Schedule C detected - applying business risk logic...');
+      console.log('Business inputs:', { businessYearsActive, profitableYears, hasMileageLog });
+      
+      // Hobby Loss Rule - Critical IRS test (3 of 5 years must show profit)
+      if (profitableYears !== undefined && profitableYears !== null) {
+        if (profitableYears < 3) {
+          const severity = profitableYears < 2 ? 'high' : 'medium';
+          flags.push({
+            flag: 'Hobby Loss Rule Risk',
+            severity,
+            details: `Business showed profit in only ${profitableYears} of the last 5 years. IRS requires profit in at least 3 of 5 years to presume business intent. This is a significant audit trigger that could reclassify your business as a hobby, disallowing all losses.`
+          });
+        }
+      }
+      
+      // New business with losses - higher scrutiny for businesses under 3 years
+      if (businessYearsActive !== undefined && businessYearsActive > 0 && businessYearsActive < 3) {
+        if (extractedData.netProfit !== null && extractedData.netProfit < 0) {
+          flags.push({
+            flag: 'New Business With Losses',
+            severity: 'medium',
+            details: `Business is only ${businessYearsActive} year${businessYearsActive === 1 ? '' : 's'} old and showing a loss of $${Math.abs(extractedData.netProfit).toLocaleString()}. While startup losses are common, the IRS may scrutinize new businesses with consistent losses.`
+          });
+        }
+      }
+      
+      // Vehicle expense documentation risk
+      if (hasMileageLog === 'no' && extractedData.vehicleExpenses !== null && extractedData.vehicleExpenses > 0) {
+        flags.push({
+          flag: 'Vehicle Expense Documentation Risk',
+          severity: 'high',
+          details: `Vehicle expenses of $${extractedData.vehicleExpenses.toLocaleString()} claimed without a mileage log. IRS requires contemporaneous records for vehicle deductions. Without proper documentation, these deductions are almost always disallowed in an audit.`
+        });
+      } else if (hasMileageLog !== 'yes' && extractedData.vehicleExpenses !== null && extractedData.vehicleExpenses > 5000) {
+        flags.push({
+          flag: 'High Vehicle Expenses',
+          severity: 'medium',
+          details: `Vehicle expenses of $${extractedData.vehicleExpenses.toLocaleString()} may require substantiation with a detailed mileage log showing business vs. personal use.`
+        });
+      }
+      
+      // High gross receipts with loss - suspicious pattern
+      if (extractedData.grossReceipts !== null && 
+          extractedData.grossReceipts > 100000 && 
+          extractedData.netProfit !== null && 
+          extractedData.netProfit < 0) {
+        flags.push({
+          flag: 'High Revenue Business Loss',
+          severity: 'medium',
+          details: `Business has substantial gross receipts ($${extractedData.grossReceipts.toLocaleString()}) but reports a net loss. This pattern may attract IRS scrutiny for expense inflation.`
+        });
       }
     }
 
