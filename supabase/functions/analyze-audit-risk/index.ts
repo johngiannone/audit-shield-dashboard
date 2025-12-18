@@ -6,6 +6,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface CharityDonation {
+  name: string;
+  amount: number | null;
+}
+
+interface CharityValidation {
+  name: string;
+  amount: number | null;
+  verified: boolean;
+  matchedName: string | null;
+  ein: string | null;
+}
+
 interface ExtractedData {
   agi: number | null;
   businessIncome: number | null;
@@ -22,6 +35,8 @@ interface ExtractedData {
   // Address fields for geographic and lifestyle risk
   stateCode: string | null; // 2-letter state code from address
   fullAddress: string | null; // Full street address for property lookup
+  // Charity list from Schedule A
+  charityList: CharityDonation[];
 }
 
 interface LifestyleData {
@@ -56,6 +71,7 @@ interface RiskAssessment {
     isHighRisk: boolean;
   } | null;
   lifestyleData: LifestyleData | null;
+  charityValidations: CharityValidation[];
 }
 
 serve(async (req) => {
@@ -92,7 +108,8 @@ serve(async (req) => {
   "occupation": <string or null>, // Occupation from Page 2 signature block (taxpayer's occupation field)
   "wagesIncome": <number or null>, // Wages, salaries, tips from Line 1 (W-2 income)
   "stateCode": <string or null>, // 2-letter state code from taxpayer's address (e.g., "CA", "NY", "TX")
-  "fullAddress": <string or null> // Full street address from the form (e.g., "123 Main St, Los Angeles, CA 90001")
+  "fullAddress": <string or null>, // Full street address from the form (e.g., "123 Main St, Los Angeles, CA 90001")
+  "charityList": [{"name": <string>, "amount": <number or null>}, ...] // List of charitable donations from Schedule A with organization names and amounts
 }
 
 Important:
@@ -103,6 +120,7 @@ Important:
 - Occupation should be the text from the occupation field near signature
 - stateCode should be the 2-letter US state abbreviation from the address at the top of the form
 - fullAddress should be the complete address including street, city, state and zip if visible
+- charityList should be an array of objects with "name" (charity organization name) and "amount" (donation amount) extracted from Schedule A charitable contributions section. Return empty array [] if no charities found.
 - Only return the JSON object, no other text`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -180,8 +198,14 @@ Important:
         occupation: null,
         wagesIncome: null,
         stateCode: null,
-        fullAddress: null
+        fullAddress: null,
+        charityList: []
       };
+    }
+    
+    // Ensure charityList is always an array
+    if (!extractedData.charityList || !Array.isArray(extractedData.charityList)) {
+      extractedData.charityList = [];
     }
 
     console.log('Extracted data:', extractedData);
@@ -542,6 +566,87 @@ Important:
       }
     }
 
+    // NEW: Charity Validation against IRS Pub 78 database
+    console.log('Step C4: Validating charitable donations...');
+    
+    const charityValidations: CharityValidation[] = [];
+    
+    if (extractedData.charityList && extractedData.charityList.length > 0) {
+      // Fetch all valid charities for fuzzy matching
+      const { data: validCharities, error: charityError } = await supabase
+        .from('valid_charities')
+        .select('organization_name, ein');
+      
+      if (!charityError && validCharities) {
+        console.log(`Found ${validCharities.length} valid charities in database`);
+        
+        for (const donation of extractedData.charityList) {
+          const donationName = donation.name?.toLowerCase().trim() || '';
+          let bestMatch: { name: string; ein: string | null; score: number } | null = null;
+          
+          // Fuzzy matching logic
+          for (const charity of validCharities) {
+            const charityName = charity.organization_name.toLowerCase();
+            
+            // Exact match
+            if (charityName === donationName) {
+              bestMatch = { name: charity.organization_name, ein: charity.ein, score: 100 };
+              break;
+            }
+            
+            // Partial match - donation name contains charity name or vice versa
+            if (donationName.includes(charityName) || charityName.includes(donationName)) {
+              const score = 80;
+              if (!bestMatch || score > bestMatch.score) {
+                bestMatch = { name: charity.organization_name, ein: charity.ein, score };
+              }
+              continue;
+            }
+            
+            // Word-based matching
+            const donationWords = donationName.split(/\s+/).filter((w: string) => w.length > 2);
+            const charityWords = charityName.split(/\s+/).filter((w: string) => w.length > 2);
+            let matchedWords = 0;
+            
+            for (const dWord of donationWords) {
+              if (charityWords.some((cWord: string) => cWord.includes(dWord) || dWord.includes(cWord))) {
+                matchedWords++;
+              }
+            }
+            
+            if (matchedWords >= 2 || (matchedWords >= 1 && donationWords.length <= 2)) {
+              const score = (matchedWords / Math.max(donationWords.length, charityWords.length)) * 70;
+              if (!bestMatch || score > bestMatch.score) {
+                bestMatch = { name: charity.organization_name, ein: charity.ein, score };
+              }
+            }
+          }
+          
+          // Threshold for considering a match valid
+          const isVerified = !!(bestMatch && bestMatch.score >= 50);
+          
+          charityValidations.push({
+            name: donation.name,
+            amount: donation.amount,
+            verified: isVerified,
+            matchedName: isVerified && bestMatch ? bestMatch.name : null,
+            ein: isVerified && bestMatch ? bestMatch.ein : null
+          });
+          
+          // Add risk flag for unverified charities
+          if (!isVerified && donation.amount && donation.amount >= 250) {
+            flags.push({
+              flag: 'Unverified Charitable Donation',
+              severity: 'medium',
+              details: `We could not verify "${donation.name}" as a registered 501(c)(3) organization. Ensure this is a registered non-profit, not a personal gift. Donations over $250 to unverified organizations may be scrutinized.`
+            });
+          }
+        }
+        
+        console.log('Charity validations:', charityValidations);
+      }
+    }
+
     // Step D: Calculate risk score
     console.log('Step D: Calculating risk score...');
     
@@ -575,7 +680,8 @@ Important:
         userProfitMargin: userProfitMargin
       } : null,
       geoRisk,
-      lifestyleData
+      lifestyleData,
+      charityValidations
     };
 
     console.log('Final risk assessment:', assessment);
