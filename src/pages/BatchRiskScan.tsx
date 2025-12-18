@@ -95,8 +95,11 @@ export default function BatchRiskScan() {
     try {
       if (!user?.id) throw new Error('Not authenticated');
 
-      // Upload to storage
-      const filePath = `${user.id}/${Date.now()}_${file.name}`;
+      // Generate UUID filename for privacy (don't expose original filename in storage)
+      const fileExtension = file.name.split('.').pop() || 'pdf';
+      const uuidFilename = `${crypto.randomUUID()}.${fileExtension}`;
+      const filePath = `${user.id}/${uuidFilename}`;
+      
       const { error: uploadError } = await supabase.storage
         .from('scan-queue')
         .upload(filePath, file);
