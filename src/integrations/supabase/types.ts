@@ -571,6 +571,8 @@ export type Database = {
           address: string | null
           affiliate_status: string | null
           avatar_url: string | null
+          brand_logo_url: string | null
+          brand_primary_color: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -586,6 +588,8 @@ export type Database = {
           address?: string | null
           affiliate_status?: string | null
           avatar_url?: string | null
+          brand_logo_url?: string | null
+          brand_primary_color?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -601,6 +605,8 @@ export type Database = {
           address?: string | null
           affiliate_status?: string | null
           avatar_url?: string | null
+          brand_logo_url?: string | null
+          brand_primary_color?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
