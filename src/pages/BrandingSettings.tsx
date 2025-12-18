@@ -45,6 +45,7 @@ const BrandingSettings = () => {
   const navigate = useNavigate();
   const [logoUrl, setLogoUrl] = useState('');
   const [primaryColor, setPrimaryColor] = useState('#1e3a5f');
+  const [firmName, setFirmName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -64,13 +65,14 @@ const BrandingSettings = () => {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('brand_logo_url, brand_primary_color')
+        .select('brand_logo_url, brand_primary_color, brand_firm_name')
         .eq('id', profileId)
         .maybeSingle();
 
       if (!error && data) {
         setLogoUrl(data.brand_logo_url || '');
         setPrimaryColor(data.brand_primary_color || '#1e3a5f');
+        setFirmName(data.brand_firm_name || '');
       }
       setLoading(false);
     };
@@ -151,6 +153,7 @@ const BrandingSettings = () => {
         .update({
           brand_logo_url: logoUrl || null,
           brand_primary_color: primaryColor || null,
+          brand_firm_name: firmName || null,
         })
         .eq('id', profileId);
 
@@ -295,6 +298,30 @@ const BrandingSettings = () => {
 
             <Card>
               <CardHeader>
+                <CardTitle>Firm Name</CardTitle>
+                <CardDescription>
+                  Set a custom name to display in your clients' sidebar
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="firm-name">Display Name</Label>
+                  <Input
+                    id="firm-name"
+                    value={firmName}
+                    onChange={(e) => setFirmName(e.target.value)}
+                    placeholder="e.g., Smith Tax Services"
+                    maxLength={50}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leave blank to use "Return Shield" as the default
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Primary Color</CardTitle>
                 <CardDescription>
                   Choose a color for buttons and sidebar accents
@@ -392,7 +419,7 @@ const BrandingSettings = () => {
                           )}
                           <div>
                             <p className="text-sm font-semibold text-white truncate max-w-[120px]">
-                              Your Firm Name
+                              {firmName || 'Your Firm Name'}
                             </p>
                             <p className="text-xs text-white/60">Client Portal</p>
                           </div>
