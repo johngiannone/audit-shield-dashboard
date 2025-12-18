@@ -1,24 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { RiskGauge } from '@/components/audit/RiskGauge';
+import { RiskFlagCard } from '@/components/audit/RiskFlagCard';
+import { DefenseUpsellBanner } from '@/components/audit/DefenseUpsellBanner';
 import { 
   Upload, 
   FileText, 
-  AlertTriangle, 
   CheckCircle, 
   Shield, 
   Loader2,
-  TrendingUp,
   DollarSign,
-  AlertCircle,
   Info
 } from 'lucide-react';
 
@@ -48,10 +48,30 @@ interface RiskAssessment {
 
 export default function AuditRiskCheck() {
   const { toast } = useToast();
+  const { profileId } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [priorYearLosses, setPriorYearLosses] = useState<number>(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [assessment, setAssessment] = useState<RiskAssessment | null>(null);
+  const [hasActivePlan, setHasActivePlan] = useState<boolean | null>(null);
+
+  // Check if user has an active plan
+  useEffect(() => {
+    const checkPlan = async () => {
+      if (!profileId) return;
+      
+      const { data } = await supabase
+        .from('audit_plans')
+        .select('id, status')
+        .eq('profile_id', profileId)
+        .eq('status', 'active')
+        .limit(1);
+      
+      setHasActivePlan(data && data.length > 0);
+    };
+    
+    checkPlan();
+  }, [profileId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -135,24 +155,13 @@ export default function AuditRiskCheck() {
     }
   };
 
-  const getRiskLevel = (score: number) => {
-    if (score >= 70) return { label: 'High Risk', color: 'bg-destructive', textColor: 'text-destructive' };
-    if (score >= 40) return { label: 'Moderate Risk', color: 'bg-yellow-500', textColor: 'text-yellow-600' };
-    return { label: 'Low Risk', color: 'bg-green-500', textColor: 'text-green-600' };
-  };
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'high': return 'destructive';
-      case 'medium': return 'secondary';
-      default: return 'outline';
-    }
-  };
-
   const formatCurrency = (value: number | null) => {
     if (value === null) return 'Not found';
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   };
+
+  // Determine if we should show upsell
+  const showUpsell = assessment && assessment.score > 50 && hasActivePlan === false;
 
   return (
     <DashboardLayout>
@@ -251,37 +260,13 @@ export default function AuditRiskCheck() {
           <div className="space-y-4">
             {assessment ? (
               <>
-                {/* Risk Score Card */}
+                {/* Risk Gauge Card */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5" />
-                        Risk Score
-                      </span>
-                      <Badge 
-                        variant={assessment.score >= 70 ? 'destructive' : assessment.score >= 40 ? 'secondary' : 'default'}
-                        className="text-lg px-3 py-1"
-                      >
-                        {assessment.score}/100
-                      </Badge>
-                    </CardTitle>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-center">Audit Risk Score</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <Progress 
-                        value={assessment.score} 
-                        className="h-3"
-                      />
-                      <div className="flex justify-between text-sm">
-                        <span className="text-green-600">Low Risk</span>
-                        <span className="text-yellow-600">Moderate</span>
-                        <span className="text-destructive">High Risk</span>
-                      </div>
-                      <p className={`text-center font-semibold ${getRiskLevel(assessment.score).textColor}`}>
-                        {getRiskLevel(assessment.score).label}
-                      </p>
-                    </div>
+                  <CardContent className="flex justify-center py-6">
+                    <RiskGauge score={assessment.score} size={240} />
                   </CardContent>
                 </Card>
 
@@ -319,42 +304,43 @@ export default function AuditRiskCheck() {
                   </CardContent>
                 </Card>
 
-                {/* Risk Flags Card */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5" />
-                      Risk Flags ({assessment.flags.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {assessment.flags.length > 0 ? (
-                      <div className="space-y-3">
-                        {assessment.flags.map((flag, index) => (
-                          <div key={index} className="border rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                              {flag.severity === 'high' ? (
-                                <AlertTriangle className="h-4 w-4 text-destructive" />
-                              ) : (
-                                <AlertCircle className="h-4 w-4 text-yellow-600" />
-                              )}
-                              <span className="font-medium">{flag.flag}</span>
-                              <Badge variant={getSeverityColor(flag.severity)} className="ml-auto">
-                                {flag.severity}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground">{flag.details}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-green-600">
-                        <CheckCircle className="h-5 w-5" />
-                        <span>No significant risk flags detected</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                {/* Risk Flags Section */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    Risk Flags ({assessment.flags.length})
+                  </h3>
+                  {assessment.flags.length > 0 ? (
+                    <div className="space-y-3">
+                      {assessment.flags.map((flag, index) => (
+                        <RiskFlagCard
+                          key={index}
+                          flag={flag.flag}
+                          severity={flag.severity}
+                          details={flag.details}
+                          yourValue={
+                            flag.flag.includes('Charity') ? assessment.extractedData.charitableContributions :
+                            flag.flag.includes('Business') ? assessment.extractedData.businessIncome :
+                            undefined
+                          }
+                          benchmarkValue={
+                            flag.flag.includes('Charity') ? assessment.benchmarks?.avgCharitableDeduction :
+                            undefined
+                          }
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <Card className="bg-green-500/10 border-green-500/20">
+                      <CardContent className="flex items-center gap-3 py-4">
+                        <CheckCircle className="h-6 w-6 text-green-600" />
+                        <div>
+                          <p className="font-semibold text-green-700">No Significant Risk Flags</p>
+                          <p className="text-sm text-muted-foreground">Your return appears to be within normal parameters</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </>
             ) : (
               <Card className="h-full flex items-center justify-center min-h-[300px]">
@@ -369,7 +355,13 @@ export default function AuditRiskCheck() {
             )}
           </div>
         </div>
+        
+        {/* Spacer for sticky footer */}
+        {showUpsell && <div className="h-24" />}
       </div>
+
+      {/* Sticky Upsell Banner */}
+      {showUpsell && <DefenseUpsellBanner riskScore={assessment.score} />}
     </DashboardLayout>
   );
 }
