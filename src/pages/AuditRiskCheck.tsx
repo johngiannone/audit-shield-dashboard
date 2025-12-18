@@ -544,7 +544,9 @@ export default function AuditRiskCheck() {
                           size="lg"
                         >
                           <Shield className="mr-2 h-5 w-5" />
-                          Protect Now
+                          {(formType === '1120' || formType === '1120-S') && totalScore > 50 
+                            ? 'Schedule Corporate Compliance Review' 
+                            : 'Protect Now'}
                         </Button>
                       </div>
                     </CardContent>
@@ -778,6 +780,13 @@ export default function AuditRiskCheck() {
         <p className="text-xs text-muted-foreground text-center mt-8 max-w-2xl mx-auto">
           This tool provides a statistical analysis based on public data benchmarks. It is not an official IRS determination and does not guarantee an audit will or will not occur.
         </p>
+        
+        {/* S-Corp specific disclaimer */}
+        {formType === '1120-S' && assessment && (
+          <p className="text-xs text-amber-600 text-center mt-2 max-w-2xl mx-auto font-medium">
+            Note: Reasonable Compensation analysis is a statistical estimate. Consult a compensation study for IRS defense.
+          </p>
+        )}
 
         {/* Spacer for sticky footer */}
         {showUpsell && <div className="h-24" />}
