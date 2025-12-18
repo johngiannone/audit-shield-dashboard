@@ -26,22 +26,41 @@ interface ExtractedData {
 /**
  * Redact Social Security Numbers from text for privacy protection.
  * Matches patterns like: 123-45-6789, 123 45 6789, 123456789
+ * Returns the redacted text and count of redactions made.
  */
-function redactSSN(text: string): string {
+function redactSSN(text: string): { text: string; count: number } {
+  let count = 0;
+  
   // Pattern for SSN with dashes: ###-##-####
   const dashPattern = /\b\d{3}-\d{2}-\d{4}\b/g;
   // Pattern for SSN with spaces: ### ## ####
   const spacePattern = /\b\d{3}\s\d{2}\s\d{4}\b/g;
-  // Pattern for SSN without separators: ######### (9 consecutive digits, but be careful not to match other numbers)
-  // Using word boundaries and context to reduce false positives
+  // Pattern for SSN without separators: ######### (9 consecutive digits)
   const noSeparatorPattern = /\b(?<!\d)\d{9}(?!\d)\b/g;
   
   let redacted = text;
+  
+  // Count and replace each pattern
+  const dashMatches = redacted.match(dashPattern);
+  if (dashMatches) count += dashMatches.length;
   redacted = redacted.replace(dashPattern, '[REDACTED-SSN]');
+  
+  const spaceMatches = redacted.match(spacePattern);
+  if (spaceMatches) count += spaceMatches.length;
   redacted = redacted.replace(spacePattern, '[REDACTED-SSN]');
+  
+  const noSepMatches = redacted.match(noSeparatorPattern);
+  if (noSepMatches) count += noSepMatches.length;
   redacted = redacted.replace(noSeparatorPattern, '[REDACTED-SSN]');
   
-  return redacted;
+  return { text: redacted, count };
+}
+
+/**
+ * Simple redact for individual fields (returns just the string)
+ */
+function redactSSNSimple(text: string): string {
+  return redactSSN(text).text;
 }
 
 serve(async (req) => {
@@ -206,7 +225,10 @@ Only return valid JSON, no other text. Remember: NO SSN data anywhere in your re
     let content = aiData.choices?.[0]?.message?.content || '';
     
     // PRIVACY: Redact any SSNs that may have slipped through in the AI response
-    content = redactSSN(content);
+    const redactionResult = redactSSN(content);
+    content = redactionResult.text;
+    let totalSSNRedactions = redactionResult.count;
+    
     console.log('AI response received (SSNs redacted):', content.substring(0, 200));
 
     // Parse the AI response
@@ -223,15 +245,39 @@ Only return valid JSON, no other text. Remember: NO SSN data anywhere in your re
         
         // Double-check: redact any SSNs in string fields of the result
         if (result.extractedData.clientName) {
-          result.extractedData.clientName = redactSSN(result.extractedData.clientName);
+          const nameRedaction = redactSSN(result.extractedData.clientName);
+          result.extractedData.clientName = nameRedaction.text;
+          totalSSNRedactions += nameRedaction.count;
         }
-        result.riskFlags = result.riskFlags.map(flag => ({
-          ...flag,
-          flag: redactSSN(flag.flag),
-          details: redactSSN(flag.details),
-        }));
+        result.riskFlags = result.riskFlags.map(flag => {
+          const flagRedaction = redactSSN(flag.flag);
+          const detailsRedaction = redactSSN(flag.details);
+          totalSSNRedactions += flagRedaction.count + detailsRedaction.count;
+          return {
+            ...flag,
+            flag: flagRedaction.text,
+            details: detailsRedaction.text,
+          };
+        });
       } else {
         throw new Error('No JSON found in response');
+      }
+      
+      // Log SSN redaction event if any SSNs were found
+      if (totalSSNRedactions > 0) {
+        console.log(`SSN redaction: ${totalSSNRedactions} SSN(s) redacted from job ${jobId}`);
+        
+        await supabase.from('security_logs').insert({
+          user_id: null, // System action via service role
+          action: 'ssn_redacted',
+          resource_type: 'audit_scan_job',
+          resource_id: jobId,
+          metadata: {
+            ssn_count: totalSSNRedactions,
+            profile_id: job.profile_id,
+            filename: job.original_filename,
+          },
+        });
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
