@@ -54,7 +54,7 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
         // Fetch the manager's branding
         const { data: managerProfile, error: managerError } = await supabase
           .from('profiles')
-          .select('brand_logo_url, brand_primary_color, full_name')
+          .select('brand_logo_url, brand_primary_color, brand_firm_name, full_name')
           .eq('id', clientProfile.managed_by)
           .maybeSingle();
 
@@ -63,12 +63,12 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        // Only apply branding if at least logo or color is set
-        if (managerProfile.brand_logo_url || managerProfile.brand_primary_color) {
+        // Only apply branding if at least logo, color, or firm name is set
+        if (managerProfile.brand_logo_url || managerProfile.brand_primary_color || managerProfile.brand_firm_name) {
           setBranding({
             logoUrl: managerProfile.brand_logo_url,
             primaryColor: managerProfile.brand_primary_color,
-            firmName: managerProfile.full_name,
+            firmName: managerProfile.brand_firm_name || managerProfile.full_name,
           });
         }
       } catch (error) {
