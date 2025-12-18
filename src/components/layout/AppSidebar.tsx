@@ -1,7 +1,9 @@
-import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette, ShieldCheck } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useBranding } from '@/hooks/useBranding';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar,
   SidebarContent,
@@ -37,22 +39,54 @@ const taxPreparerNavItems = [
   { title: 'Branding', url: '/branding', icon: Palette },
 ];
 
+const superAdminNavItems = [
+  { title: 'Compliance', url: '/compliance', icon: ShieldCheck },
+];
+
 export function AppSidebar() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { branding, isWhiteLabeled } = useBranding();
   const location = useLocation();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      checkSuperAdmin();
+    }
+  }, [user]);
+
+  const checkSuperAdmin = async () => {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user?.id)
+      .eq('role', 'super_admin')
+      .maybeSingle();
+    
+    setIsSuperAdmin(!!data);
+  };
 
   const getNavItems = () => {
+    let items = [];
     switch (role) {
       case 'enrolled_agent':
-        return enrolledAgentNavItems;
+        items = [...enrolledAgentNavItems];
+        break;
       case 'tax_preparer':
-        return taxPreparerNavItems;
+        items = [...taxPreparerNavItems];
+        break;
       default:
-        return clientNavItems;
+        items = [...clientNavItems];
     }
+    
+    // Add super admin items if user is super admin
+    if (isSuperAdmin) {
+      items = [...items, ...superAdminNavItems];
+    }
+    
+    return items;
   };
 
   const navItems = getNavItems();

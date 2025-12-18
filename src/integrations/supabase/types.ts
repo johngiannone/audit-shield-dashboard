@@ -665,6 +665,42 @@ export type Database = {
         }
         Relationships: []
       }
+      security_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          resource_id: string | null
+          resource_type: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -705,7 +741,12 @@ export type Database = {
       is_user_activated: { Args: { p_user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "client" | "agent" | "enrolled_agent" | "tax_preparer"
+      app_role:
+        | "client"
+        | "agent"
+        | "enrolled_agent"
+        | "tax_preparer"
+        | "super_admin"
       notification_type: "info" | "warning" | "success"
     }
     CompositeTypes: {
@@ -834,7 +875,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["client", "agent", "enrolled_agent", "tax_preparer"],
+      app_role: [
+        "client",
+        "agent",
+        "enrolled_agent",
+        "tax_preparer",
+        "super_admin",
+      ],
       notification_type: ["info", "warning", "success"],
     },
   },
