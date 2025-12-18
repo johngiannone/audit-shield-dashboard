@@ -7,6 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +40,8 @@ import {
   MapPin,
   HelpCircle
 } from 'lucide-react';
+
+type FormType = '1040' | '1120-S' | '1120';
 
 interface CharityDonation {
   name: string;
@@ -193,8 +202,11 @@ export default function AuditRiskCheck() {
   const { profileId } = useAuth();
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
+  const [formType, setFormType] = useState<FormType>('1040');
   const [priorYearLosses, setPriorYearLosses] = useState<number>(0);
   const [manualHousingCost, setManualHousingCost] = useState<number>(0);
+  const [activeShareholders, setActiveShareholders] = useState<number>(0);
+  const [totalAssets, setTotalAssets] = useState<number>(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [assessment, setAssessment] = useState<RiskAssessment | null>(null);
   const [hasActivePlan, setHasActivePlan] = useState<boolean | null>(null);
@@ -270,8 +282,11 @@ export default function AuditRiskCheck() {
           },
           body: JSON.stringify({ 
             pdfBase64,
+            formType,
             priorYearLosses: priorYearLosses > 0 ? priorYearLosses : undefined,
-            manualHousingCost: manualHousingCost > 0 ? manualHousingCost : undefined
+            manualHousingCost: manualHousingCost > 0 ? manualHousingCost : undefined,
+            activeShareholders: formType === '1120-S' && activeShareholders > 0 ? activeShareholders : undefined,
+            totalAssets: formType === '1120' && totalAssets > 0 ? totalAssets : undefined
           }),
         }
       );
@@ -326,7 +341,7 @@ export default function AuditRiskCheck() {
         <div>
           <h1 className="text-3xl font-bold font-display">Audit Risk Check</h1>
           <p className="text-muted-foreground mt-1">
-            Upload your Form 1040 to analyze potential audit risk factors
+            Upload your tax return to analyze potential audit risk factors
           </p>
         </div>
 
@@ -343,8 +358,27 @@ export default function AuditRiskCheck() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Return Type Selector */}
               <div>
-                <Label htmlFor="tax-return">Form 1040 PDF</Label>
+                <Label htmlFor="form-type">Select Return Type</Label>
+                <Select value={formType} onValueChange={(value: FormType) => setFormType(value)}>
+                  <SelectTrigger id="form-type" className="mt-2">
+                    <SelectValue placeholder="Select return type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1040">Individual (1040)</SelectItem>
+                    <SelectItem value="1120-S">S-Corp (1120-S)</SelectItem>
+                    <SelectItem value="1120">C-Corp (1120)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="tax-return">
+                  {formType === '1040' ? 'Form 1040 PDF' : 
+                   formType === '1120-S' ? 'Form 1120-S PDF' : 
+                   'Form 1120 PDF'}
+                </Label>
                 <div className="mt-2">
                   <Input
                     id="tax-return"
@@ -361,6 +395,52 @@ export default function AuditRiskCheck() {
                   </div>
                 )}
               </div>
+
+              {/* S-Corp specific field */}
+              {formType === '1120-S' && (
+                <div>
+                  <Label htmlFor="shareholders">
+                    Number of Active Shareholders
+                  </Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Total number of shareholders who were active during the tax year
+                  </p>
+                  <Input
+                    id="shareholders"
+                    type="number"
+                    min="1"
+                    placeholder="e.g., 2"
+                    value={activeShareholders || ''}
+                    onChange={(e) => setActiveShareholders(parseInt(e.target.value) || 0)}
+                    className="w-32"
+                  />
+                </div>
+              )}
+
+              {/* C-Corp specific field */}
+              {formType === '1120' && (
+                <div>
+                  <Label htmlFor="total-assets">
+                    Total Assets (End of Year)
+                  </Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Total assets from Schedule L, Line 15, Column (d)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">$</span>
+                    <Input
+                      id="total-assets"
+                      type="number"
+                      min="0"
+                      step="1000"
+                      placeholder="1,000,000"
+                      value={totalAssets || ''}
+                      onChange={(e) => setTotalAssets(parseInt(e.target.value) || 0)}
+                      className="w-40"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="prior-losses">

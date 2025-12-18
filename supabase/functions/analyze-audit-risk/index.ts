@@ -89,11 +89,16 @@ serve(async (req) => {
   }
 
   try {
-    const { pdfBase64, priorYearLosses, manualHousingCost } = await req.json();
+    const { pdfBase64, formType, priorYearLosses, manualHousingCost, activeShareholders, totalAssets } = await req.json();
 
     if (!pdfBase64) {
       throw new Error('PDF data is required');
     }
+
+    // Log the form type being analyzed
+    const returnType = formType || '1040';
+    console.log(`Analyzing ${returnType} return...`);
+    console.log('Additional params:', { priorYearLosses, manualHousingCost, activeShareholders, totalAssets });
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
