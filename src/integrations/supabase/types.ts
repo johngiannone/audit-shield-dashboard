@@ -89,6 +89,59 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_logs: {
+        Row: {
+          created_at: string
+          estimated_cost: number | null
+          id: string
+          input_tokens: number | null
+          metadata: Json | null
+          model_id: string
+          output_tokens: number | null
+          profile_id: string | null
+          resource_id: string | null
+          resource_type: string | null
+          task_name: string
+          total_tokens: number | null
+        }
+        Insert: {
+          created_at?: string
+          estimated_cost?: number | null
+          id?: string
+          input_tokens?: number | null
+          metadata?: Json | null
+          model_id: string
+          output_tokens?: number | null
+          profile_id?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          task_name: string
+          total_tokens?: number | null
+        }
+        Update: {
+          created_at?: string
+          estimated_cost?: number | null
+          id?: string
+          input_tokens?: number | null
+          metadata?: Json | null
+          model_id?: string
+          output_tokens?: number | null
+          profile_id?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          task_name?: string
+          total_tokens?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_logs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_plans: {
         Row: {
           covered_years: number[]
