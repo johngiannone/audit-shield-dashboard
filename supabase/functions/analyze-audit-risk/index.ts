@@ -19,8 +19,15 @@ interface ExtractedData {
   // Occupation field from signature block
   occupation: string | null;
   wagesIncome: number | null; // W-2 wages from Line 1
-  // Address field for geographic risk
+  // Address fields for geographic and lifestyle risk
   stateCode: string | null; // 2-letter state code from address
+  fullAddress: string | null; // Full street address for property lookup
+}
+
+interface LifestyleData {
+  propertyTax: number | null;
+  homeValue: number | null;
+  source: 'api' | 'manual' | null;
 }
 
 interface RiskFlag {
@@ -48,6 +55,7 @@ interface RiskAssessment {
     auditRate: number;
     isHighRisk: boolean;
   } | null;
+  lifestyleData: LifestyleData | null;
 }
 
 serve(async (req) => {
@@ -56,7 +64,7 @@ serve(async (req) => {
   }
 
   try {
-    const { pdfBase64, priorYearLosses } = await req.json();
+    const { pdfBase64, priorYearLosses, manualHousingCost } = await req.json();
 
     if (!pdfBase64) {
       throw new Error('PDF data is required');
@@ -83,7 +91,8 @@ serve(async (req) => {
   "netProfit": <number or null>, // Net Profit from Schedule C Line 31 (can be negative)
   "occupation": <string or null>, // Occupation from Page 2 signature block (taxpayer's occupation field)
   "wagesIncome": <number or null>, // Wages, salaries, tips from Line 1 (W-2 income)
-  "stateCode": <string or null> // 2-letter state code from taxpayer's address (e.g., "CA", "NY", "TX")
+  "stateCode": <string or null>, // 2-letter state code from taxpayer's address (e.g., "CA", "NY", "TX")
+  "fullAddress": <string or null> // Full street address from the form (e.g., "123 Main St, Los Angeles, CA 90001")
 }
 
 Important:
@@ -93,6 +102,7 @@ Important:
 - NAICS code should be a 6-digit string if found
 - Occupation should be the text from the occupation field near signature
 - stateCode should be the 2-letter US state abbreviation from the address at the top of the form
+- fullAddress should be the complete address including street, city, state and zip if visible
 - Only return the JSON object, no other text`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -169,7 +179,8 @@ Important:
         netProfit: null,
         occupation: null,
         wagesIncome: null,
-        stateCode: null
+        stateCode: null,
+        fullAddress: null
       };
     }
 
@@ -438,6 +449,99 @@ Important:
       }
     }
 
+    // NEW: Lifestyle Mismatch Check (Property Data)
+    console.log('Step C3: Checking lifestyle mismatch...');
+    
+    let lifestyleData: LifestyleData | null = null;
+    const ESTATED_API_KEY = Deno.env.get('ESTATED_API_KEY');
+    
+    // Try to get property data from API if address is available and API key exists
+    if (extractedData.fullAddress && ESTATED_API_KEY && ESTATED_API_KEY.length > 0) {
+      try {
+        console.log('Querying Estated API for address:', extractedData.fullAddress);
+        
+        // Parse address components - Estated API expects individual fields
+        const addressParts = extractedData.fullAddress.split(',').map((s: string) => s.trim());
+        let street = addressParts[0] || '';
+        let city = addressParts[1] || '';
+        let stateZip = addressParts[2] || '';
+        
+        // Extract state and zip from last part
+        const stateZipMatch = stateZip.match(/([A-Z]{2})\s*(\d{5})?/);
+        const state = stateZipMatch?.[1] || extractedData.stateCode || '';
+        const zip = stateZipMatch?.[2] || '';
+        
+        const estatedUrl = new URL('https://apis.estated.com/v4/property');
+        estatedUrl.searchParams.set('token', ESTATED_API_KEY);
+        if (street) estatedUrl.searchParams.set('street_address', street);
+        if (city) estatedUrl.searchParams.set('city', city);
+        if (state) estatedUrl.searchParams.set('state', state);
+        if (zip) estatedUrl.searchParams.set('zip_code', zip);
+        
+        const propertyResponse = await fetch(estatedUrl.toString());
+        
+        if (propertyResponse.ok) {
+          const propertyData = await propertyResponse.json();
+          console.log('Estated API response:', JSON.stringify(propertyData).slice(0, 500));
+          
+          if (propertyData.data) {
+            const taxData = propertyData.data.taxes;
+            const assessmentData = propertyData.data.assessments;
+            const marketData = propertyData.data.market_assessments;
+            
+            const annualPropertyTax = taxData?.amount || null;
+            const homeValue = marketData?.total_value || assessmentData?.total_value || propertyData.data.valuation?.value || null;
+            
+            if (annualPropertyTax || homeValue) {
+              lifestyleData = {
+                propertyTax: annualPropertyTax,
+                homeValue: homeValue,
+                source: 'api'
+              };
+              console.log('Property data from API:', lifestyleData);
+            }
+          }
+        } else {
+          console.log('Estated API error:', propertyResponse.status, await propertyResponse.text());
+        }
+      } catch (apiError) {
+        console.error('Error fetching property data:', apiError);
+      }
+    }
+    
+    // Fallback: Use manual housing cost if provided and no API data
+    if (!lifestyleData && manualHousingCost && manualHousingCost > 0) {
+      // Convert monthly to annual
+      const annualHousingCost = manualHousingCost * 12;
+      lifestyleData = {
+        propertyTax: annualHousingCost, // Use housing cost as proxy
+        homeValue: null, // Cannot determine from rent/mortgage payment
+        source: 'manual'
+      };
+      console.log('Using manual housing cost:', lifestyleData);
+    }
+    
+    // Apply Lifestyle Mismatch rules
+    if (lifestyleData && extractedData.agi && extractedData.agi > 0) {
+      // Rule A: If Annual_Property_Tax > (AGI * 0.25) = Housing costs exceed 25% of gross income
+      if (lifestyleData.propertyTax && lifestyleData.propertyTax > extractedData.agi * 0.25) {
+        flags.push({
+          flag: 'Housing Costs Exceed 25% of Gross Income',
+          severity: 'high',
+          details: `Annual housing costs ($${lifestyleData.propertyTax.toLocaleString()}) exceed 25% of your AGI ($${extractedData.agi.toLocaleString()}). This lifestyle/income mismatch is a common IRS audit trigger for potential unreported income.`
+        });
+      }
+      
+      // Rule B: If Home_Value > $1M AND AGI < $60k = High Asset / Low Income Discrepancy
+      if (lifestyleData.homeValue && lifestyleData.homeValue > 1000000 && extractedData.agi < 60000) {
+        flags.push({
+          flag: 'High Asset / Low Income Discrepancy',
+          severity: 'high',
+          details: `Your home value ($${lifestyleData.homeValue.toLocaleString()}) exceeds $1M but your reported AGI ($${extractedData.agi.toLocaleString()}) is under $60K. This significant disparity often triggers IRS scrutiny for potential unreported income or asset-hiding.`
+        });
+      }
+    }
+
     // Step D: Calculate risk score
     console.log('Step D: Calculating risk score...');
     
@@ -470,7 +574,8 @@ Important:
         avgProfitMargin: industryBenchmark.avgProfitMargin,
         userProfitMargin: userProfitMargin
       } : null,
-      geoRisk
+      geoRisk,
+      lifestyleData
     };
 
     console.log('Final risk assessment:', assessment);
