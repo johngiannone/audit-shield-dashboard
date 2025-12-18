@@ -1,4 +1,4 @@
-import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette, ShieldCheck } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette, ShieldCheck, ScanSearch } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useBranding } from '@/hooks/useBranding';
@@ -24,6 +24,7 @@ const clientNavItems = [
   { title: 'My Cases', url: '/my-cases', icon: FolderOpen },
   { title: 'My Plans', url: '/plans', icon: FileText },
   { title: 'Report a Notice', url: '/report', icon: AlertTriangle },
+  { title: 'Audit Risk Check', url: '/audit-risk', icon: ScanSearch },
 ];
 
 const enrolledAgentNavItems = [
