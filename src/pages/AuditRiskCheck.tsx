@@ -356,6 +356,11 @@ export default function AuditRiskCheck() {
           </div>
         </div>
         
+        {/* Disclaimer */}
+        <p className="text-xs text-muted-foreground text-center mt-8 max-w-2xl mx-auto">
+          This tool provides a statistical analysis based on public data benchmarks. It is not an official IRS determination and does not guarantee an audit will or will not occur.
+        </p>
+
         {/* Spacer for sticky footer */}
         {showUpsell && <div className="h-24" />}
       </div>
