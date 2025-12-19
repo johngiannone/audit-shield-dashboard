@@ -20,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RiskGauge } from '@/components/audit/RiskGauge';
 import { RiskFlagCard } from '@/components/audit/RiskFlagCard';
 import { DefenseUpsellBanner } from '@/components/audit/DefenseUpsellBanner';
-import { RiskFactorBreakdown } from '@/components/audit/RiskFactorBreakdown';
+import { RiskBentoGrid } from '@/components/audit/RiskBentoGrid';
 import { cn } from '@/lib/utils';
 import { 
   Tooltip,
@@ -679,63 +679,15 @@ This log format complies with IRS requirements under Treas. Reg. 1.274-5T(c)(2)`
           <div className="space-y-4">
             {assessment && riskFactors ? (
               <>
-                {/* Risk Factor Breakdown - NEW */}
-                <RiskFactorBreakdown
+                {/* Bento Grid Risk Display */}
+                <RiskBentoGrid
                   deductionIntensity={riskFactors.deductionIntensity}
                   industryAlignment={riskFactors.industryAlignment}
                   incomeConsistency={riskFactors.incomeConsistency}
                   auditEnvironment={riskFactors.auditEnvironment}
+                  hasActivePlan={hasActivePlan === true}
+                  formType={formType}
                 />
-
-                {/* High Risk CTA */}
-                {isHighRisk && hasActivePlan === false && (
-                  <Card className="border-destructive bg-destructive/5">
-                    <CardContent className="py-4">
-                      <div className="flex flex-col items-center gap-3 text-center">
-                        <AlertTriangle className="h-8 w-8 text-destructive animate-pulse" />
-                        <div>
-                          <p className="font-semibold text-destructive">High Audit Risk Detected</p>
-                          <p className="text-sm text-muted-foreground">
-                            Your return has a {totalScore}% audit probability
-                          </p>
-                        </div>
-                        <Button 
-                          onClick={() => navigate('/plans')}
-                          className={cn(
-                            "w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground",
-                            "animate-pulse shadow-lg shadow-destructive/25"
-                          )}
-                          size="lg"
-                        >
-                          <Shield className="mr-2 h-5 w-5" />
-                          {(formType === '1120' || formType === '1120-S') && totalScore > 50 
-                            ? 'Schedule Corporate Compliance Review' 
-                            : 'Protect Now'}
-                        </Button>
-                        {(formType === '1120' || formType === '1120-S') && totalScore > 50 && (
-                          <Button
-                            onClick={() => navigate(`/corporate-compliance-review?type=${formType}`)}
-                            variant="outline"
-                            size="sm"
-                            className="mt-2"
-                          >
-                            View Consultation Details
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Risk Gauge Card */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-center">Legacy Risk Score</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex justify-center py-6">
-                    <RiskGauge score={assessment.score} size={180} />
-                  </CardContent>
-                </Card>
 
                 {/* Extracted Data Card */}
                 <Card>
