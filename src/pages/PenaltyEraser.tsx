@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,13 +23,17 @@ import {
   Scale,
   Mail,
   Loader2,
-  Send
+  Send,
+  Upload,
+  Sparkles,
+  ShieldCheck,
+  DollarSign
 } from 'lucide-react';
 import { downloadFTALetter, generateFTALetter, type FTALetterData } from '@/utils/fta-letter-generator';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-type Step = 'input' | 'qualification' | 'result';
+type Step = 'upload' | 'input' | 'qualification' | 'result';
 
 interface NoticeData {
   noticeType: string;
@@ -37,6 +41,9 @@ interface NoticeData {
   taxYear: string;
   penaltyAmount: string;
   penaltyType: string;
+  failureToFilePenalty: string;
+  failureToPayPenalty: string;
+  interestAmount: string;
 }
 
 interface TaxpayerInfo {
@@ -54,6 +61,20 @@ interface EmailDelivery {
   sendToTaxPro: boolean;
   taxProEmail: string;
   taxProName: string;
+}
+
+interface ScanResult {
+  notice_number: string | null;
+  tax_year: number | null;
+  taxpayer_name: string | null;
+  failure_to_file_penalty: number;
+  failure_to_pay_penalty: number;
+  other_penalties: number;
+  interest_amount: number;
+  total_amount_due: number;
+  notice_date: string | null;
+  response_due_date: string | null;
+  ssn_last_4: string | null;
 }
 
 const PENALTY_TYPES = [
@@ -82,13 +103,21 @@ const US_STATES = [
 ];
 
 export default function PenaltyEraser() {
-  const [step, setStep] = useState<Step>('input');
+  const [step, setStep] = useState<Step>('upload');
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  
   const [noticeData, setNoticeData] = useState<NoticeData>({
     noticeType: '',
     noticeDate: '',
     taxYear: '',
     penaltyAmount: '',
-    penaltyType: ''
+    penaltyType: '',
+    failureToFilePenalty: '',
+    failureToPayPenalty: '',
+    interestAmount: ''
   });
   const [taxpayerInfo, setTaxpayerInfo] = useState<TaxpayerInfo>({
     name: '',
@@ -108,6 +137,90 @@ export default function PenaltyEraser() {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [hasPriorPenalties, setHasPriorPenalties] = useState<string>('');
   const [isQualified, setIsQualified] = useState<boolean | null>(null);
+
+  const handleFileUpload = useCallback(async (file: File) => {
+    setUploadedFile(file);
+    setIsScanning(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-penalty-notice`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze notice');
+      }
+
+      const result = await response.json();
+      const analysis = result.analysis as ScanResult;
+      setScanResult(analysis);
+      
+      // Pre-fill form with scanned data
+      const totalPenalty = (analysis.failure_to_file_penalty || 0) + (analysis.failure_to_pay_penalty || 0) + (analysis.other_penalties || 0);
+      
+      setNoticeData({
+        noticeType: analysis.notice_number || '',
+        noticeDate: analysis.notice_date || '',
+        taxYear: analysis.tax_year?.toString() || '',
+        penaltyAmount: totalPenalty.toString(),
+        penaltyType: analysis.failure_to_file_penalty > 0 ? 'Failure to File Penalty' : 
+                    analysis.failure_to_pay_penalty > 0 ? 'Failure to Pay Penalty' : '',
+        failureToFilePenalty: analysis.failure_to_file_penalty?.toString() || '0',
+        failureToPayPenalty: analysis.failure_to_pay_penalty?.toString() || '0',
+        interestAmount: analysis.interest_amount?.toString() || '0'
+      });
+      
+      if (analysis.taxpayer_name) {
+        setTaxpayerInfo(prev => ({ ...prev, name: analysis.taxpayer_name || '' }));
+      }
+      if (analysis.ssn_last_4) {
+        setTaxpayerInfo(prev => ({ ...prev, ssnLast4: analysis.ssn_last_4 || '' }));
+      }
+
+      toast.success('Notice scanned successfully! Please review the detected information.');
+      
+    } catch (error: any) {
+      console.error('Scan error:', error);
+      toast.error(error.message || 'Failed to scan notice. Please enter details manually.');
+    } finally {
+      setIsScanning(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file && (file.type === 'application/pdf' || file.type.startsWith('image/'))) {
+      handleFileUpload(file);
+    } else {
+      toast.error('Please upload a PDF or image file');
+    }
+  }, [handleFileUpload]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
   const handleNoticeChange = (field: keyof NoticeData, value: string) => {
     setNoticeData(prev => ({ ...prev, [field]: value }));
@@ -133,6 +246,10 @@ export default function PenaltyEraser() {
            taxpayerInfo.state && 
            taxpayerInfo.zip && 
            taxpayerInfo.ssnLast4.length === 4;
+  };
+
+  const handleProceedToInput = () => {
+    setStep('input');
   };
 
   const handleProceedToQualification = () => {
@@ -181,14 +298,13 @@ export default function PenaltyEraser() {
     }
 
     if (emailDelivery.sendToTaxPro && !emailDelivery.taxProEmail) {
-      toast.error('Please enter your tax professional\'s email');
+      toast.error("Please enter your tax professional's email");
       return;
     }
 
     setIsSendingEmail(true);
 
     try {
-      // Generate PDF as base64
       const letterData: FTALetterData = {
         taxpayerName: taxpayerInfo.name,
         taxpayerAddress: taxpayerInfo.address,
@@ -239,13 +355,18 @@ export default function PenaltyEraser() {
   };
 
   const handleStartOver = () => {
-    setStep('input');
+    setStep('upload');
+    setScanResult(null);
+    setUploadedFile(null);
     setNoticeData({
       noticeType: '',
       noticeDate: '',
       taxYear: '',
       penaltyAmount: '',
-      penaltyType: ''
+      penaltyType: '',
+      failureToFilePenalty: '',
+      failureToPayPenalty: '',
+      interestAmount: ''
     });
     setTaxpayerInfo({
       name: '',
@@ -271,40 +392,201 @@ export default function PenaltyEraser() {
   return (
     <DashboardLayout>
       <Helmet>
-        <title>Penalty Eraser - First-Time Abatement Tool | Return Shield</title>
-        <meta name="description" content="Generate IRS First-Time Abatement request letters to potentially eliminate penalties" />
+        <title>Penalty Eraser - Remove IRS Penalties Automatically | Return Shield</title>
+        <meta name="description" content="Use the IRS First-Time Abatement waiver to automatically remove Failure-to-File and Failure-to-Pay penalties" />
       </Helmet>
 
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
-            <Eraser className="h-8 w-8 text-primary" />
+      <div className="space-y-8">
+        {/* Hero Section */}
+        {step === 'upload' && (
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/20 p-8 md:p-12">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+            
+            <div className="relative z-10 max-w-3xl">
+              <div className="flex items-center gap-2 mb-4">
+                <Badge variant="secondary" className="bg-primary/20 text-primary border-0">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  AI-Powered
+                </Badge>
+              </div>
+              
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+                Remove IRS Penalties Automatically
+              </h1>
+              <p className="text-lg text-muted-foreground mb-6">
+                We use the IRS First-Time Abatement (FTA) waiver to erase Failure-to-File and Failure-to-Pay penalties.
+              </p>
+              
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <ShieldCheck className="h-4 w-4 text-green-500" />
+                  <span>IRS-Approved Method</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <DollarSign className="h-4 w-4 text-green-500" />
+                  <span>Save Thousands</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <FileText className="h-4 w-4 text-green-500" />
+                  <span>Instant Letter Generation</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Penalty Eraser</h1>
-            <p className="text-muted-foreground">
-              Generate a First-Time Abatement request to potentially eliminate IRS penalties
-            </p>
-          </div>
-        </div>
+        )}
 
         {/* Progress Steps */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant={step === 'upload' ? 'default' : 'secondary'} className="gap-1">
+            1. Upload Notice
+          </Badge>
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
           <Badge variant={step === 'input' ? 'default' : 'secondary'} className="gap-1">
-            1. Notice Details
+            2. Review Details
           </Badge>
           <ArrowRight className="h-4 w-4 text-muted-foreground" />
           <Badge variant={step === 'qualification' ? 'default' : 'secondary'} className="gap-1">
-            2. Qualification
+            3. Qualification
           </Badge>
           <ArrowRight className="h-4 w-4 text-muted-foreground" />
           <Badge variant={step === 'result' ? 'default' : 'secondary'} className="gap-1">
-            3. Result
+            4. Result
           </Badge>
         </div>
 
-        {/* Step 1: Input */}
+        {/* Step 1: Upload */}
+        {step === 'upload' && (
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Upload Zone */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Upload Your Penalty Notice
+                </CardTitle>
+                <CardDescription>
+                  Upload your IRS penalty notice (CP14, CP503, CP504) and we'll automatically extract the penalty information
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  className={`relative border-2 border-dashed rounded-xl p-8 md:p-12 text-center transition-all ${
+                    isDragging 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
+                  }`}
+                >
+                  {isScanning ? (
+                    <div className="flex flex-col items-center gap-4">
+                      <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                      <div>
+                        <p className="text-lg font-medium">Scanning your notice...</p>
+                        <p className="text-sm text-muted-foreground">Our AI is extracting penalty information</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                        <FileText className="h-8 w-8 text-primary" />
+                      </div>
+                      <p className="text-lg font-medium mb-2">
+                        Drag and drop your penalty notice here
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        or click to browse (PDF, PNG, JPG)
+                      </p>
+                      <input
+                        type="file"
+                        accept=".pdf,image/*"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file);
+                        }}
+                      />
+                      <Button variant="outline" className="pointer-events-none">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Select File
+                      </Button>
+                    </>
+                  )}
+                </div>
+
+                {/* Scan Results Preview */}
+                {scanResult && (
+                  <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <span className="font-medium text-green-700 dark:text-green-400">Detected Information</span>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Notice Type:</span>
+                        <p className="font-medium">{scanResult.notice_number || 'Not detected'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Tax Year:</span>
+                        <p className="font-medium">{scanResult.tax_year || 'Not detected'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Failure to File:</span>
+                        <p className="font-medium text-destructive">
+                          ${(scanResult.failure_to_file_penalty || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Failure to Pay:</span>
+                        <p className="font-medium text-destructive">
+                          ${(scanResult.failure_to_pay_penalty || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Interest:</span>
+                        <p className="font-medium">
+                          ${(scanResult.interest_amount || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Total Due:</span>
+                        <p className="font-medium">
+                          ${(scanResult.total_amount_due || 0).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex gap-3">
+                      <Button onClick={handleProceedToInput}>
+                        Continue with These Details
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                      <Button variant="outline" onClick={handleStartOver}>
+                        Upload Different Notice
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual Entry Option */}
+                {!scanResult && !isScanning && (
+                  <div className="mt-6 text-center">
+                    <Separator className="my-4" />
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Don't have the notice handy? No problem.
+                    </p>
+                    <Button variant="outline" onClick={handleProceedToInput}>
+                      Enter Details Manually
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Step 2: Input (Review/Manual Entry) */}
         {step === 'input' && (
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Notice Information */}
@@ -315,7 +597,7 @@ export default function PenaltyEraser() {
                   Notice Information
                 </CardTitle>
                 <CardDescription>
-                  Enter the details from your IRS notice (CP14, CP503, etc.)
+                  {scanResult ? 'Review and confirm the detected information' : 'Enter the details from your IRS notice'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -365,7 +647,7 @@ export default function PenaltyEraser() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="penaltyAmount">Penalty Amount ($)</Label>
+                    <Label htmlFor="penaltyAmount">Total Penalty Amount ($)</Label>
                     <Input
                       id="penaltyAmount"
                       type="number"
@@ -379,7 +661,7 @@ export default function PenaltyEraser() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="penaltyType">Penalty Type</Label>
+                  <Label htmlFor="penaltyType">Primary Penalty Type</Label>
                   <Select 
                     value={noticeData.penaltyType} 
                     onValueChange={(v) => handleNoticeChange('penaltyType', v)}
@@ -394,6 +676,20 @@ export default function PenaltyEraser() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {scanResult && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Breakdown from Notice</AlertTitle>
+                    <AlertDescription className="text-sm">
+                      <div className="mt-2 space-y-1">
+                        <div>Failure to File: ${parseFloat(noticeData.failureToFilePenalty || '0').toLocaleString()}</div>
+                        <div>Failure to Pay: ${parseFloat(noticeData.failureToPayPenalty || '0').toLocaleString()}</div>
+                        <div>Interest: ${parseFloat(noticeData.interestAmount || '0').toLocaleString()}</div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
               </CardContent>
             </Card>
 
@@ -491,310 +787,257 @@ export default function PenaltyEraser() {
                       onChange={(e) => handleTaxpayerChange('email', e.target.value)}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Optional - for email delivery
+                      For letter delivery (optional)
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Action Button */}
-            <div className="lg:col-span-2">
+            {/* Continue Button */}
+            <div className="lg:col-span-2 flex justify-between">
+              <Button variant="outline" onClick={handleStartOver}>
+                Start Over
+              </Button>
               <Button 
-                size="lg" 
-                className="w-full"
                 onClick={handleProceedToQualification}
                 disabled={!isNoticeDataComplete() || !isTaxpayerInfoComplete()}
               >
-                Continue to Qualification Check
-                <ArrowRight className="ml-2 h-5 w-5" />
+                Continue to Qualification
+                <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
           </div>
         )}
 
-        {/* Step 2: Qualification */}
+        {/* Step 3: Qualification */}
         {step === 'qualification' && (
           <Card className="max-w-2xl mx-auto">
-            <CardHeader className="text-center">
-              <CardTitle className="flex items-center justify-center gap-2 text-xl">
-                <AlertTriangle className="h-6 w-6 text-amber-500" />
-                Qualification Check
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                FTA Qualification Check
               </CardTitle>
-              <CardDescription className="text-base">
-                The IRS First-Time Abatement (FTA) waiver requires a clean compliance history
+              <CardDescription>
+                Answer this question to determine if you qualify for First-Time Abatement
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <Alert>
                 <Info className="h-4 w-4" />
-                <AlertTitle>Important Question</AlertTitle>
+                <AlertTitle>What is First-Time Abatement?</AlertTitle>
                 <AlertDescription>
-                  Your answer determines if you qualify for penalty relief under IRM 20.1.1.3.3.2.1
+                  The IRS offers penalty relief to taxpayers who have a clean compliance history 
+                  for the past 3 years. This is an administrative waiver that can eliminate 
+                  Failure to File and Failure to Pay penalties.
                 </AlertDescription>
               </Alert>
 
-              <div className="p-6 bg-muted/50 rounded-lg space-y-4">
-                <p className="text-lg font-medium text-center">
-                  Have you had any IRS penalties assessed in the prior 3 tax years?
+              <div className="space-y-4">
+                <p className="font-medium">
+                  Have you been assessed any IRS penalties in the past 3 tax years 
+                  (before {parseInt(noticeData.taxYear) - 3})?
                 </p>
-                <p className="text-sm text-muted-foreground text-center">
-                  (Excluding estimated tax penalties, which do not disqualify you)
-                </p>
-
-                <RadioGroup 
-                  className="flex justify-center gap-8 pt-4"
-                  value={hasPriorPenalties}
-                  onValueChange={handleQualificationAnswer}
-                >
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem value="no" id="no" className="h-5 w-5" />
-                    <Label htmlFor="no" className="text-lg cursor-pointer">
-                      No, I have not
+                <RadioGroup value={hasPriorPenalties} onValueChange={handleQualificationAnswer}>
+                  <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="no" id="no-penalties" />
+                    <Label htmlFor="no-penalties" className="flex-1 cursor-pointer">
+                      <span className="font-medium">No</span>
+                      <span className="block text-sm text-muted-foreground">
+                        I have had a clean compliance history (no penalties in past 3 years)
+                      </span>
                     </Label>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem value="yes" id="yes" className="h-5 w-5" />
-                    <Label htmlFor="yes" className="text-lg cursor-pointer">
-                      Yes, I have
+                  <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="yes" id="yes-penalties" />
+                    <Label htmlFor="yes-penalties" className="flex-1 cursor-pointer">
+                      <span className="font-medium">Yes</span>
+                      <span className="block text-sm text-muted-foreground">
+                        I have been assessed penalties in the past 3 years
+                      </span>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="unsure" id="unsure" />
+                    <Label htmlFor="unsure" className="flex-1 cursor-pointer">
+                      <span className="font-medium">I'm not sure</span>
+                      <span className="block text-sm text-muted-foreground">
+                        I don't know my penalty history
+                      </span>
                     </Label>
                   </div>
                 </RadioGroup>
               </div>
 
-              <Separator />
-
-              <div className="text-center">
-                <Button variant="ghost" onClick={() => setStep('input')}>
-                  ← Back to Notice Details
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => setStep('input')}>
+                  Back
                 </Button>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Step 3: Result */}
+        {/* Step 4: Result */}
         {step === 'result' && (
           <div className="max-w-2xl mx-auto space-y-6">
             {isQualified ? (
               <>
-                <Alert className="border-green-500/50 bg-green-500/10">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <AlertTitle className="text-green-700 text-lg">
-                    You Qualify for First-Time Abatement!
-                  </AlertTitle>
-                  <AlertDescription className="text-green-700/90">
-                    Based on your clean compliance history, you may request penalty abatement 
-                    of ${penaltyAmountNum.toLocaleString('en-US', { minimumFractionDigits: 2 })} under IRM 20.1.1.3.3.2.1.
-                  </AlertDescription>
-                </Alert>
-
-                <Card>
+                <Card className="border-green-500/50 bg-green-500/5">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Your FTA Request Letter
+                    <CardTitle className="flex items-center gap-2 text-green-600">
+                      <CheckCircle2 className="h-6 w-6" />
+                      You Likely Qualify for FTA!
                     </CardTitle>
                     <CardDescription>
-                      A formal First-Time Abatement request has been generated for you
+                      Based on your answers, you may be eligible to have your penalties removed
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Notice Type:</span>
-                        <span className="font-medium">{noticeData.noticeType}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Tax Year:</span>
-                        <span className="font-medium">{noticeData.taxYear}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Penalty Type:</span>
-                        <span className="font-medium">{noticeData.penaltyType}</span>
-                      </div>
-                      <Separator className="my-2" />
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Penalty Amount:</span>
-                        <span className="font-bold text-lg text-destructive">
-                          ${penaltyAmountNum.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </span>
+                    <div className="p-4 bg-background rounded-lg border">
+                      <div className="text-sm text-muted-foreground">Potential Savings</div>
+                      <div className="text-3xl font-bold text-green-600">
+                        ${penaltyAmountNum.toLocaleString()}
                       </div>
                     </div>
 
                     <Alert>
                       <Info className="h-4 w-4" />
-                      <AlertTitle>Next Steps</AlertTitle>
                       <AlertDescription>
-                        <ol className="list-decimal list-inside space-y-1 mt-2 text-sm">
-                          <li>Download and print the letter below</li>
-                          <li>Sign and date the letter where indicated</li>
-                          <li>Mail to the IRS address shown on your notice</li>
-                          <li>Keep a copy for your records</li>
-                          <li>Allow 30-60 days for IRS response</li>
-                        </ol>
+                        Your FTA request letter is ready. Download it and mail to the IRS address 
+                        on your notice, or call the IRS and request FTA verbally using this letter 
+                        as a reference.
                       </AlertDescription>
                     </Alert>
+                  </CardContent>
+                </Card>
 
-                    <div className="flex gap-3">
-                      <Button 
-                        size="lg" 
-                        className="flex-1"
-                        onClick={handleDownloadLetter}
-                      >
-                        <Download className="mr-2 h-5 w-5" />
-                        Download PDF
-                      </Button>
-                    </div>
+                {/* Download & Email Options */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Get Your FTA Letter
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Button onClick={handleDownloadLetter} className="w-full" size="lg">
+                      <Download className="h-5 w-5 mr-2" />
+                      Download FTA Request Letter (PDF)
+                    </Button>
 
                     <Separator />
 
-                    {/* Email Delivery Section */}
                     <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-5 w-5 text-primary" />
-                        <h3 className="font-medium">Email Delivery</h3>
+                      <p className="text-sm font-medium">Or send via email:</p>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="sendToSelf" 
+                          checked={emailDelivery.sendToSelf}
+                          onCheckedChange={(checked) => 
+                            setEmailDelivery(prev => ({ ...prev, sendToSelf: checked as boolean }))
+                          }
+                        />
+                        <Label htmlFor="sendToSelf" className="text-sm">
+                          Send to my email ({taxpayerInfo.email || 'not provided'})
+                        </Label>
                       </div>
 
-                      <div className="space-y-3 p-4 bg-muted/30 rounded-lg">
-                        <div className="flex items-start space-x-3">
-                          <Checkbox
-                            id="sendToSelf"
-                            checked={emailDelivery.sendToSelf}
-                            onCheckedChange={(checked) => 
-                              setEmailDelivery(prev => ({ ...prev, sendToSelf: !!checked }))
-                            }
-                          />
-                          <div className="space-y-1">
-                            <Label htmlFor="sendToSelf" className="cursor-pointer">
-                              Send a copy to myself
-                            </Label>
-                            {emailDelivery.sendToSelf && (
-                              <Input
-                                type="email"
-                                placeholder="your@email.com"
-                                value={taxpayerInfo.email}
-                                onChange={(e) => handleTaxpayerChange('email', e.target.value)}
-                                className="mt-2"
-                              />
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-start space-x-3">
-                          <Checkbox
-                            id="sendToTaxPro"
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="sendToTaxPro" 
                             checked={emailDelivery.sendToTaxPro}
                             onCheckedChange={(checked) => 
-                              setEmailDelivery(prev => ({ ...prev, sendToTaxPro: !!checked }))
+                              setEmailDelivery(prev => ({ ...prev, sendToTaxPro: checked as boolean }))
                             }
                           />
-                          <div className="space-y-1 flex-1">
-                            <Label htmlFor="sendToTaxPro" className="cursor-pointer">
-                              Send to my tax professional
-                            </Label>
-                            {emailDelivery.sendToTaxPro && (
-                              <div className="space-y-2 mt-2">
-                                <Input
-                                  placeholder="Tax Pro Name (optional)"
-                                  value={emailDelivery.taxProName}
-                                  onChange={(e) => 
-                                    setEmailDelivery(prev => ({ ...prev, taxProName: e.target.value }))
-                                  }
-                                />
-                                <Input
-                                  type="email"
-                                  placeholder="taxpro@email.com"
-                                  value={emailDelivery.taxProEmail}
-                                  onChange={(e) => 
-                                    setEmailDelivery(prev => ({ ...prev, taxProEmail: e.target.value }))
-                                  }
-                                />
-                              </div>
-                            )}
-                          </div>
+                          <Label htmlFor="sendToTaxPro" className="text-sm">
+                            Send to my tax professional
+                          </Label>
                         </div>
+                        
+                        {emailDelivery.sendToTaxPro && (
+                          <div className="ml-6 space-y-2">
+                            <Input
+                              placeholder="Tax Pro Name"
+                              value={emailDelivery.taxProName}
+                              onChange={(e) => 
+                                setEmailDelivery(prev => ({ ...prev, taxProName: e.target.value }))
+                              }
+                            />
+                            <Input
+                              type="email"
+                              placeholder="Tax Pro Email"
+                              value={emailDelivery.taxProEmail}
+                              onChange={(e) => 
+                                setEmailDelivery(prev => ({ ...prev, taxProEmail: e.target.value }))
+                              }
+                            />
+                          </div>
+                        )}
                       </div>
 
-                      {(emailDelivery.sendToSelf || emailDelivery.sendToTaxPro) && (
-                        <Button 
-                          size="lg" 
-                          variant="secondary"
-                          className="w-full"
-                          onClick={handleEmailLetter}
-                          disabled={isSendingEmail}
-                        >
-                          {isSendingEmail ? (
-                            <>
-                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                              Sending...
-                            </>
-                          ) : (
-                            <>
-                              <Send className="mr-2 h-5 w-5" />
-                              Send Letter via Email
-                            </>
-                          )}
-                        </Button>
-                      )}
+                      <Button 
+                        variant="outline" 
+                        onClick={handleEmailLetter}
+                        disabled={isSendingEmail || (!emailDelivery.sendToSelf && !emailDelivery.sendToTaxPro)}
+                        className="w-full"
+                      >
+                        {isSendingEmail ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4 mr-2" />
+                            Send Letter via Email
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               </>
             ) : (
-              <>
-                <Alert className="border-destructive/50 bg-destructive/10">
-                  <XCircle className="h-5 w-5 text-destructive" />
-                  <AlertTitle className="text-destructive text-lg">
-                    You May Not Qualify for FTA
-                  </AlertTitle>
-                  <AlertDescription className="text-destructive/90">
-                    Because you have had penalties in the prior 3 tax years, you may not be 
-                    eligible for the First-Time Abatement administrative waiver.
-                  </AlertDescription>
-                </Alert>
+              <Card className="border-amber-500/50 bg-amber-500/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-amber-600">
+                    <XCircle className="h-6 w-6" />
+                    FTA May Not Apply
+                  </CardTitle>
+                  <CardDescription>
+                    Based on your answers, you may not qualify for First-Time Abatement
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Other Options Available</AlertTitle>
+                    <AlertDescription>
+                      Don't worry! There are other penalty relief options including:
+                      <ul className="list-disc list-inside mt-2 space-y-1">
+                        <li>Reasonable Cause relief (if you have a valid reason)</li>
+                        <li>Statutory exceptions</li>
+                        <li>Installment agreement to pay over time</li>
+                        <li>Offer in Compromise (if you can't pay)</li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Alternative Options</CardTitle>
-                    <CardDescription>
-                      Even without FTA, there may be other ways to reduce or eliminate your penalty
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="p-3 border rounded-lg">
-                        <h4 className="font-medium">Reasonable Cause</h4>
-                        <p className="text-sm text-muted-foreground">
-                          If you had circumstances beyond your control (serious illness, death in family, 
-                          natural disaster), you may request abatement based on reasonable cause.
-                        </p>
-                      </div>
-                      <div className="p-3 border rounded-lg">
-                        <h4 className="font-medium">Statutory Exception</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Certain statutory exceptions may apply, such as reliance on erroneous 
-                          advice from the IRS.
-                        </p>
-                      </div>
-                      <div className="p-3 border rounded-lg">
-                        <h4 className="font-medium">Professional Representation</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Consider working with an Enrolled Agent or tax attorney who can review 
-                          your specific situation and identify the best strategy.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
+                  <p className="text-sm text-muted-foreground">
+                    Consider consulting with a tax professional to explore other 
+                    penalty abatement strategies for your situation.
+                  </p>
+                </CardContent>
+              </Card>
             )}
 
-            <div className="text-center">
-              <Button variant="outline" onClick={handleStartOver}>
-                Start New Analysis
-              </Button>
-            </div>
+            <Button variant="outline" onClick={handleStartOver} className="w-full">
+              Start Over with New Notice
+            </Button>
           </div>
         )}
       </div>
