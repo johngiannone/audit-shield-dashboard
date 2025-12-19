@@ -138,10 +138,18 @@ serve(async (req) => {
       });
     }
 
-    // Convert to base64 for AI processing
+    // Convert to base64 for AI processing (chunked to avoid stack overflow)
     const arrayBuffer = await fileData.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
-    const pdfBase64 = btoa(String.fromCharCode(...uint8Array));
+    
+    // Use chunked conversion to avoid "Maximum call stack size exceeded" error
+    let binaryString = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+      binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    const pdfBase64 = btoa(binaryString);
     console.log('File downloaded and converted to base64, size:', uint8Array.length);
 
     console.log(`Step A: Extracting data from ${returnType} PDF...`);
