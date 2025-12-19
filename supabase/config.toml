@@ -68,3 +68,6 @@ verify_jwt = true
 
 [functions.analyze-schedule-c]
 verify_jwt = true
+
+[functions.send-fta-letter]
+verify_jwt = true

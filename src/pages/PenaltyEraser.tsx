@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Eraser, 
   FileText, 
@@ -19,9 +20,13 @@ import {
   AlertTriangle,
   ArrowRight,
   Info,
-  Scale
+  Scale,
+  Mail,
+  Loader2,
+  Send
 } from 'lucide-react';
-import { downloadFTALetter, type FTALetterData } from '@/utils/fta-letter-generator';
+import { downloadFTALetter, generateFTALetter, type FTALetterData } from '@/utils/fta-letter-generator';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 type Step = 'input' | 'qualification' | 'result';
@@ -41,6 +46,14 @@ interface TaxpayerInfo {
   state: string;
   zip: string;
   ssnLast4: string;
+  email: string;
+}
+
+interface EmailDelivery {
+  sendToSelf: boolean;
+  sendToTaxPro: boolean;
+  taxProEmail: string;
+  taxProName: string;
 }
 
 const PENALTY_TYPES = [
@@ -83,8 +96,16 @@ export default function PenaltyEraser() {
     city: '',
     state: '',
     zip: '',
-    ssnLast4: ''
+    ssnLast4: '',
+    email: ''
   });
+  const [emailDelivery, setEmailDelivery] = useState<EmailDelivery>({
+    sendToSelf: false,
+    sendToTaxPro: false,
+    taxProEmail: '',
+    taxProName: ''
+  });
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [hasPriorPenalties, setHasPriorPenalties] = useState<string>('');
   const [isQualified, setIsQualified] = useState<boolean | null>(null);
 
@@ -148,6 +169,75 @@ export default function PenaltyEraser() {
     toast.success('FTA request letter downloaded successfully');
   };
 
+  const handleEmailLetter = async () => {
+    if (!emailDelivery.sendToSelf && !emailDelivery.sendToTaxPro) {
+      toast.error('Please select at least one delivery option');
+      return;
+    }
+
+    if (emailDelivery.sendToSelf && !taxpayerInfo.email) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    if (emailDelivery.sendToTaxPro && !emailDelivery.taxProEmail) {
+      toast.error('Please enter your tax professional\'s email');
+      return;
+    }
+
+    setIsSendingEmail(true);
+
+    try {
+      // Generate PDF as base64
+      const letterData: FTALetterData = {
+        taxpayerName: taxpayerInfo.name,
+        taxpayerAddress: taxpayerInfo.address,
+        taxpayerCity: taxpayerInfo.city,
+        taxpayerState: taxpayerInfo.state,
+        taxpayerZip: taxpayerInfo.zip,
+        ssn: taxpayerInfo.ssnLast4,
+        noticeType: noticeData.noticeType,
+        noticeDate: noticeData.noticeDate,
+        taxYear: noticeData.taxYear,
+        penaltyAmount: parseFloat(noticeData.penaltyAmount),
+        penaltyType: noticeData.penaltyType
+      };
+
+      const doc = generateFTALetter(letterData);
+      const pdfBase64 = doc.output('datauristring').split(',')[1];
+
+      const { data, error } = await supabase.functions.invoke('send-fta-letter', {
+        body: {
+          recipientEmail: taxpayerInfo.email,
+          recipientName: taxpayerInfo.name,
+          taxpayerName: taxpayerInfo.name,
+          taxYear: noticeData.taxYear,
+          penaltyAmount: parseFloat(noticeData.penaltyAmount),
+          penaltyType: noticeData.penaltyType,
+          noticeType: noticeData.noticeType,
+          noticeDate: noticeData.noticeDate,
+          letterPdfBase64: pdfBase64,
+          sendToTaxPro: emailDelivery.sendToTaxPro,
+          taxProEmail: emailDelivery.taxProEmail,
+          taxProName: emailDelivery.taxProName
+        }
+      });
+
+      if (error) throw error;
+
+      const recipients = [];
+      if (emailDelivery.sendToSelf) recipients.push(taxpayerInfo.email);
+      if (emailDelivery.sendToTaxPro) recipients.push(emailDelivery.taxProEmail);
+      
+      toast.success(`Letter sent to ${recipients.join(' and ')}`);
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toast.error(error.message || 'Failed to send email. Please try again.');
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   const handleStartOver = () => {
     setStep('input');
     setNoticeData({
@@ -163,7 +253,14 @@ export default function PenaltyEraser() {
       city: '',
       state: '',
       zip: '',
-      ssnLast4: ''
+      ssnLast4: '',
+      email: ''
+    });
+    setEmailDelivery({
+      sendToSelf: false,
+      sendToTaxPro: false,
+      taxProEmail: '',
+      taxProName: ''
     });
     setHasPriorPenalties('');
     setIsQualified(null);
@@ -370,18 +467,33 @@ export default function PenaltyEraser() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="ssnLast4">Last 4 Digits of SSN</Label>
-                  <Input
-                    id="ssnLast4"
-                    placeholder="1234"
-                    maxLength={4}
-                    value={taxpayerInfo.ssnLast4}
-                    onChange={(e) => handleTaxpayerChange('ssnLast4', e.target.value.replace(/\D/g, ''))}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Only the last 4 digits are used for identification on the letter
-                  </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="ssnLast4">Last 4 Digits of SSN</Label>
+                    <Input
+                      id="ssnLast4"
+                      placeholder="1234"
+                      maxLength={4}
+                      value={taxpayerInfo.ssnLast4}
+                      onChange={(e) => handleTaxpayerChange('ssnLast4', e.target.value.replace(/\D/g, ''))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      For identification on the letter
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={taxpayerInfo.email}
+                      onChange={(e) => handleTaxpayerChange('email', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Optional - for email delivery
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -524,14 +636,108 @@ export default function PenaltyEraser() {
                       </AlertDescription>
                     </Alert>
 
-                    <Button 
-                      size="lg" 
-                      className="w-full"
-                      onClick={handleDownloadLetter}
-                    >
-                      <Download className="mr-2 h-5 w-5" />
-                      Download FTA Request Letter (PDF)
-                    </Button>
+                    <div className="flex gap-3">
+                      <Button 
+                        size="lg" 
+                        className="flex-1"
+                        onClick={handleDownloadLetter}
+                      >
+                        <Download className="mr-2 h-5 w-5" />
+                        Download PDF
+                      </Button>
+                    </div>
+
+                    <Separator />
+
+                    {/* Email Delivery Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-5 w-5 text-primary" />
+                        <h3 className="font-medium">Email Delivery</h3>
+                      </div>
+
+                      <div className="space-y-3 p-4 bg-muted/30 rounded-lg">
+                        <div className="flex items-start space-x-3">
+                          <Checkbox
+                            id="sendToSelf"
+                            checked={emailDelivery.sendToSelf}
+                            onCheckedChange={(checked) => 
+                              setEmailDelivery(prev => ({ ...prev, sendToSelf: !!checked }))
+                            }
+                          />
+                          <div className="space-y-1">
+                            <Label htmlFor="sendToSelf" className="cursor-pointer">
+                              Send a copy to myself
+                            </Label>
+                            {emailDelivery.sendToSelf && (
+                              <Input
+                                type="email"
+                                placeholder="your@email.com"
+                                value={taxpayerInfo.email}
+                                onChange={(e) => handleTaxpayerChange('email', e.target.value)}
+                                className="mt-2"
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3">
+                          <Checkbox
+                            id="sendToTaxPro"
+                            checked={emailDelivery.sendToTaxPro}
+                            onCheckedChange={(checked) => 
+                              setEmailDelivery(prev => ({ ...prev, sendToTaxPro: !!checked }))
+                            }
+                          />
+                          <div className="space-y-1 flex-1">
+                            <Label htmlFor="sendToTaxPro" className="cursor-pointer">
+                              Send to my tax professional
+                            </Label>
+                            {emailDelivery.sendToTaxPro && (
+                              <div className="space-y-2 mt-2">
+                                <Input
+                                  placeholder="Tax Pro Name (optional)"
+                                  value={emailDelivery.taxProName}
+                                  onChange={(e) => 
+                                    setEmailDelivery(prev => ({ ...prev, taxProName: e.target.value }))
+                                  }
+                                />
+                                <Input
+                                  type="email"
+                                  placeholder="taxpro@email.com"
+                                  value={emailDelivery.taxProEmail}
+                                  onChange={(e) => 
+                                    setEmailDelivery(prev => ({ ...prev, taxProEmail: e.target.value }))
+                                  }
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {(emailDelivery.sendToSelf || emailDelivery.sendToTaxPro) && (
+                        <Button 
+                          size="lg" 
+                          variant="secondary"
+                          className="w-full"
+                          onClick={handleEmailLetter}
+                          disabled={isSendingEmail}
+                        >
+                          {isSendingEmail ? (
+                            <>
+                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="mr-2 h-5 w-5" />
+                              Send Letter via Email
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </>
