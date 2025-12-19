@@ -319,23 +319,60 @@ export default function PenaltyEraser() {
     setStep('result');
   };
 
-  const handleDownloadLetter = () => {
-    const letterData: FTALetterData = {
-      taxpayerName: taxpayerInfo.name,
-      taxpayerAddress: taxpayerInfo.address,
-      taxpayerCity: taxpayerInfo.city,
-      taxpayerState: taxpayerInfo.state,
-      taxpayerZip: taxpayerInfo.zip,
-      ssn: taxpayerInfo.ssnLast4,
-      noticeType: noticeData.noticeType,
-      noticeDate: noticeData.noticeDate,
-      taxYear: noticeData.taxYear,
-      penaltyAmount: parseFloat(noticeData.penaltyAmount),
-      penaltyType: noticeData.penaltyType
-    };
+  const [isGeneratingLetter, setIsGeneratingLetter] = useState(false);
 
-    downloadFTALetter(letterData);
-    toast.success('FTA request letter downloaded successfully');
+  const handleDownloadLetter = async () => {
+    setIsGeneratingLetter(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-fta-letter`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userName: taxpayerInfo.name,
+            address: taxpayerInfo.address,
+            city: taxpayerInfo.city,
+            state: taxpayerInfo.state,
+            zip: taxpayerInfo.zip,
+            ssnLast4: taxpayerInfo.ssnLast4,
+            taxYear: noticeData.taxYear,
+            penaltyAmount: parseFloat(noticeData.penaltyAmount),
+            noticeNumber: noticeData.noticeType,
+            penaltyType: noticeData.penaltyType
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate letter');
+      }
+
+      // Download the PDF
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `FTA_Request_${noticeData.taxYear}_${noticeData.noticeType}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('FTA request letter downloaded successfully');
+    } catch (error: any) {
+      console.error('Error generating letter:', error);
+      toast.error(error.message || 'Failed to generate letter');
+    } finally {
+      setIsGeneratingLetter(false);
+    }
   };
 
   const handleEmailLetter = async () => {
@@ -977,9 +1014,23 @@ export default function PenaltyEraser() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <Button onClick={handleDownloadLetter} className="w-full" size="lg">
-                      <Download className="h-5 w-5 mr-2" />
-                      Download FTA Request Letter (PDF)
+                    <Button 
+                      onClick={handleDownloadLetter} 
+                      className="w-full" 
+                      size="lg"
+                      disabled={isGeneratingLetter}
+                    >
+                      {isGeneratingLetter ? (
+                        <>
+                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                          Generating Letter...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-5 w-5 mr-2" />
+                          Download FTA Request Letter (PDF)
+                        </>
+                      )}
                     </Button>
 
                     <Separator />
