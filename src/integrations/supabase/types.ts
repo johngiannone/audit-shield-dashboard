@@ -689,6 +689,39 @@ export type Database = {
         }
         Relationships: []
       }
+      irs_transaction_codes: {
+        Row: {
+          category: string | null
+          code: string
+          created_at: string
+          description: string
+          explanation: string | null
+          id: string
+          recommended_action: string | null
+          severity: string
+        }
+        Insert: {
+          category?: string | null
+          code: string
+          created_at?: string
+          description: string
+          explanation?: string | null
+          id?: string
+          recommended_action?: string | null
+          severity?: string
+        }
+        Update: {
+          category?: string | null
+          code?: string
+          created_at?: string
+          description?: string
+          explanation?: string | null
+          id?: string
+          recommended_action?: string | null
+          severity?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
