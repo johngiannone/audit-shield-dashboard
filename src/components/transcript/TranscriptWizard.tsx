@@ -15,15 +15,18 @@ import {
   HelpCircle,
   LogIn,
   FolderOpen,
-  MousePointer,
   AlertTriangle,
   Download,
-  CheckCircle2,
-  ArrowRight,
-  Check,
-  X
+  CheckCircle2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Import screenshots
+import irsStep1 from "@/assets/irs-step-1.png";
+import irsStep1b from "@/assets/irs-step-1b.png";
+import irsStep1c from "@/assets/irs-step-1c.png";
+import irsStep2 from "@/assets/irs-step-2.png";
+import irsStep2b from "@/assets/irs-step-2b.png";
 
 interface TranscriptWizardProps {
   open: boolean;
@@ -34,180 +37,79 @@ const WIZARD_STEPS = [
   {
     step: 1,
     title: "Go to IRS.gov and Sign In",
-    description: "Navigate to IRS.gov/account and click 'Sign in' in the top right corner. You'll need to verify your identity with ID.me.",
+    description: "Navigate to IRS.gov/account and click 'Sign in' in the top right corner. Select 'Individual' and sign in with your ID.me account.",
     icon: LogIn,
     link: "https://www.irs.gov/payments/your-online-account",
     linkText: "Open IRS.gov/account",
-    visual: {
-      type: "steps",
-      items: [
-        "Go to irs.gov and click 'Sign in' dropdown",
-        "Select 'Individual' for personal taxes",
-        "Click 'Sign in with ID.me'",
-        "Enter your email and password"
-      ]
-    },
+    images: [
+      { src: irsStep1, caption: "Click 'Sign in' and select 'Individual'" },
+      { src: irsStep1b, caption: "Click 'Sign in with ID.me'" },
+      { src: irsStep1c, caption: "Enter your ID.me credentials" }
+    ],
     tip: "If you don't have an ID.me account, you'll need to create one. Have a photo ID ready for verification."
   },
   {
     step: 2,
-    title: "Click on Tax Records",
-    description: "Once logged in to your IRS account, look for the 'Records and Status' menu in the top navigation bar, or find 'Tax Records' on your account dashboard.",
+    title: "Navigate to Tax Records",
+    description: "Once logged in, find the 'Transcripts' section and click 'View transcripts' to see all available transcript types.",
     icon: FolderOpen,
-    visual: {
-      type: "highlight",
-      location: "Look for 'Records and Status' in the blue navigation bar at the top",
-      action: "Click to open the Tax Records page"
-    },
-    tip: "The Tax Records section shows your return summary, transcripts, and compliance information."
+    images: [
+      { src: irsStep2, caption: "Click 'View transcripts' button" }
+    ],
+    tip: "Look for the Transcripts card on your Tax Records page."
   },
   {
     step: 3,
-    title: "Click 'View Transcripts'",
-    description: "On the Tax Records page, find the 'Transcripts' section on the right side. Click the 'View transcripts' button to see all available transcript types.",
-    icon: MousePointer,
-    visual: {
-      type: "highlight",
-      location: "Right side of the page under 'Transcripts' heading",
-      action: "Click the blue 'View transcripts' button"
-    },
-    tip: "You'll see different transcript types on the next page. Make sure you select the right one!"
-  },
-  {
-    step: 4,
     title: "Select ACCOUNT Transcript (Not Return!)",
-    description: "This is the crucial step! You'll see two main options side by side. Look for 'Account Transcripts' on the LEFT side. Do NOT select 'Return Transcripts' on the right.",
+    description: "This is the crucial step! You'll see two columns side by side. Choose 'Account Transcripts' on the LEFT. Do NOT select 'Return Transcripts' on the right.",
     icon: AlertTriangle,
     isImportant: true,
-    visual: {
-      type: "comparison",
-      correct: {
-        title: "Account Transcripts ✓",
-        description: "Shows penalties, payments, IRS actions",
-        side: "LEFT side of page"
-      },
-      incorrect: {
-        title: "Return Transcripts ✗",
-        description: "Only shows what you originally filed",
-        side: "RIGHT side - DO NOT USE"
-      }
-    },
+    images: [
+      { src: irsStep2b, caption: "Choose Account Transcripts (LEFT column) - NOT Return Transcripts!" }
+    ],
     tip: "Account Transcript = Payment history, penalties, IRS actions\nReturn Transcript = Just what you originally filed (won't show penalty codes)"
   },
   {
-    step: 5,
+    step: 4,
     title: "Download the 2024 PDF",
     description: "Under 'Account Transcripts', click on '2024 Account Transcript [PDF] EN' to download. Save the file to your device, then upload it here!",
     icon: Download,
-    visual: {
-      type: "steps",
-      items: [
-        "Find '2024 Account Transcript [PDF]' under Account Transcripts",
-        "Click 'EN' for English version",
-        "PDF will download to your device",
-        "Come back here and drop it in the upload zone!"
-      ]
-    },
     tip: "The PDF filename will include 'Account' in it. If it says 'Return', you downloaded the wrong one!"
   }
 ];
 
 export function TranscriptWizard({ open, onOpenChange }: TranscriptWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const handleNext = () => {
     if (currentStep < WIZARD_STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
+      setCurrentImageIndex(0);
     }
   };
 
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+      setCurrentImageIndex(0);
     }
   };
 
   const handleClose = () => {
     setCurrentStep(0);
+    setCurrentImageIndex(0);
     onOpenChange(false);
   };
 
   const step = WIZARD_STEPS[currentStep];
   const StepIcon = step.icon;
   const isLastStep = currentStep === WIZARD_STEPS.length - 1;
-
-  const renderVisual = () => {
-    if (!step.visual) return null;
-
-    if (step.visual.type === "steps") {
-      return (
-        <div className="space-y-2">
-          {step.visual.items.map((item, index) => (
-            <div key={index} className="flex items-start gap-3 p-2 rounded bg-background/50">
-              <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
-                {index + 1}
-              </div>
-              <span className="text-sm">{item}</span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (step.visual.type === "highlight") {
-      return (
-        <div className="p-4 rounded-lg border-2 border-primary/30 bg-primary/5">
-          <div className="flex items-center gap-2 mb-2">
-            <ArrowRight className="h-4 w-4 text-primary" />
-            <span className="font-medium text-primary">Where to look:</span>
-          </div>
-          <p className="text-sm mb-3">{step.visual.location}</p>
-          <div className="flex items-center gap-2 text-sm bg-background/50 p-2 rounded">
-            <MousePointer className="h-4 w-4" />
-            <span>{step.visual.action}</span>
-          </div>
-        </div>
-      );
-    }
-
-    if (step.visual.type === "comparison") {
-      return (
-        <div className="grid grid-cols-2 gap-3">
-          {/* Correct Option */}
-          <div className="p-4 rounded-lg border-2 border-green-500 bg-green-500/10">
-            <div className="flex items-center gap-2 mb-2">
-              <Check className="h-5 w-5 text-green-500" />
-              <span className="font-bold text-green-600">USE THIS</span>
-            </div>
-            <h4 className="font-semibold text-sm mb-1">{step.visual.correct.title}</h4>
-            <p className="text-xs text-muted-foreground mb-2">{step.visual.correct.description}</p>
-            <Badge variant="outline" className="text-xs border-green-500 text-green-600">
-              {step.visual.correct.side}
-            </Badge>
-          </div>
-          
-          {/* Incorrect Option */}
-          <div className="p-4 rounded-lg border-2 border-red-500/50 bg-red-500/5 opacity-75">
-            <div className="flex items-center gap-2 mb-2">
-              <X className="h-5 w-5 text-red-500" />
-              <span className="font-bold text-red-500">DO NOT USE</span>
-            </div>
-            <h4 className="font-semibold text-sm mb-1 line-through">{step.visual.incorrect.title}</h4>
-            <p className="text-xs text-muted-foreground mb-2">{step.visual.incorrect.description}</p>
-            <Badge variant="outline" className="text-xs border-red-500/50 text-red-500">
-              {step.visual.incorrect.side}
-            </Badge>
-          </div>
-        </div>
-      );
-    }
-
-    return null;
-  };
+  const hasMultipleImages = step.images && step.images.length > 1;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
             <HelpCircle className="h-5 w-5 text-primary" />
@@ -223,7 +125,10 @@ export function TranscriptWizard({ open, onOpenChange }: TranscriptWizardProps) 
           {WIZARD_STEPS.map((_, index) => (
             <button
               key={index}
-              onClick={() => setCurrentStep(index)}
+              onClick={() => {
+                setCurrentStep(index);
+                setCurrentImageIndex(0);
+              }}
               className={cn(
                 "w-2.5 h-2.5 rounded-full transition-all",
                 index === currentStep 
@@ -272,10 +177,39 @@ export function TranscriptWizard({ open, onOpenChange }: TranscriptWizardProps) 
             {step.description}
           </p>
 
-          {/* Visual Guide */}
-          <div className="mb-4">
-            {renderVisual()}
-          </div>
+          {/* Screenshot */}
+          {step.images && step.images.length > 0 && (
+            <div className="mb-4">
+              <div className="rounded-lg overflow-hidden border bg-background">
+                <img 
+                  src={step.images[currentImageIndex].src} 
+                  alt={step.images[currentImageIndex].caption}
+                  className="w-full h-auto"
+                />
+              </div>
+              <p className="text-sm text-center text-muted-foreground mt-2">
+                {step.images[currentImageIndex].caption}
+              </p>
+              
+              {/* Image navigation for multiple images */}
+              {hasMultipleImages && (
+                <div className="flex justify-center gap-2 mt-3">
+                  {step.images.map((_, imgIndex) => (
+                    <button
+                      key={imgIndex}
+                      onClick={() => setCurrentImageIndex(imgIndex)}
+                      className={cn(
+                        "w-2 h-2 rounded-full transition-all",
+                        imgIndex === currentImageIndex 
+                          ? "bg-primary" 
+                          : "bg-muted-foreground/30"
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Tip Box */}
           {step.tip && (

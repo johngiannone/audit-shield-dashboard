@@ -36,21 +36,16 @@ const GUIDE_STEPS = [
   {
     step: 2,
     title: "Navigate to Tax Records",
-    description: "Click on \"Tax Records\" and select \"Get Transcript\"."
+    description: "Click 'View transcripts' to see available transcript types."
   },
   {
     step: 3,
-    title: "Select the Reason",
-    description: "Choose \"Federal Tax\" as the reason for your transcript request."
-  },
-  {
-    step: 4,
     title: "Choose Account Transcript",
-    description: "Look for the Account Transcript section (NOT Return Transcript). This shows payment history and penalties.",
+    description: "Select Account Transcript (LEFT column) - NOT Return Transcript!",
     important: true
   },
   {
-    step: 5,
+    step: 4,
     title: "Download the PDF",
     description: "Download the 2024 Account Transcript PDF to your device."
   }
