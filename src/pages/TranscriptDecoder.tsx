@@ -16,12 +16,14 @@ import {
   Loader2,
   Clock,
   AlertCircle,
-  Download
+  Download,
+  HelpCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { downloadTranscriptReport } from "@/utils/transcript-report-generator";
+import { TranscriptWizard } from "@/components/transcript/TranscriptWizard";
 
 const GUIDE_STEPS = [
   {
@@ -114,6 +116,7 @@ export default function TranscriptDecoder() {
   const [showReturnWarning, setShowReturnWarning] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [decodeResult, setDecodeResult] = useState<DecodeResult | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -477,13 +480,26 @@ export default function TranscriptDecoder() {
             <div className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Upload className="h-5 w-5 text-primary" />
-                    Upload Transcript
-                  </CardTitle>
-                  <CardDescription>
-                    Drop your Account Transcript PDF here for analysis
-                  </CardDescription>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Upload className="h-5 w-5 text-primary" />
+                        Upload Transcript
+                      </CardTitle>
+                      <CardDescription>
+                        Drop your Account Transcript PDF here for analysis
+                      </CardDescription>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowWizard(true)}
+                      className="flex-shrink-0"
+                    >
+                      <HelpCircle className="h-4 w-4 mr-2" />
+                      Launch Guide
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div
@@ -618,6 +634,9 @@ export default function TranscriptDecoder() {
             </div>
           </div>
         )}
+
+        {/* Transcript Wizard Modal */}
+        <TranscriptWizard open={showWizard} onOpenChange={setShowWizard} />
       </div>
     </DashboardLayout>
   );
