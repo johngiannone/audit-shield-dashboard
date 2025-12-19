@@ -129,7 +129,7 @@ serve(async (req) => {
       .download(filePath);
 
     if (downloadError || !fileData) {
-      console.error('Download error:', downloadError);
+      console.error('Download error:', downloadError?.message || 'Unknown download error');
       return new Response(JSON.stringify({ 
         error: 'File not found or access denied' 
       }), {
@@ -311,7 +311,7 @@ Important:
         throw new Error('No JSON found in response');
       }
     } catch (parseError) {
-      console.error('Failed to parse extraction:', parseError);
+      console.error('Failed to parse extraction:', parseError instanceof Error ? parseError.message : 'Parse error');
       extractedData = {
         agi: null,
         businessIncome: null,
@@ -793,7 +793,7 @@ Important:
           console.log('Estated API error:', propertyResponse.status, await propertyResponse.text());
         }
       } catch (apiError) {
-        console.error('Error fetching property data:', apiError);
+        console.error('Error fetching property data:', apiError instanceof Error ? apiError.message : 'API error');
       }
     }
     
@@ -1007,7 +1007,7 @@ Important:
       .remove([filePath]);
     
     if (deleteError) {
-      console.warn('Failed to delete temp file (non-critical):', deleteError);
+      console.warn('Failed to delete temp file (non-critical):', deleteError?.message || 'Unknown delete error');
     } else {
       console.log('Temporary file deleted successfully');
     }
@@ -1017,7 +1017,7 @@ Important:
     });
 
   } catch (error) {
-    console.error('Error in analyze-audit-risk:', error);
+    console.error('Error in analyze-audit-risk:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Unknown error occurred' 
     }), {
