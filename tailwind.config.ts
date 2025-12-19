@@ -14,11 +14,24 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'sans-serif'],
+        serif: ['Playfair Display', 'serif'],
         display: ['Playfair Display', 'Georgia', 'serif'],
         mono: ['JetBrains Mono', 'Menlo', 'monospace'],
       },
       colors: {
+        // The "Authority" Navy
+        brand: {
+          900: '#0B1120', // Sidebar / Darkest
+          800: '#0F172A', // Secondary Headers
+          700: '#1E293B', // Muted Text
+        },
+        // The "Trust" Gold
+        gold: {
+          500: '#D4AF37', // Primary Button / Links
+          600: '#C5A028', // Hover State
+          100: '#F9F5E6', // Light background accents (for alerts)
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
