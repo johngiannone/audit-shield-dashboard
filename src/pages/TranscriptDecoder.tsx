@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { 
   FileText, 
   Upload, 
-  ExternalLink, 
   CheckCircle2, 
   AlertTriangle,
   Info,
@@ -16,40 +15,14 @@ import {
   Loader2,
   Clock,
   AlertCircle,
-  Download,
-  HelpCircle
+  Download
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { downloadTranscriptReport } from "@/utils/transcript-report-generator";
-import { TranscriptWizard } from "@/components/transcript/TranscriptWizard";
+import { TranscriptGuide } from "@/components/transcript/TranscriptGuide";
 
-const GUIDE_STEPS = [
-  {
-    step: 1,
-    title: "Log in to your IRS Online Account",
-    description: "Access your account via ID.me verification.",
-    link: "https://www.irs.gov/payments/your-online-account",
-    linkText: "Go to IRS.gov"
-  },
-  {
-    step: 2,
-    title: "Navigate to Tax Records",
-    description: "Click 'View transcripts' to see available transcript types."
-  },
-  {
-    step: 3,
-    title: "Choose Account Transcript",
-    description: "Select Account Transcript (LEFT column) - NOT Return Transcript!",
-    important: true
-  },
-  {
-    step: 4,
-    title: "Download the PDF",
-    description: "Download the 2024 Account Transcript PDF to your device."
-  }
-];
 
 // Plain English translations for common codes
 const PLAIN_ENGLISH: Record<string, string> = {
@@ -111,7 +84,7 @@ export default function TranscriptDecoder() {
   const [showReturnWarning, setShowReturnWarning] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [decodeResult, setDecodeResult] = useState<DecodeResult | null>(null);
-  const [showWizard, setShowWizard] = useState(false);
+  
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -422,79 +395,19 @@ export default function TranscriptDecoder() {
         {!decodeResult && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column - Guide */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Info className="h-5 w-5 text-primary" />
-                  How to Get Your Transcript
-                </CardTitle>
-                <CardDescription>
-                  Follow these steps to download your IRS Account Transcript
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {GUIDE_STEPS.map((item) => (
-                  <div 
-                    key={item.step} 
-                    className={cn(
-                      "flex gap-4 p-3 rounded-lg border",
-                      item.important && "border-primary/50 bg-primary/5"
-                    )}
-                  >
-                    <div className="flex-shrink-0">
-                      <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold text-sm">
-                        {item.step}
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <h4 className="font-medium">{item.title}</h4>
-                      <p className="text-sm text-muted-foreground">{item.description}</p>
-                      {item.link && (
-                        <a
-                          href={item.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-1"
-                        >
-                          {item.linkText}
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      )}
-                      {item.important && (
-                        <p className="text-xs text-primary font-medium mt-1">
-                          ⚠️ Important: Account Transcript shows penalties & payments
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+            <TranscriptGuide />
 
             {/* Right Column - Upload */}
             <div className="space-y-4">
               <Card>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Upload className="h-5 w-5 text-primary" />
-                        Upload Transcript
-                      </CardTitle>
-                      <CardDescription>
-                        Drop your Account Transcript PDF here for analysis
-                      </CardDescription>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowWizard(true)}
-                      className="flex-shrink-0"
-                    >
-                      <HelpCircle className="h-4 w-4 mr-2" />
-                      Launch Guide
-                    </Button>
-                  </div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="h-5 w-5 text-primary" />
+                    Upload Transcript
+                  </CardTitle>
+                  <CardDescription>
+                    Drop your Account Transcript PDF here for analysis
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div
@@ -630,8 +543,6 @@ export default function TranscriptDecoder() {
           </div>
         )}
 
-        {/* Transcript Wizard Modal */}
-        <TranscriptWizard open={showWizard} onOpenChange={setShowWizard} />
       </div>
     </DashboardLayout>
   );
