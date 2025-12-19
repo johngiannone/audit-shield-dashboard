@@ -90,6 +90,10 @@ interface ScanResult {
   notice_number: string | null;
   tax_year: number | null;
   taxpayer_name: string | null;
+  address_line_1: string | null;
+  address_city: string | null;
+  address_state: string | null;
+  address_zip: string | null;
   failure_to_file_penalty: number;
   failure_to_pay_penalty: number;
   other_penalties: number;
@@ -305,12 +309,16 @@ export default function PenaltyEraser() {
         interestAmount: analysis.interest_amount?.toString() || '0'
       });
       
-      if (analysis.taxpayer_name) {
-        setTaxpayerInfo(prev => ({ ...prev, name: analysis.taxpayer_name || '' }));
-      }
-      if (analysis.ssn_last_4) {
-        setTaxpayerInfo(prev => ({ ...prev, ssnLast4: analysis.ssn_last_4 || '' }));
-      }
+      // Auto-populate taxpayer info from extracted data (keep fields editable)
+      setTaxpayerInfo(prev => ({
+        ...prev,
+        name: analysis.taxpayer_name || prev.name,
+        address: analysis.address_line_1 || prev.address,
+        city: analysis.address_city || prev.city,
+        state: analysis.address_state || prev.state,
+        zip: analysis.address_zip || prev.zip,
+        ssnLast4: analysis.ssn_last_4 || prev.ssnLast4
+      }));
 
       toast.success('Notice scanned successfully! Please review the detected information.');
       
@@ -757,6 +765,18 @@ export default function PenaltyEraser() {
                       <div>
                         <span className="text-muted-foreground">Tax Year:</span>
                         <p className="font-medium">{scanResult.tax_year || 'Not detected'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Taxpayer Name:</span>
+                        <p className="font-medium">{scanResult.taxpayer_name || 'Not detected'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Address:</span>
+                        <p className="font-medium">
+                          {scanResult.address_line_1 
+                            ? `${scanResult.address_line_1}${scanResult.address_city ? `, ${scanResult.address_city}` : ''}${scanResult.address_state ? `, ${scanResult.address_state}` : ''} ${scanResult.address_zip || ''}`
+                            : 'Not detected'}
+                        </p>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Failure to File:</span>

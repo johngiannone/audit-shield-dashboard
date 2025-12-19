@@ -63,13 +63,17 @@ serve(async (req) => {
 
     console.log(`Sending to AI for penalty notice analysis with media type: ${mediaType}`);
 
-    const systemPrompt = `You are an expert IRS penalty notice analyzer. Your job is to extract specific penalty information from IRS notices (CP14, CP501, CP503, CP504, etc.).
+    const systemPrompt = `You are an expert IRS penalty notice analyzer. Your job is to extract specific penalty information AND taxpayer identity from IRS notices (CP14, CP501, CP503, CP504, etc.).
 
 You MUST respond with valid JSON only, no markdown, no explanation. The JSON must have this exact structure:
 {
   "notice_number": the notice type/code (e.g., "CP14", "CP501", "CP503", "CP504"),
   "tax_year": the tax year as a number (e.g., 2023),
-  "taxpayer_name": the taxpayer name shown on the notice,
+  "taxpayer_name": the full legal name of the taxpayer shown on the notice (usually in the header/address block),
+  "address_line_1": the street address (e.g., "123 Main Street"),
+  "address_city": the city name,
+  "address_state": the 2-letter state code (e.g., "CA", "NY", "TX"),
+  "address_zip": the ZIP code (5 or 9 digits),
   "failure_to_file_penalty": the Failure to File penalty amount as a number (0 if not present),
   "failure_to_pay_penalty": the Failure to Pay penalty amount as a number (0 if not present),
   "other_penalties": total of any other penalties as a number (0 if none),
@@ -77,10 +81,13 @@ You MUST respond with valid JSON only, no markdown, no explanation. The JSON mus
   "total_amount_due": the total amount due as a number,
   "notice_date": the date of the notice in YYYY-MM-DD format,
   "response_due_date": the deadline for response in YYYY-MM-DD format (if mentioned),
-  "ssn_last_4": the last 4 digits of SSN if visible (null if not shown)
+  "ssn_last_4": the last 4 digits of SSN if visible (null if not shown, usually shown in top right as "XXX-XX-1234")
 }
 
 Important instructions:
+- Extract the Taxpayer Name and Mailing Address found in the header/address block of the notice
+- The taxpayer name is usually in the top-left address block or top-right identification area
+- The mailing address typically appears below the taxpayer name in the address block
 - Look for "Failure to File Penalty" or "Late Filing Penalty" for failure_to_file_penalty
 - Look for "Failure to Pay Penalty" or "Late Payment Penalty" for failure_to_pay_penalty  
 - Look for "Interest" or "Interest Charged" for interest_amount
