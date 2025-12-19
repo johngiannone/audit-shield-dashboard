@@ -211,6 +211,12 @@ export function TranscriptGuide() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2"
+                          onClick={() => {
+                            // Auto-advance to next step when clicking external link
+                            if (item.step < GUIDE_STEPS.length) {
+                              setTimeout(() => setExpandedStep(item.step + 1), 300);
+                            }
+                          }}
                         >
                           {item.linkText}
                           <ExternalLink className="h-3 w-3" />
