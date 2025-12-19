@@ -3,65 +3,11 @@
  * Functions for detecting tax return anomalies and audit risk factors
  */
 
-import { z } from 'zod';
-
-// Schema for validating expense input
-const expenseValueSchema = z.union([
-  z.number(),
-  z.string()
-]);
-
-const expensesInputSchema = z.record(z.string(), expenseValueSchema);
-
 export interface EstimationAnomalyResult {
   isHighRisk: boolean;
-  roundNumberPercentage: number;
-  totalExpenseLines: number;
-  roundExpenseLines: number;
-  roundExpenses: { name: string; amount: number }[];
-  flag: {
-    flag: string;
-    severity: 'critical' | 'high' | 'medium' | 'low';
-    details: string;
-    irsReference?: string;
-  } | null;
-}
-
-/**
- * Sanitizes a currency string or number to a numeric value
- * Removes $, commas, and handles negative values in parentheses
- */
-function sanitizeCurrencyValue(value: string | number): number {
-  if (typeof value === 'number') {
-    return value;
-  }
-  
-  // Handle string values
-  let sanitized = value
-    .replace(/\$/g, '')           // Remove dollar signs
-    .replace(/,/g, '')            // Remove commas
-    .replace(/\s/g, '')           // Remove whitespace
-    .trim();
-  
-  // Handle negative values in parentheses (e.g., "(500)" = -500)
-  if (sanitized.startsWith('(') && sanitized.endsWith(')')) {
-    sanitized = '-' + sanitized.slice(1, -1);
-  }
-  
-  const parsed = parseFloat(sanitized);
-  return isNaN(parsed) ? 0 : parsed;
-}
-
-/**
- * Checks if a number is a "round" number (divisible by 50 or 100)
- * Round numbers suggest estimated rather than actual expenses
- */
-function isRoundNumber(value: number): boolean {
-  // Check divisibility by 100 first (more suspicious)
-  if (value % 100 === 0) return true;
-  // Check divisibility by 50
-  if (value % 50 === 0) return true;
-  return false;
+  riskScore: number;
+  flaggedItems: string[];
+  message: string | null;
 }
 
 /**
@@ -71,160 +17,45 @@ function isRoundNumber(value: number): boolean {
  * as they often indicate the taxpayer is estimating rather than using actual records.
  * 
  * @param expenses - Object with expense names as keys and amounts as values
- * @param options - Configuration options
  * @returns Analysis result with risk assessment
- * 
- * @example
- * ```typescript
- * const expenses = {
- *   "Office Supplies": "$500.00",
- *   "Travel": "1,200",
- *   "Utilities": 847.32,
- *   "Marketing": 2000
- * };
- * 
- * const result = detectEstimationAnomaly(expenses);
- * // result.isHighRisk = true if >30% are round numbers
- * ```
  */
-export function detectEstimationAnomaly(
-  expenses: Record<string, string | number>,
-  options: {
-    minimumThreshold?: number;    // Ignore amounts below this (default: 100)
-    roundPercentageThreshold?: number; // High risk threshold (default: 30)
-  } = {}
-): EstimationAnomalyResult {
-  const {
-    minimumThreshold = 100,
-    roundPercentageThreshold = 30
-  } = options;
+export function detectEstimationAnomaly(expenses: Record<string, any>): EstimationAnomalyResult {
+  let roundCount = 0;
+  let totalCount = 0;
+  const roundEntries: string[] = [];
 
-  // Validate input
-  const validationResult = expensesInputSchema.safeParse(expenses);
-  if (!validationResult.success) {
-    return {
-      isHighRisk: false,
-      roundNumberPercentage: 0,
-      totalExpenseLines: 0,
-      roundExpenseLines: 0,
-      roundExpenses: [],
-      flag: null
-    };
-  }
+  // 1. Iterate through all keys in the expense object
+  for (const [category, value] of Object.entries(expenses)) {
+    // 2. Clean the value (handle "$1,200.00", "500", etc.)
+    const cleanString = String(value).replace(/[^0-9.]/g, '');
+    const amount = parseFloat(cleanString);
 
-  const sanitizedExpenses: { name: string; amount: number }[] = [];
-  const roundExpenses: { name: string; amount: number }[] = [];
+    // Skip empty, zero, or very small amounts (IRS ignores $5 rounding)
+    if (isNaN(amount) || amount < 100) continue;
 
-  // Process each expense line
-  for (const [name, value] of Object.entries(expenses)) {
-    const amount = sanitizeCurrencyValue(value);
-    
-    // Skip if amount is below minimum threshold or zero/negative
-    if (amount < minimumThreshold) {
-      continue;
-    }
-    
-    sanitizedExpenses.push({ name, amount });
-    
-    // Check if it's a round number
-    if (isRoundNumber(amount)) {
-      roundExpenses.push({ name, amount });
+    totalCount++;
+
+    // 3. The "Round Number" Check
+    // We check if it is divisible by 50 or 100.
+    // Real expenses (e.g. $1,243.21) are rarely divisible by 10.
+    // "Guesstimates" (e.g. $500, $1,250) are almost always divisible by 50.
+    if (amount % 50 === 0) {
+      roundCount++;
+      roundEntries.push(`${category}: $${amount}`);
     }
   }
 
-  const totalExpenseLines = sanitizedExpenses.length;
-  const roundExpenseLines = roundExpenses.length;
-  
-  // Calculate round number percentage
-  const roundNumberPercentage = totalExpenseLines > 0
-    ? (roundExpenseLines / totalExpenseLines) * 100
-    : 0;
-
-  // Determine if high risk (>30% round numbers)
-  const isHighRisk = roundNumberPercentage > roundPercentageThreshold;
-
-  // Generate flag if high risk
-  let flag: EstimationAnomalyResult['flag'] = null;
-  
-  if (isHighRisk) {
-    const topRoundExpenses = roundExpenses
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5)
-      .map(e => `${e.name}: $${e.amount.toLocaleString()}`)
-      .join(', ');
-
-    flag = {
-      flag: 'Estimated Expenses Detected (Lack of Records)',
-      severity: roundNumberPercentage > 50 ? 'high' : 'medium',
-      details: `${roundNumberPercentage.toFixed(0)}% of expense entries (${roundExpenseLines}/${totalExpenseLines}) are round numbers (divisible by $50 or $100). This pattern suggests estimated rather than actual expenses, indicating potential lack of substantiating records. IRS auditors are trained to identify this pattern.${topRoundExpenses ? ` Notable entries: ${topRoundExpenses}` : ''}`,
-      irsReference: 'IRM 4.10.3.2 - Audit Techniques for Schedule C'
-    };
-  } else if (roundNumberPercentage > 20) {
-    // Medium warning for 20-30%
-    flag = {
-      flag: 'Multiple Round Number Expenses',
-      severity: 'low',
-      details: `${roundNumberPercentage.toFixed(0)}% of expense entries are round numbers. Consider maintaining more detailed records with exact amounts to reduce audit scrutiny.`,
-    };
-  }
+  // 4. Calculate Risk Score
+  // If more than 30% of lines are round, that is statistically improbable.
+  const ratio = totalCount > 0 ? (roundCount / totalCount) : 0;
+  const isHighRisk = ratio > 0.30; // 30% threshold
 
   return {
     isHighRisk,
-    roundNumberPercentage,
-    totalExpenseLines,
-    roundExpenseLines,
-    roundExpenses,
-    flag
-  };
-}
-
-/**
- * Batch analyze multiple expense categories for round number patterns
- * Useful for analyzing complete Schedule C data
- */
-export function analyzeExpensePatterns(
-  expenseCategories: Record<string, Record<string, string | number>>
-): Map<string, EstimationAnomalyResult> {
-  const results = new Map<string, EstimationAnomalyResult>();
-  
-  for (const [category, expenses] of Object.entries(expenseCategories)) {
-    results.set(category, detectEstimationAnomaly(expenses));
-  }
-  
-  return results;
-}
-
-/**
- * Calculate aggregate risk from multiple expense analyses
- */
-export function calculateAggregateRisk(
-  analyses: EstimationAnomalyResult[]
-): {
-  overallRoundPercentage: number;
-  totalLines: number;
-  totalRoundLines: number;
-  highRiskCategories: number;
-  isOverallHighRisk: boolean;
-} {
-  let totalLines = 0;
-  let totalRoundLines = 0;
-  let highRiskCategories = 0;
-
-  for (const analysis of analyses) {
-    totalLines += analysis.totalExpenseLines;
-    totalRoundLines += analysis.roundExpenseLines;
-    if (analysis.isHighRisk) highRiskCategories++;
-  }
-
-  const overallRoundPercentage = totalLines > 0
-    ? (totalRoundLines / totalLines) * 100
-    : 0;
-
-  return {
-    overallRoundPercentage,
-    totalLines,
-    totalRoundLines,
-    highRiskCategories,
-    isOverallHighRisk: overallRoundPercentage > 30 || highRiskCategories > 0
+    riskScore: Math.round(ratio * 100), // 0 to 100 score
+    flaggedItems: roundEntries, // List of suspicious items to show user
+    message: isHighRisk 
+      ? `Estimation Risk: ${Math.round(ratio * 100)}% of your expenses end in '00' or '50'. The IRS views this as lack of record keeping.`
+      : null
   };
 }
