@@ -35,6 +35,7 @@ import RiskAssessments from "./pages/RiskAssessments";
 import BatchRiskScan from "./pages/BatchRiskScan";
 import ModelConfig from "./pages/ModelConfig";
 import CorporateComplianceReview from "./pages/CorporateComplianceReview";
+import PenaltyEraser from "./pages/PenaltyEraser";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -84,6 +85,7 @@ const App = () => (
                   <Route path="/batch-risk-scan" element={<BatchRiskScan />} />
                   <Route path="/admin/model-config" element={<ModelConfig />} />
                   <Route path="/corporate-compliance-review" element={<CorporateComplianceReview />} />
+                  <Route path="/penalty-eraser" element={<PenaltyEraser />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </ReferralTracker>
