@@ -14,13 +14,14 @@ import {
   Info,
   Shield,
   Loader2,
-  XCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Download
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { downloadTranscriptReport } from "@/utils/transcript-report-generator";
 
 const GUIDE_STEPS = [
   {
@@ -301,8 +302,8 @@ export default function TranscriptDecoder() {
                   {getRiskBadge(decodeResult.statusSummary.riskLevel)}
                 </div>
               </CardHeader>
-              {hasHighSeverity && (
-                <CardContent>
+              <CardContent className="flex flex-wrap gap-3">
+                {hasHighSeverity && (
                   <Button 
                     size="lg" 
                     className="bg-red-600 hover:bg-red-700"
@@ -311,8 +312,16 @@ export default function TranscriptDecoder() {
                     <Shield className="h-5 w-5 mr-2" />
                     Start Defense Prep
                   </Button>
-                </CardContent>
-              )}
+                )}
+                <Button 
+                  variant={hasHighSeverity ? "outline" : "default"}
+                  size="lg"
+                  onClick={() => downloadTranscriptReport(decodeResult, uploadedFile?.name)}
+                >
+                  <Download className="h-5 w-5 mr-2" />
+                  Download PDF Report
+                </Button>
+              </CardContent>
             </Card>
 
             {/* Timeline */}
