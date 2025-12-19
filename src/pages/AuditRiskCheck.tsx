@@ -211,6 +211,7 @@ export default function AuditRiskCheck() {
   const [activeShareholders, setActiveShareholders] = useState<number>(0);
   const [totalAssets, setTotalAssets] = useState<number>(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [assessment, setAssessment] = useState<RiskAssessment | null>(null);
   const [hasActivePlan, setHasActivePlan] = useState<boolean | null>(null);
   
@@ -265,39 +266,64 @@ export default function AuditRiskCheck() {
       return;
     }
 
-    setIsAnalyzing(true);
+    // Get user session for upload
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to analyze your tax return.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setAssessment(null);
+    setIsUploading(true);
 
     try {
-      // Convert file to base64
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          const base64 = result.split(',')[1];
-          resolve(base64);
-        };
-        reader.onerror = reject;
-      });
-      reader.readAsDataURL(file);
-      const pdfBase64 = await base64Promise;
+      // Step A: Upload file to temp-audit-files bucket
+      const fileId = crypto.randomUUID();
+      const filePath = `${session.user.id}/${fileId}.pdf`;
 
+      const { error: uploadError } = await supabase.storage
+        .from('temp-audit-files')
+        .upload(filePath, file, {
+          contentType: 'application/pdf',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        toast({
+          title: 'Upload Failed',
+          description: uploadError.message || 'Failed to upload document.',
+          variant: 'destructive',
+        });
+        setIsUploading(false);
+        return;
+      }
+
+      // Step C: Upload finished, now analyze
+      setIsUploading(false);
+      setIsAnalyzing(true);
+
+      // Step D: Call edge function with filePath (NOT the file content)
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-audit-risk`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({ 
-            pdfBase64,
+            filePath,
+            fileType: 'application/pdf',
             formType,
             priorYearLosses: priorYearLosses > 0 ? priorYearLosses : undefined,
             manualHousingCost: manualHousingCost > 0 ? manualHousingCost : undefined,
             activeShareholders: formType === '1120-S' && activeShareholders > 0 ? activeShareholders : undefined,
             totalAssets: formType === '1120' && totalAssets > 0 ? totalAssets : undefined,
-            // Schedule C business fields
             businessYearsActive: formType === '1040' && businessYearsActive > 0 ? businessYearsActive : undefined,
             profitableYears: formType === '1040' && profitableYears > 0 ? profitableYears : undefined,
             hasMileageLog: formType === '1040' && hasMileageLog ? hasMileageLog : undefined
@@ -313,7 +339,6 @@ export default function AuditRiskCheck() {
       const result: RiskAssessment = await response.json();
       setAssessment(result);
       
-      // Check if Schedule C was detected in 1040
       if (formType === '1040' && result.extractedData?.hasScheduleC) {
         setScheduleCDetected(true);
       }
@@ -330,6 +355,7 @@ export default function AuditRiskCheck() {
         variant: 'destructive',
       });
     } finally {
+      setIsUploading(false);
       setIsAnalyzing(false);
     }
   };
@@ -618,10 +644,15 @@ This log format complies with IRS requirements under Treas. Reg. 1.274-5T(c)(2)`
 
               <Button 
                 onClick={handleAnalyze} 
-                disabled={!file || isAnalyzing}
+                disabled={!file || isUploading || isAnalyzing}
                 className="w-full"
               >
-                {isAnalyzing ? (
+                {isUploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading document...
+                  </>
+                ) : isAnalyzing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Analyzing...

@@ -100,21 +100,44 @@ serve(async (req) => {
   }
 
   try {
-    const { pdfBase64, formType, priorYearLosses, manualHousingCost, activeShareholders, totalAssets, businessYearsActive, profitableYears, hasMileageLog } = await req.json();
+    const { filePath, fileType, formType, priorYearLosses, manualHousingCost, activeShareholders, totalAssets, businessYearsActive, profitableYears, hasMileageLog } = await req.json();
 
-    if (!pdfBase64) {
-      throw new Error('PDF data is required');
+    if (!filePath) {
+      throw new Error('filePath is required');
     }
 
     // Log the form type being analyzed
     const returnType = formType || '1040';
     console.log(`Analyzing ${returnType} return...`);
+    console.log('File path:', filePath, 'Type:', fileType);
     console.log('Additional params:', { priorYearLosses, manualHousingCost, activeShareholders, totalAssets, businessYearsActive, profitableYears, hasMileageLog });
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
+
+    // Initialize Supabase client with service role to access storage
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Download file from temp-audit-files bucket
+    console.log('Downloading file from storage...');
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('temp-audit-files')
+      .download(filePath);
+
+    if (downloadError || !fileData) {
+      console.error('Download error:', downloadError);
+      throw new Error('Failed to download file from storage');
+    }
+
+    // Convert to base64 for AI processing
+    const arrayBuffer = await fileData.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const pdfBase64 = btoa(String.fromCharCode(...uint8Array));
+    console.log('File downloaded and converted to base64, size:', uint8Array.length);
 
     console.log(`Step A: Extracting data from ${returnType} PDF...`);
     
@@ -316,10 +339,7 @@ Important:
 
     console.log('Extracted data:', extractedData);
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Step B: Fetch IRS benchmarks (using supabase client already initialized above)
 
     // Step B: Fetch IRS benchmarks
     console.log('Step B: Fetching IRS benchmarks...');
