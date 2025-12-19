@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Audit Defense Dashboard Design System */
+/* Private Wealth & Legal Defense Design System */
 
 @layer base {
   html {
@@ -13,57 +13,59 @@
   }
 
   :root {
-    /* Premium Fintech Palette */
-    /* Background: Off-white #F8F9FA */
-    --background: 210 17% 98%;
-    /* Foreground: Near-black slate-900 for headings */
+    /* Background: Sophisticated off-white #F9FAFB (Gray-50) */
+    --background: 210 20% 98%;
+    /* Foreground: Brand Navy #0F172A (Slate-900) */
     --foreground: 222 47% 11%;
 
-    /* Cards: Pure white with enhanced shadows */
+    /* Cards: Pure white with subtle shadow */
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Primary: Gold/Bronze accent #C2A479 */
-    --primary: 37 38% 62%;
-    --primary-foreground: 222 47% 11%;
+    /* Primary: Brand Gold #D4AF37 */
+    --primary: 43 69% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Primary Hover: Darker Gold #B5952F */
+    --primary-hover: 43 59% 45%;
 
     /* Secondary: Light gray surface */
-    --secondary: 210 17% 95%;
+    --secondary: 210 20% 96%;
     --secondary-foreground: 222 47% 11%;
 
     /* Muted: Subtle gray */
-    --muted: 210 17% 93%;
-    /* Muted foreground: Slate-600 for better legibility */
-    --muted-foreground: 215 19% 35%;
+    --muted: 210 20% 94%;
+    /* Muted foreground: Slate-600 for body text */
+    --muted-foreground: 215 16% 47%;
 
-    /* Accent: Richer Gold #D4AF37 */
-    --accent: 43 74% 52%;
-    --accent-foreground: 222 47% 11%;
+    /* Accent: Brand Gold #D4AF37 */
+    --accent: 43 69% 52%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     /* Border: Very subtle slate-100 */
-    --border: 210 17% 92%;
-    --input: 210 17% 90%;
-    --ring: 37 38% 62%;
+    --border: 210 20% 94%;
+    --input: 210 20% 96%;
+    --ring: 43 69% 52%;
 
-    --radius: 0.625rem;
+    --radius: 0.375rem;
 
-    /* Sidebar: Deep rich navy #0F172A (Slate-900) */
+    /* Sidebar: Deep Brand Navy #0F172A (Slate-900) */
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 37 38% 62%;
-    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-primary: 43 69% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 222 40% 18%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 222 40% 20%;
-    --sidebar-ring: 37 38% 62%;
+    --sidebar-ring: 43 69% 52%;
 
-    /* Custom Colors */
+    /* Semantic Colors */
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
@@ -72,16 +74,16 @@
     --info-foreground: 0 0% 100%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(37 38% 62%) 0%, hsl(43 74% 52%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(43 74% 52%) 0%, hsl(37 50% 55%) 100%);
-    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 17% 98%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(43 69% 52%) 0%, hsl(43 59% 45%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(43 69% 52%) 0%, hsl(38 60% 48%) 100%);
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
     --gradient-sidebar: linear-gradient(180deg, hsl(222 47% 11%) 0%, hsl(222 47% 8%) 100%);
 
-    /* Shadows: Enhanced for card distinctiveness */
-    --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.04);
-    --shadow-md: 0 4px 12px -2px hsl(222 47% 11% / 0.08), 0 2px 6px -2px hsl(222 47% 11% / 0.04);
-    --shadow-lg: 0 12px 24px -4px hsl(222 47% 11% / 0.1), 0 4px 8px -4px hsl(222 47% 11% / 0.06);
-    --shadow-xl: 0 24px 48px -8px hsl(222 47% 11% / 0.12), 0 8px 16px -6px hsl(222 47% 11% / 0.08);
+    /* Shadows: Refined for elegant cards */
+    --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.03);
+    --shadow-md: 0 4px 12px -2px hsl(222 47% 11% / 0.06), 0 2px 6px -2px hsl(222 47% 11% / 0.03);
+    --shadow-lg: 0 12px 32px -4px hsl(222 47% 11% / 0.08), 0 4px 12px -4px hsl(222 47% 11% / 0.04);
+    --shadow-xl: 0 24px 48px -8px hsl(222 47% 11% / 0.10), 0 8px 16px -6px hsl(222 47% 11% / 0.06);
   }
 
   .dark {
@@ -96,8 +98,10 @@
     --popover-foreground: 210 40% 98%;
 
     /* Primary: Gold accent in dark mode */
-    --primary: 37 38% 62%;
+    --primary: 43 69% 52%;
     --primary-foreground: 222 47% 8%;
+
+    --primary-hover: 43 59% 45%;
 
     --secondary: 222 40% 18%;
     --secondary-foreground: 210 40% 98%;
@@ -105,7 +109,7 @@
     --muted: 222 40% 18%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 43 74% 52%;
+    --accent: 43 69% 52%;
     --accent-foreground: 222 47% 8%;
 
     --destructive: 0 62% 50%;
@@ -113,16 +117,16 @@
 
     --border: 222 40% 22%;
     --input: 222 40% 22%;
-    --ring: 37 38% 62%;
+    --ring: 43 69% 52%;
 
     --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 37 38% 62%;
+    --sidebar-primary: 43 69% 52%;
     --sidebar-primary-foreground: 222 47% 8%;
     --sidebar-accent: 222 40% 14%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 222 40% 18%;
-    --sidebar-ring: 37 38% 62%;
+    --sidebar-ring: 43 69% 52%;
   }
 }
 
@@ -132,30 +136,41 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', sans-serif;
+    @apply bg-background text-muted-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
-  h1, h2, h3, h4 {
-    font-family: 'Playfair Display', serif;
-    @apply tracking-tight text-foreground;
+  /* Typography: Playfair Display for headings */
+  h1, h2, h3 {
+    font-family: 'Playfair Display', Georgia, serif;
+    @apply tracking-tight text-foreground font-semibold;
+  }
+
+  h4, h5, h6 {
+    font-family: 'Inter', system-ui, sans-serif;
+    @apply tracking-tight text-foreground font-semibold;
   }
 
   h1 {
-    @apply text-3xl font-bold md:text-4xl;
+    @apply text-3xl md:text-4xl;
   }
 
   h2 {
-    @apply text-2xl font-semibold md:text-3xl;
+    @apply text-2xl md:text-3xl;
   }
 
   h3 {
-    @apply text-xl font-semibold md:text-2xl;
+    @apply text-xl md:text-2xl;
   }
 
   h4 {
-    @apply text-lg font-medium;
+    @apply text-lg;
+  }
+
+  /* Body text: Slate-600 for better contrast */
+  p {
+    @apply text-muted-foreground;
   }
 
   /* Labels with increased weight for clarity */
@@ -163,12 +178,19 @@
     @apply font-medium text-foreground;
   }
 
-  /* Tabular figures for numbers - auto-applied to data elements */
+  /* Tabular figures for financial data - perfect alignment */
   .tabular-nums,
   td,
+  th,
   [data-currency],
-  [data-number] {
+  [data-number],
+  .font-mono {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Links default to gold */
+  a {
+    @apply text-primary hover:text-primary/80 transition-colors duration-200;
   }
 }
 
