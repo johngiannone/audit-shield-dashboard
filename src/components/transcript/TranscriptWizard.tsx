@@ -27,6 +27,7 @@ import irsStep1b from "@/assets/irs-step-1b.png";
 import irsStep1c from "@/assets/irs-step-1c.png";
 import irsStep2 from "@/assets/irs-step-2.png";
 import irsStep2b from "@/assets/irs-step-2b.png";
+import irsStep4 from "@/assets/irs-step-4.png";
 
 interface TranscriptWizardProps {
   open: boolean;
@@ -74,6 +75,9 @@ const WIZARD_STEPS = [
     title: "Download the 2024 PDF",
     description: "Under 'Account Transcripts', click on '2024 Account Transcript [PDF] EN' to download. Save the file to your device, then upload it here!",
     icon: Download,
+    images: [
+      { src: irsStep4, caption: "Click 'EN' next to '2024 Record of Account Transcript [PDF]'" }
+    ],
     tip: "The PDF filename will include 'Account' in it. If it says 'Return', you downloaded the wrong one!"
   }
 ];
