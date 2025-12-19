@@ -11,6 +11,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { 
   Eraser, 
   FileText, 
@@ -27,7 +34,9 @@ import {
   Upload,
   Sparkles,
   ShieldCheck,
-  DollarSign
+  DollarSign,
+  HelpCircle,
+  Phone
 } from 'lucide-react';
 import { downloadFTALetter, generateFTALetter, type FTALetterData } from '@/utils/fta-letter-generator';
 import { supabase } from '@/integrations/supabase/client';
@@ -109,6 +118,13 @@ export default function PenaltyEraser() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   
+  // Eligibility Wizard state
+  const [showEligibilityWizard, setShowEligibilityWizard] = useState(false);
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 'result'>(1);
+  const [isCurrentTaxYear, setIsCurrentTaxYear] = useState<boolean | null>(null);
+  const [hasPriorPenaltiesWizard, setHasPriorPenaltiesWizard] = useState<boolean | null>(null);
+  const [wizardResult, setWizardResult] = useState<'qualified' | 'standard-defense' | null>(null);
+  
   const [noticeData, setNoticeData] = useState<NoticeData>({
     noticeType: '',
     noticeDate: '',
@@ -137,6 +153,42 @@ export default function PenaltyEraser() {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [hasPriorPenalties, setHasPriorPenalties] = useState<string>('');
   const [isQualified, setIsQualified] = useState<boolean | null>(null);
+
+  // Eligibility Wizard handlers
+  const handleOpenEligibilityWizard = () => {
+    setWizardStep(1);
+    setIsCurrentTaxYear(null);
+    setHasPriorPenaltiesWizard(null);
+    setWizardResult(null);
+    setShowEligibilityWizard(true);
+  };
+
+  const handleWizardQ1Answer = (answer: boolean) => {
+    setIsCurrentTaxYear(answer);
+    setWizardStep(2);
+  };
+
+  const handleWizardQ2Answer = (answer: boolean) => {
+    setHasPriorPenaltiesWizard(answer);
+    // Logic: If Q1=Yes (current tax year) AND Q2=No (no prior penalties) -> Qualified
+    if (isCurrentTaxYear === true && answer === false) {
+      setWizardResult('qualified');
+      setIsQualified(true);
+    } else {
+      setWizardResult('standard-defense');
+      setIsQualified(false);
+    }
+    setWizardStep('result');
+  };
+
+  const handleWizardGenerateLetter = () => {
+    setShowEligibilityWizard(false);
+    setStep('input');
+  };
+
+  const handleWizardClose = () => {
+    setShowEligibilityWizard(false);
+  };
 
   const handleFileUpload = useCallback(async (file: File) => {
     setUploadedFile(file);
@@ -557,12 +609,16 @@ export default function PenaltyEraser() {
                         </p>
                       </div>
                     </div>
-                    <div className="mt-4 flex gap-3">
-                      <Button onClick={handleProceedToInput}>
-                        Continue with These Details
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <Button onClick={handleOpenEligibilityWizard} className="bg-green-600 hover:bg-green-700">
+                        <HelpCircle className="h-4 w-4 mr-2" />
+                        Check Eligibility
+                      </Button>
+                      <Button variant="outline" onClick={handleProceedToInput}>
+                        Skip to Details
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </Button>
-                      <Button variant="outline" onClick={handleStartOver}>
+                      <Button variant="ghost" onClick={handleStartOver}>
                         Upload Different Notice
                       </Button>
                     </div>
@@ -1041,6 +1097,134 @@ export default function PenaltyEraser() {
           </div>
         )}
       </div>
+
+      {/* Eligibility Wizard Modal */}
+      <Dialog open={showEligibilityWizard} onOpenChange={setShowEligibilityWizard}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-primary" />
+              Check Eligibility
+            </DialogTitle>
+            <DialogDescription>
+              Answer these questions to determine if you qualify for First-Time Abatement
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Question 1 */}
+          {wizardStep === 1 && (
+            <div className="space-y-4 py-4">
+              <p className="font-medium text-foreground">
+                Is this penalty for the current tax year?
+              </p>
+              <p className="text-sm text-muted-foreground">
+                The tax year shown on your notice: <strong>{scanResult?.tax_year || noticeData.taxYear || 'Unknown'}</strong>
+              </p>
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => handleWizardQ1Answer(true)} 
+                  className="flex-1"
+                  variant="outline"
+                >
+                  Yes
+                </Button>
+                <Button 
+                  onClick={() => handleWizardQ1Answer(false)} 
+                  className="flex-1"
+                  variant="outline"
+                >
+                  No
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Question 2 */}
+          {wizardStep === 2 && (
+            <div className="space-y-4 py-4">
+              <p className="font-medium text-foreground">
+                Have you had ANY other penalties (except Estimated Tax) in the prior 3 years?
+              </p>
+              <p className="text-sm text-muted-foreground">
+                This includes Failure to File, Failure to Pay, or any other IRS penalties.
+              </p>
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => handleWizardQ2Answer(true)} 
+                  className="flex-1"
+                  variant="outline"
+                >
+                  Yes, I've had penalties
+                </Button>
+                <Button 
+                  onClick={() => handleWizardQ2Answer(false)} 
+                  className="flex-1"
+                  variant="outline"
+                >
+                  No, clean record
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Result: Qualified */}
+          {wizardStep === 'result' && wizardResult === 'qualified' && (
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-center">
+                <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-green-700 dark:text-green-400">
+                  Success! You Qualify for Abatement
+                </h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Based on your answers, you're eligible for the IRS First-Time Abatement waiver.
+                </p>
+                <div className="mt-3 p-3 bg-background rounded-lg">
+                  <span className="text-sm text-muted-foreground">Potential Savings:</span>
+                  <p className="text-2xl font-bold text-green-600">
+                    ${((scanResult?.failure_to_file_penalty || 0) + (scanResult?.failure_to_pay_penalty || 0) + parseFloat(noticeData.penaltyAmount || '0')).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <Button onClick={handleWizardGenerateLetter} className="w-full" size="lg">
+                <FileText className="h-4 w-4 mr-2" />
+                Generate FTA Letter
+              </Button>
+            </div>
+          )}
+
+          {/* Result: Standard Defense */}
+          {wizardStep === 'result' && wizardResult === 'standard-defense' && (
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg text-center">
+                <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-amber-700 dark:text-amber-400">
+                  Standard Defense
+                </h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  You may not qualify for automatic FTA, but we can challenge this penalty for Reasonable Cause.
+                </p>
+              </div>
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Don't give up!</AlertTitle>
+                <AlertDescription>
+                  Many penalties can still be removed through Reasonable Cause arguments. 
+                  An enrolled agent can review your situation and build a strong case.
+                </AlertDescription>
+              </Alert>
+              <div className="flex gap-3">
+                <Button onClick={handleWizardClose} variant="outline" className="flex-1">
+                  Close
+                </Button>
+                <Button className="flex-1">
+                  <Phone className="h-4 w-4 mr-2" />
+                  Contact an Agent
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
