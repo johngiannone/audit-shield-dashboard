@@ -74,3 +74,6 @@ verify_jwt = true
 
 [functions.decode-transcript]
 verify_jwt = true
+
+[functions.analyze-penalty-notice]
+verify_jwt = true
