@@ -730,6 +730,36 @@ export type Database = {
         }
         Relationships: []
       }
+      irs_service_centers: {
+        Row: {
+          address_line_1: string
+          address_line_2: string
+          created_at: string | null
+          id: string
+          service_center_name: string
+          state_code: string
+          submission_type: string
+        }
+        Insert: {
+          address_line_1: string
+          address_line_2: string
+          created_at?: string | null
+          id?: string
+          service_center_name: string
+          state_code: string
+          submission_type?: string
+        }
+        Update: {
+          address_line_1?: string
+          address_line_2?: string
+          created_at?: string | null
+          id?: string
+          service_center_name?: string
+          state_code?: string
+          submission_type?: string
+        }
+        Relationships: []
+      }
       irs_transaction_codes: {
         Row: {
           category: string | null
