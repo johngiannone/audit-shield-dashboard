@@ -71,3 +71,6 @@ verify_jwt = true
 
 [functions.send-fta-letter]
 verify_jwt = true
+
+[functions.decode-transcript]
+verify_jwt = true
