@@ -281,7 +281,7 @@
   }
 }
 
-/* Shimmer Animation for Holiday Card Header */
+/* Shimmer Animation for Skeleton Loaders */
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
@@ -292,5 +292,14 @@
 }
 
 .animate-shimmer {
-  animation: shimmer 3s ease-in-out infinite;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Hover lift effect utility */
+.hover-lift {
+  @apply transition-all duration-200;
+}
+
+.hover-lift:hover {
+  @apply -translate-y-1 shadow-lg;
 }
