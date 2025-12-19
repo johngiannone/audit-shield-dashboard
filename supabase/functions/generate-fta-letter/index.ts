@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +17,7 @@ interface FTALetterRequest {
   penaltyAmount: number;
   noticeNumber: string;
   penaltyType: string;
+  saveToDatabase?: boolean;
 }
 
 function formatDate(date: Date): string {
@@ -202,6 +204,65 @@ serve(async (req) => {
     const pdfBytes = generatePDFBytes(letterContent);
     
     console.log(`Generated PDF with ${pdfBytes.length} bytes`);
+
+    // Save to database if requested and user is authenticated
+    const authHeader = req.headers.get('Authorization');
+    if (data.saveToDatabase && authHeader) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        
+        // Create admin client for storage operations
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        
+        // Create user client to get the user
+        const supabaseUser = createClient(supabaseUrl, supabaseServiceKey, {
+          global: { headers: { Authorization: authHeader } }
+        });
+        
+        const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+        
+        if (user && !userError) {
+          // Get profile_id for the user
+          const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (profile) {
+            const fileName = `${user.id}/${Date.now()}_FTA_${data.taxYear}_${data.noticeNumber}.pdf`;
+            
+            // Upload PDF to storage
+            const { error: uploadError } = await supabaseAdmin.storage
+              .from('fta-letters')
+              .upload(fileName, pdfBytes, {
+                contentType: 'application/pdf',
+                upsert: false
+              });
+            
+            if (!uploadError) {
+              // Save record to database
+              await supabaseAdmin.from('fta_letters').insert({
+                profile_id: profile.id,
+                tax_year: parseInt(data.taxYear),
+                penalty_amount: data.penaltyAmount,
+                notice_number: data.noticeNumber,
+                taxpayer_name: data.userName,
+                file_path: fileName
+              });
+              
+              console.log(`Saved FTA letter to database for user ${user.id}`);
+            } else {
+              console.error('Storage upload error:', uploadError);
+            }
+          }
+        }
+      } catch (saveError) {
+        // Don't fail the request if saving fails, just log it
+        console.error('Error saving to database:', saveError);
+      }
+    }
 
     // Return PDF as downloadable file (convert Uint8Array to ReadableStream)
     const stream = new ReadableStream({

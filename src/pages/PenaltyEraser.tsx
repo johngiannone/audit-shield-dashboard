@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,11 +36,25 @@ import {
   ShieldCheck,
   DollarSign,
   HelpCircle,
-  Phone
+  Phone,
+  History,
+  Eye
 } from 'lucide-react';
 import { downloadFTALetter, generateFTALetter, type FTALetterData } from '@/utils/fta-letter-generator';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { format } from 'date-fns';
+
+interface SavedLetter {
+  id: string;
+  tax_year: number;
+  penalty_amount: number;
+  notice_number: string;
+  taxpayer_name: string;
+  file_path: string;
+  created_at: string;
+}
 
 type Step = 'upload' | 'input' | 'qualification' | 'result';
 
@@ -112,11 +126,17 @@ const US_STATES = [
 ];
 
 export default function PenaltyEraser() {
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>('upload');
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Saved letters state
+  const [savedLetters, setSavedLetters] = useState<SavedLetter[]>([]);
+  const [isLoadingLetters, setIsLoadingLetters] = useState(false);
+  const [isDownloadingSaved, setIsDownloadingSaved] = useState<string | null>(null);
   
   // Eligibility Wizard state
   const [showEligibilityWizard, setShowEligibilityWizard] = useState(false);
@@ -153,6 +173,56 @@ export default function PenaltyEraser() {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [hasPriorPenalties, setHasPriorPenalties] = useState<string>('');
   const [isQualified, setIsQualified] = useState<boolean | null>(null);
+
+  // Fetch saved letters
+  const fetchSavedLetters = useCallback(async () => {
+    if (!user) return;
+    
+    setIsLoadingLetters(true);
+    try {
+      const { data, error } = await supabase
+        .from('fta_letters')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setSavedLetters(data || []);
+    } catch (error) {
+      console.error('Error fetching saved letters:', error);
+    } finally {
+      setIsLoadingLetters(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchSavedLetters();
+  }, [fetchSavedLetters]);
+
+  // Download saved letter
+  const handleDownloadSavedLetter = async (letter: SavedLetter) => {
+    setIsDownloadingSaved(letter.id);
+    try {
+      const { data, error } = await supabase.storage
+        .from('fta-letters')
+        .download(letter.file_path);
+      
+      if (error) throw error;
+      
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `FTA_Request_${letter.tax_year}_${letter.notice_number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('Error downloading letter:', error);
+      toast.error('Failed to download letter');
+    } finally {
+      setIsDownloadingSaved(null);
+    }
+  };
 
   // Eligibility Wizard handlers
   const handleOpenEligibilityWizard = () => {
@@ -345,7 +415,8 @@ export default function PenaltyEraser() {
             taxYear: noticeData.taxYear,
             penaltyAmount: parseFloat(noticeData.penaltyAmount),
             noticeNumber: noticeData.noticeType,
-            penaltyType: noticeData.penaltyType
+            penaltyType: noticeData.penaltyType,
+            saveToDatabase: !!user
           }),
         }
       );
@@ -366,7 +437,12 @@ export default function PenaltyEraser() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      toast.success('FTA request letter downloaded successfully');
+      toast.success('FTA request letter downloaded and saved');
+      
+      // Refresh saved letters list
+      if (user) {
+        fetchSavedLetters();
+      }
     } catch (error: any) {
       console.error('Error generating letter:', error);
       toast.error(error.message || 'Failed to generate letter');
@@ -543,6 +619,67 @@ export default function PenaltyEraser() {
             4. Result
           </Badge>
         </div>
+
+        {/* Saved Letters Section */}
+        {user && savedLetters.length > 0 && step === 'upload' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Your Saved FTA Letters
+              </CardTitle>
+              <CardDescription>
+                Previously generated letters you can download again
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingLetters ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {savedLetters.map((letter) => (
+                    <div 
+                      key={letter.id} 
+                      className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            Tax Year {letter.tax_year} - {letter.notice_number}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {letter.taxpayer_name} • ${letter.penalty_amount.toLocaleString()} • 
+                            {format(new Date(letter.created_at), ' MMM d, yyyy')}
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDownloadSavedLetter(letter)}
+                        disabled={isDownloadingSaved === letter.id}
+                      >
+                        {isDownloadingSaved === letter.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Step 1: Upload */}
         {step === 'upload' && (
