@@ -18,6 +18,12 @@ interface ScheduleCData {
   otherExpenses: number | null; // Line 27a total
   otherExpensesList: { description: string; amount: number }[]; // Line 27a detail
   
+  // Vehicle mileage data (Part IV)
+  businessMiles: number | null; // Line 44a
+  commutingMiles: number | null; // Line 44b
+  otherMiles: number | null; // Line 44c
+  totalMiles: number | null; // Calculated or from form
+  
   // Additional Schedule C data
   businessName: string | null;
   businessActivity: string | null;
@@ -34,10 +40,20 @@ interface BusinessRiskFlag {
   irsReference?: string;
 }
 
+interface VehicleRiskAnalysis {
+  hasVehicleExpenses: boolean;
+  businessUsePercentage: number | null;
+  is100PercentBusiness: boolean;
+  hasMileageLog: boolean;
+  flags: BusinessRiskFlag[];
+  recommendation: string | null;
+}
+
 interface ScheduleCAnalysis {
   businessRiskScore: number;
   flags: BusinessRiskFlag[];
   extractedData: ScheduleCData;
+  vehicleRisk: VehicleRiskAnalysis;
   summary: {
     profitMargin: number | null;
     expenseToRevenueRatio: number | null;
@@ -86,6 +102,10 @@ serve(async (req) => {
     {"description": <string>, "amount": <number>}
   ], // Detailed breakdown of Line 27a "Other expenses" with each item's description and amount
   
+  "businessMiles": <number or null>, // Part IV Line 44a - Business miles driven
+  "commutingMiles": <number or null>, // Part IV Line 44b - Commuting miles
+  "otherMiles": <number or null>, // Part IV Line 44c - Other miles
+  
   "businessName": <string or null>, // Business name from top of form
   "businessActivity": <string or null>, // Principal business or profession (Line A)
   "naicsCode": <string or null>, // Business code from Line B (6-digit)
@@ -98,6 +118,7 @@ Important:
 - Net profit/loss can be negative (a loss)
 - For otherExpensesList, extract each individual item listed under Line 27a "Other expenses"
 - For allExpenseAmounts, include every expense line that has a value (Lines 8 through 27)
+- For mileage data (Part IV), look for Lines 44a, 44b, 44c which show business, commuting, and other miles
 - If a field is not present or cannot be found, use null
 - Only return the JSON object, no other text`;
 
@@ -162,11 +183,20 @@ Important:
           mealsExpenses: parsed.mealsExpenses ?? null,
           otherExpenses: parsed.otherExpenses ?? null,
           otherExpensesList: parsed.otherExpensesList ?? [],
+          businessMiles: parsed.businessMiles ?? null,
+          commutingMiles: parsed.commutingMiles ?? null,
+          otherMiles: parsed.otherMiles ?? null,
+          totalMiles: null, // Will be calculated below
           businessName: parsed.businessName ?? null,
           businessActivity: parsed.businessActivity ?? null,
           naicsCode: parsed.naicsCode ?? null,
           allExpenseAmounts: parsed.allExpenseAmounts ?? [],
         };
+        
+        // Calculate total miles if we have mileage data
+        if (extractedData.businessMiles !== null || extractedData.commutingMiles !== null || extractedData.otherMiles !== null) {
+          extractedData.totalMiles = (extractedData.businessMiles ?? 0) + (extractedData.commutingMiles ?? 0) + (extractedData.otherMiles ?? 0);
+        }
       } else {
         throw new Error('No JSON found in response');
       }
@@ -181,6 +211,10 @@ Important:
         mealsExpenses: null,
         otherExpenses: null,
         otherExpensesList: [],
+        businessMiles: null,
+        commutingMiles: null,
+        otherMiles: null,
+        totalMiles: null,
         businessName: null,
         businessActivity: null,
         naicsCode: null,
@@ -321,6 +355,99 @@ Important:
       }
     }
 
+    // ========== VEHICLE RISK SUB-MODULE ==========
+    console.log('Step 3: Analyzing vehicle risk factors...');
+    
+    const vehicleFlags: BusinessRiskFlag[] = [];
+    let vehicleRiskScore = 0;
+    const hasVehicleExpenses = (extractedData.carTruckExpenses ?? 0) > 0;
+    let businessUsePercentage: number | null = null;
+    let is100PercentBusiness = false;
+    let vehicleRecommendation: string | null = null;
+    
+    if (hasVehicleExpenses) {
+      // Calculate business use percentage from mileage data
+      if (extractedData.totalMiles && extractedData.totalMiles > 0 && extractedData.businessMiles !== null) {
+        businessUsePercentage = (extractedData.businessMiles / extractedData.totalMiles) * 100;
+      }
+      
+      // Check for 100% business use claim (business miles claimed but 0 commuting)
+      if (extractedData.businessMiles !== null && extractedData.businessMiles > 0) {
+        if (extractedData.commutingMiles === 0 || extractedData.commutingMiles === null) {
+          is100PercentBusiness = true;
+          vehicleFlags.push({
+            flag: '100% Business Use Claimed (High Scrutiny)',
+            severity: 'high',
+            details: `Business miles of ${extractedData.businessMiles.toLocaleString()} claimed with zero commuting miles. IRS closely scrutinizes 100% business use claims as most taxpayers have some personal use of their vehicle. This is one of the most common audit triggers.`,
+            irsReference: 'IRS Audit Technique Guide - Business Use of Vehicles'
+          });
+          vehicleRiskScore += 30;
+          riskScore += 20;
+          
+          // Add to main flags too
+          flags.push({
+            flag: '100% Business Use Claimed (High Scrutiny)',
+            severity: 'high',
+            details: `Business miles of ${extractedData.businessMiles.toLocaleString()} claimed with zero commuting miles. IRS closely scrutinizes 100% business use claims.`,
+            irsReference: 'IRS Audit Technique Guide - Business Use of Vehicles'
+          });
+        }
+      }
+      
+      // Check for missing mileage log
+      if (hasMileageLog === 'no') {
+        vehicleFlags.push({
+          flag: 'Missing Mileage Log (Automatic Disallowance in Audit)',
+          severity: 'critical',
+          details: `Car/truck expenses of $${(extractedData.carTruckExpenses ?? 0).toLocaleString()} claimed without a contemporaneous mileage log. The IRS requires written records made at or near the time of each trip. Without this documentation, vehicle deductions are AUTOMATICALLY DISALLOWED in an audit - no exceptions.`,
+          irsReference: 'Treas. Reg. 1.274-5T(c)(2) - Contemporaneous Records Requirement'
+        });
+        vehicleRiskScore += 50;
+        riskScore += 25;
+        vehicleRecommendation = 'CRITICAL: Start a compliant mileage log immediately. Download our IRS-compliant template to protect your vehicle deductions.';
+        
+        // Add to main flags
+        flags.push({
+          flag: 'Missing Mileage Log (Automatic Disallowance)',
+          severity: 'critical',
+          details: `Vehicle expenses without a contemporaneous mileage log are automatically disallowed in an audit.`,
+          irsReference: 'Treas. Reg. 1.274-5T(c)(2)'
+        });
+      } else if (!hasMileageLog || hasMileageLog === '') {
+        // Unknown mileage log status with vehicle expenses
+        if ((extractedData.carTruckExpenses ?? 0) > 5000) {
+          vehicleFlags.push({
+            flag: 'Vehicle Documentation Status Unknown',
+            severity: 'medium',
+            details: `Significant vehicle expenses of $${(extractedData.carTruckExpenses ?? 0).toLocaleString()} should be supported by a detailed mileage log. Confirm you have proper documentation.`
+          });
+          vehicleRiskScore += 15;
+        }
+      }
+      
+      // High vehicle expenses without proportion check
+      if ((extractedData.carTruckExpenses ?? 0) > 15000 && extractedData.grossReceipts) {
+        const vehicleToRevenueRatio = (extractedData.carTruckExpenses ?? 0) / extractedData.grossReceipts;
+        if (vehicleToRevenueRatio > 0.15) {
+          vehicleFlags.push({
+            flag: 'High Vehicle Expenses Relative to Revenue',
+            severity: 'medium',
+            details: `Vehicle expenses of $${(extractedData.carTruckExpenses ?? 0).toLocaleString()} represent ${(vehicleToRevenueRatio * 100).toFixed(1)}% of gross receipts. High vehicle deductions relative to income draw extra attention.`
+          });
+          vehicleRiskScore += 15;
+        }
+      }
+    }
+    
+    const vehicleRisk: VehicleRiskAnalysis = {
+      hasVehicleExpenses,
+      businessUsePercentage,
+      is100PercentBusiness,
+      hasMileageLog: hasMileageLog === 'yes',
+      flags: vehicleFlags,
+      recommendation: vehicleRecommendation,
+    };
+
     // Calculate summary metrics
     const roundNumberPercentage = expenseAmounts.length > 0 
       ? (expenseAmounts.filter(amt => amt % 100 === 0 || amt % 1000 === 0).length / expenseAmounts.length) * 100 
@@ -349,11 +476,13 @@ Important:
       businessRiskScore: riskScore,
       flags,
       extractedData,
+      vehicleRisk,
       summary,
     };
 
     console.log('Analysis complete. Business Risk Score:', riskScore);
-    console.log('Flags:', flags.length);
+    console.log('Vehicle Risk Flags:', vehicleFlags.length);
+    console.log('Total Flags:', flags.length);
 
     return new Response(JSON.stringify(analysis), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

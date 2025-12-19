@@ -38,7 +38,9 @@ import {
   Info,
   AlertTriangle,
   MapPin,
-  HelpCircle
+  HelpCircle,
+  Car,
+  Download
 } from 'lucide-react';
 
 type FormType = '1040' | '1120-S' | '1120';
@@ -519,9 +521,54 @@ export default function AuditRiskCheck() {
                         </SelectContent>
                       </Select>
                       {hasMileageLog === 'no' && (
-                        <p className="text-xs text-amber-600 mt-1">
-                          Without a mileage log, vehicle expense deductions may be disallowed in an audit.
-                        </p>
+                        <div className="mt-2 space-y-2">
+                          <Alert variant="destructive" className="py-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription className="text-xs">
+                              <strong>Critical Risk:</strong> Without a contemporaneous mileage log, vehicle expense deductions are <strong>automatically disallowed</strong> in an audit - no exceptions. IRS requires records made at or near the time of each trip.
+                            </AlertDescription>
+                          </Alert>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="w-full border-amber-500/50 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-500/10"
+                            onClick={() => {
+                              // Generate and download mileage log template
+                              const csvContent = `Date,Starting Location,Destination,Business Purpose,Miles Driven,Notes
+${new Date().toISOString().split('T')[0]},Office,Client Meeting,Sales presentation to ABC Corp,15.2,Round trip
+YYYY-MM-DD,Starting Address,Ending Address,Business Purpose Description,0.0,Additional notes
+
+INSTRUCTIONS:
+- Record EVERY business trip at or near the time it occurs
+- Include: Date - Starting Point - Destination - Business Purpose - Miles
+- Keep receipts for parking and tolls
+- Do NOT include commuting miles (home to regular work location)
+- Personal miles must be tracked separately
+- Contemporaneous means recorded "at or near the time" of the expense
+- The IRS defines this as within one week of the trip
+
+This log format complies with IRS requirements under Treas. Reg. 1.274-5T(c)(2)`;
+                              
+                              const blob = new Blob([csvContent], { type: 'text/csv' });
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = 'IRS_Compliant_Mileage_Log_Template.csv';
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              window.URL.revokeObjectURL(url);
+                              
+                              toast({
+                                title: 'Mileage Log Template Downloaded',
+                                description: 'Start logging your trips immediately to protect your deductions.',
+                              });
+                            }}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Download Compliant Mileage Log Template
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </CardContent>
