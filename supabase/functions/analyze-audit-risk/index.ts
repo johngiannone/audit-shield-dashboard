@@ -130,7 +130,12 @@ serve(async (req) => {
 
     if (downloadError || !fileData) {
       console.error('Download error:', downloadError);
-      throw new Error('Failed to download file from storage');
+      return new Response(JSON.stringify({ 
+        error: 'File not found or access denied' 
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Convert to base64 for AI processing
@@ -994,6 +999,18 @@ Important:
     };
 
     console.log('Final risk assessment:', assessment);
+
+    // Cleanup: Delete the temporary file from storage for privacy
+    console.log('Cleaning up temporary file...');
+    const { error: deleteError } = await supabase.storage
+      .from('temp-audit-files')
+      .remove([filePath]);
+    
+    if (deleteError) {
+      console.warn('Failed to delete temp file (non-critical):', deleteError);
+    } else {
+      console.log('Temporary file deleted successfully');
+    }
 
     return new Response(JSON.stringify(assessment), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
