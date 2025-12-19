@@ -569,6 +569,47 @@ export type Database = {
           },
         ]
       }
+      fta_letters: {
+        Row: {
+          created_at: string
+          file_path: string
+          id: string
+          notice_number: string
+          penalty_amount: number
+          profile_id: string
+          tax_year: number
+          taxpayer_name: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          id?: string
+          notice_number: string
+          penalty_amount: number
+          profile_id: string
+          tax_year: number
+          taxpayer_name: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          id?: string
+          notice_number?: string
+          penalty_amount?: number
+          profile_id?: string
+          tax_year?: number
+          taxpayer_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fta_letters_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       geo_risk_factors: {
         Row: {
           audit_rate_per_1000: number
