@@ -1096,6 +1096,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_temp_audit_files: { Args: never; Returns: undefined }
       generate_client_activation_code: { Args: never; Returns: string }
       generate_invite_code: { Args: never; Returns: string }
       generate_referral_code: { Args: never; Returns: string }
