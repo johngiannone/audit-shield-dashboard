@@ -169,7 +169,7 @@ Date: ${currentDate}
 `;
 }
 
-// Generate multi-page PDF with proper margins
+// Generate multi-page PDF with proper margins and page numbers
 function generatePDFBytes(instructionSheet: string, letterContent: string): Uint8Array {
   const page1Lines = instructionSheet.split('\n');
   const page2Lines = letterContent.split('\n');
@@ -183,6 +183,7 @@ function generatePDFBytes(instructionSheet: string, letterContent: string): Uint
   const leftMargin = 72;
   const rightMargin = 72;
   const topMargin = 72;
+  const bottomMargin = 72;
   const pageWidth = 612; // Letter size
   const pageHeight = 792;
   const usableWidth = pageWidth - leftMargin - rightMargin; // 468 points
@@ -207,21 +208,27 @@ function generatePDFBytes(instructionSheet: string, letterContent: string): Uint
     return lines;
   }
   
-  // Helper to build content stream for a page
-  function buildContentStream(lines: string[], fontSize: number = 11, isInstructionPage: boolean = false): string {
+  // Helper to build content stream for a page with page number
+  function buildContentStream(
+    lines: string[], 
+    fontSize: number, 
+    lineSpacing: number,
+    maxCharsPerLine: number,
+    pageNumber: number,
+    totalPages: number
+  ): string {
     let contentStream = `BT\n/F1 ${fontSize} Tf\n`;
     let y = pageHeight - topMargin; // Start from top margin
-    const lineHeight = fontSize + 4; // More readable line spacing
-    const maxCharsPerLine = isInstructionPage ? 78 : 72; // Fewer chars for letter page
+    const lineHeight = fontSize + lineSpacing;
     
     for (const line of lines) {
-      if (y < 72) break; // Stop at bottom margin
+      if (y < bottomMargin + 30) break; // Leave room for page number
       
       // Wrap long lines
       const wrappedLines = wrapText(line, maxCharsPerLine);
       
       for (const wrappedLine of wrappedLines) {
-        if (y < 72) break;
+        if (y < bottomMargin + 30) break;
         
         const escapedLine = wrappedLine
           .replace(/\\/g, '\\\\')
@@ -232,13 +239,24 @@ function generatePDFBytes(instructionSheet: string, letterContent: string): Uint
         y -= lineHeight;
       }
     }
+    
+    // Add page number at bottom center
+    const pageNumberText = `Page ${pageNumber} of ${totalPages}`;
+    const pageNumberX = (pageWidth - (pageNumberText.length * 5)) / 2; // Approximate centering
+    contentStream += `/F1 9 Tf\n`;
+    contentStream += `1 0 0 1 ${pageNumberX} ${bottomMargin - 10} Tm\n(${pageNumberText}) Tj\n`;
+    
     contentStream += 'ET';
     return contentStream;
   }
   
-  // Build content streams with proper margins
-  const page1Content = buildContentStream(page1Lines, 9, true);
-  const page2Content = buildContentStream(page2Lines, 11, false);
+  const totalPages = 2;
+  
+  // Build content streams with improved line spacing
+  // Page 1: Instruction sheet - tighter spacing for dense content
+  const page1Content = buildContentStream(page1Lines, 9, 3, 78, 1, totalPages);
+  // Page 2: Letter - more generous spacing for readability
+  const page2Content = buildContentStream(page2Lines, 11, 6, 68, 2, totalPages);
   
   // Object 1: Catalog
   objectOffsets.push(0);
