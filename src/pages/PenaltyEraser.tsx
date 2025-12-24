@@ -560,6 +560,48 @@ export default function PenaltyEraser() {
     setIsQualified(null);
   };
 
+  const handleDownloadSampleLetter = async () => {
+    try {
+      toast.loading('Generating sample letter...');
+      
+      const { data, error } = await supabase.functions.invoke('generate-fta-letter', {
+        body: {
+          userName: 'JANE DOE',
+          address: '123 Main Street',
+          city: 'Anytown',
+          state: 'CA',
+          zip: '90210',
+          ssnLast4: '1234',
+          taxYear: '2024',
+          penaltyAmount: 1500.00,
+          noticeNumber: 'CP14',
+          penaltyType: 'Failure to File Penalty',
+          saveToDatabase: false
+        }
+      });
+
+      if (error) throw error;
+
+      // Convert the response to a blob and download
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Sample_FTA_Letter.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.dismiss();
+      toast.success('Sample letter downloaded');
+    } catch (error: any) {
+      console.error('Error generating sample letter:', error);
+      toast.dismiss();
+      toast.error('Failed to generate sample letter');
+    }
+  };
+
   const penaltyAmountNum = parseFloat(noticeData.penaltyAmount) || 0;
 
   return (
@@ -604,6 +646,18 @@ export default function PenaltyEraser() {
                   <FileText className="h-4 w-4 text-green-500" />
                   <span>Instant Letter Generation</span>
                 </div>
+              </div>
+              
+              <div className="mt-6">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleDownloadSampleLetter}
+                  className="gap-2"
+                >
+                  <Eye className="h-4 w-4" />
+                  Preview Sample Letter
+                </Button>
               </div>
             </div>
           </div>
