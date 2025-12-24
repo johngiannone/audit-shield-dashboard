@@ -109,15 +109,8 @@ function generateLetterContent(data: FTALetterRequest, irsAddress: IRSServiceCen
   const currentDate = formatDate(new Date());
   const formattedPenalty = formatCurrency(data.penaltyAmount);
   
-  // Remove redundant "penalty" if penaltyType already contains it
-  const penaltyTypeFormatted = data.penaltyType.toLowerCase().includes('penalty') 
-    ? data.penaltyType 
-    : `${data.penaltyType} penalty`;
-  
-  // For inline references, avoid "penalty penalty"
-  const penaltyTypeClean = data.penaltyType.toLowerCase().includes('penalty')
-    ? data.penaltyType
-    : data.penaltyType;
+  // Clean penalty type - avoid "Failure to File Penalty penalty" redundancy
+  const penaltyTypeClean = data.penaltyType;
   
   return `
 ${data.userName}
@@ -145,7 +138,7 @@ I am writing to request an abatement of penalties assessed for Tax Year ${data.t
 PENALTY INFORMATION:
 - Notice Number: ${data.noticeNumber}
 - Tax Year: ${data.taxYear}
-- Penalty Type: ${data.penaltyType}
+- Penalty Type: ${penaltyTypeClean}
 - Penalty Amount: ${formattedPenalty}
 
 REQUEST FOR ABATEMENT:
@@ -169,16 +162,21 @@ Based on the above, I respectfully request that you:
 2. Abate any associated interest that accrued on the penalty amount
 3. Adjust my account accordingly
 
-Thank you for your consideration of this request. If you require any additional information, please contact me at the address above.
+Thank you for your consideration of this request. If you require any additional information, please contact me at the address above. I attest that I have not been required to file a return or have had no penalties for the 3 tax years prior to the tax year in which we received the penalty.
 
 Sincerely,
 
 
 
-_______________________________
-${data.userName}
 
-Date: ${currentDate}
+__________________________________________
+Taxpayer Signature                    Date
+
+
+
+
+${data.userName}
+(Printed Name)
 `;
 }
 
