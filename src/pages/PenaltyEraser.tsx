@@ -18,7 +18,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Eraser, 
   FileText, 
   Download, 
@@ -648,7 +654,7 @@ export default function PenaltyEraser() {
                 </div>
               </div>
               
-              <div className="mt-6">
+              <div className="mt-6 flex items-center gap-2">
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -658,6 +664,20 @@ export default function PenaltyEraser() {
                   <Eye className="h-4 w-4" />
                   Preview Sample Letter
                 </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="text-muted-foreground hover:text-foreground transition-colors">
+                        <HelpCircle className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p className="text-sm">
+                        <strong>Sample letter contains:</strong> Placeholder data (Jane Doe, $1,500 penalty, Tax Year 2024). Your personalized letter will include your actual name, address, penalty amount, and IRS service center based on your state.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </div>
