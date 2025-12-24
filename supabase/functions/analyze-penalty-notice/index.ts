@@ -63,13 +63,19 @@ serve(async (req) => {
 
     console.log(`Sending to AI for penalty notice analysis with media type: ${mediaType}`);
 
-    const systemPrompt = `You are an expert IRS penalty notice analyzer. Your job is to extract specific penalty information AND taxpayer identity from IRS notices (CP14, CP501, CP503, CP504, etc.).
+    const systemPrompt = `You are an expert tax penalty notice analyzer. Your job is to extract specific penalty information AND taxpayer identity from IRS federal notices AND California Franchise Tax Board (FTB) state notices.
+
+FIRST: Determine the agency type by looking for these indicators:
+- If you see "Franchise Tax Board", "FTB", "State of California", or California-specific form numbers -> agency_type = "State_CA"
+- If you see "Internal Revenue Service", "IRS", "Department of Treasury", or federal notice codes (CP14, CP501, etc.) -> agency_type = "IRS"
+- Default to "IRS" if unclear
 
 You MUST respond with valid JSON only, no markdown, no explanation. The JSON must have this exact structure:
 {
-  "notice_number": the notice type/code (e.g., "CP14", "CP501", "CP503", "CP504"),
+  "agency_type": "IRS" or "State_CA",
+  "notice_number": the notice type/code (e.g., "CP14", "CP501" for IRS, or FTB notice numbers),
   "tax_year": the tax year as a number (e.g., 2023),
-  "taxpayer_name": the full legal name of the taxpayer shown on the notice (usually in the header/address block),
+  "taxpayer_name": the full legal name of the taxpayer shown on the notice,
   "address_line_1": the street address (e.g., "123 Main Street"),
   "address_city": the city name,
   "address_state": the 2-letter state code (e.g., "CA", "NY", "TX"),
@@ -81,18 +87,16 @@ You MUST respond with valid JSON only, no markdown, no explanation. The JSON mus
   "total_amount_due": the total amount due as a number,
   "notice_date": the date of the notice in YYYY-MM-DD format,
   "response_due_date": the deadline for response in YYYY-MM-DD format (if mentioned),
-  "ssn_last_4": the last 4 digits of SSN if visible (null if not shown, usually shown in top right as "XXX-XX-1234")
+  "ssn_last_4": the last 4 digits of SSN if visible (null if not shown)
 }
 
 Important instructions:
-- Extract the Taxpayer Name and Mailing Address found in the header/address block of the notice
-- The taxpayer name is usually in the top-left address block or top-right identification area
-- The mailing address typically appears below the taxpayer name in the address block
+- FIRST determine if this is an IRS (federal) or FTB (California state) notice
+- For FTB notices, look for "Franchise Tax Board" header, FTB logos, or Sacramento CA addresses
+- Extract the Taxpayer Name and Mailing Address found in the header/address block
 - Look for "Failure to File Penalty" or "Late Filing Penalty" for failure_to_file_penalty
 - Look for "Failure to Pay Penalty" or "Late Payment Penalty" for failure_to_pay_penalty  
 - Look for "Interest" or "Interest Charged" for interest_amount
-- CP14 notices typically show the first balance due with penalties
-- CP501, CP503, CP504 are reminder notices that may reference earlier penalties
 - If you cannot determine a numeric field, use 0
 - If you cannot determine a text/date field, use null`;
 
