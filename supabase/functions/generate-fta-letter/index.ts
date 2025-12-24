@@ -169,7 +169,7 @@ Date: ${currentDate}
 `;
 }
 
-// Generate multi-page PDF
+// Generate multi-page PDF with proper margins
 function generatePDFBytes(instructionSheet: string, letterContent: string): Uint8Array {
   const page1Lines = instructionSheet.split('\n');
   const page2Lines = letterContent.split('\n');
@@ -179,31 +179,66 @@ function generatePDFBytes(instructionSheet: string, letterContent: string): Uint
   let objects: string[] = [];
   let objectOffsets: number[] = [];
   
+  // Standard letter margins: 1 inch = 72 points
+  const leftMargin = 72;
+  const rightMargin = 72;
+  const topMargin = 72;
+  const pageWidth = 612; // Letter size
+  const pageHeight = 792;
+  const usableWidth = pageWidth - leftMargin - rightMargin; // 468 points
+  
+  // Helper to wrap text to fit within margins
+  function wrapText(text: string, maxCharsPerLine: number): string[] {
+    if (text.length <= maxCharsPerLine) return [text];
+    
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    
+    for (const word of words) {
+      if (currentLine.length + word.length + 1 <= maxCharsPerLine) {
+        currentLine += (currentLine ? ' ' : '') + word;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
+  }
+  
   // Helper to build content stream for a page
-  function buildContentStream(lines: string[], fontSize: number = 10): string {
+  function buildContentStream(lines: string[], fontSize: number = 11, isInstructionPage: boolean = false): string {
     let contentStream = `BT\n/F1 ${fontSize} Tf\n`;
-    let y = 750;
-    const leftMargin = 50;
-    const lineHeight = fontSize + 2;
+    let y = pageHeight - topMargin; // Start from top margin
+    const lineHeight = fontSize + 4; // More readable line spacing
+    const maxCharsPerLine = isInstructionPage ? 78 : 72; // Fewer chars for letter page
     
     for (const line of lines) {
-      if (y < 50) break; // Stop if we run out of page space
+      if (y < 72) break; // Stop at bottom margin
       
-      const escapedLine = line
-        .replace(/\\/g, '\\\\')
-        .replace(/\(/g, '\\(')
-        .replace(/\)/g, '\\)');
+      // Wrap long lines
+      const wrappedLines = wrapText(line, maxCharsPerLine);
       
-      contentStream += `1 0 0 1 ${leftMargin} ${y} Tm\n(${escapedLine}) Tj\n`;
-      y -= lineHeight;
+      for (const wrappedLine of wrappedLines) {
+        if (y < 72) break;
+        
+        const escapedLine = wrappedLine
+          .replace(/\\/g, '\\\\')
+          .replace(/\(/g, '\\(')
+          .replace(/\)/g, '\\)');
+        
+        contentStream += `1 0 0 1 ${leftMargin} ${y} Tm\n(${escapedLine}) Tj\n`;
+        y -= lineHeight;
+      }
     }
     contentStream += 'ET';
     return contentStream;
   }
   
-  // Build content streams
-  const page1Content = buildContentStream(page1Lines, 9);
-  const page2Content = buildContentStream(page2Lines, 10);
+  // Build content streams with proper margins
+  const page1Content = buildContentStream(page1Lines, 9, true);
+  const page2Content = buildContentStream(page2Lines, 11, false);
   
   // Object 1: Catalog
   objectOffsets.push(0);
@@ -221,9 +256,9 @@ function generatePDFBytes(instructionSheet: string, letterContent: string): Uint
   objectOffsets.push(0);
   objects.push(`4 0 obj\n<< /Length ${page1Content.length} >>\nstream\n${page1Content}\nendstream\nendobj\n`);
   
-  // Object 5: Font (Courier for monospace)
+  // Object 5: Font (Helvetica for cleaner look)
   objectOffsets.push(0);
-  objects.push('5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>\nendobj\n');
+  objects.push('5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n');
   
   // Object 6: Page 2 (FTA Letter)
   objectOffsets.push(0);
