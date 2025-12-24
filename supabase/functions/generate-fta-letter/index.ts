@@ -109,6 +109,16 @@ function generateLetterContent(data: FTALetterRequest, irsAddress: IRSServiceCen
   const currentDate = formatDate(new Date());
   const formattedPenalty = formatCurrency(data.penaltyAmount);
   
+  // Remove redundant "penalty" if penaltyType already contains it
+  const penaltyTypeFormatted = data.penaltyType.toLowerCase().includes('penalty') 
+    ? data.penaltyType 
+    : `${data.penaltyType} penalty`;
+  
+  // For inline references, avoid "penalty penalty"
+  const penaltyTypeClean = data.penaltyType.toLowerCase().includes('penalty')
+    ? data.penaltyType
+    : data.penaltyType;
+  
   return `
 ${data.userName}
 ${data.address}
@@ -118,7 +128,6 @@ ${currentDate}
 
 CERTIFIED MAIL - RETURN RECEIPT REQUESTED
 
-Internal Revenue Service
 ${irsAddress.address_line_1}
 ${irsAddress.address_line_2}
 Attn: Penalty Abatement Request
@@ -140,7 +149,7 @@ PENALTY INFORMATION:
 - Penalty Amount: ${formattedPenalty}
 
 REQUEST FOR ABATEMENT:
-I respectfully request that the IRS abate the ${data.penaltyType} penalty of ${formattedPenalty} assessed for Tax Year ${data.taxYear} based on my history of tax compliance.
+I respectfully request that the IRS abate the ${penaltyTypeClean} of ${formattedPenalty} assessed for Tax Year ${data.taxYear} based on my history of tax compliance. I also request the abatement of any associated interest.
 
 QUALIFICATION FOR FIRST-TIME ABATEMENT:
 I meet all requirements for the First-Time Abatement administrative waiver:
@@ -156,13 +165,14 @@ Under IRM 20.1.1.3.3.2.1, the IRS provides penalty relief to taxpayers who have 
 
 REQUEST:
 Based on the above, I respectfully request that you:
-1. Abate the ${data.penaltyType} penalty of ${formattedPenalty}
+1. Abate the ${penaltyTypeClean} of ${formattedPenalty}
 2. Abate any associated interest that accrued on the penalty amount
 3. Adjust my account accordingly
 
 Thank you for your consideration of this request. If you require any additional information, please contact me at the address above.
 
 Sincerely,
+
 
 
 _______________________________
