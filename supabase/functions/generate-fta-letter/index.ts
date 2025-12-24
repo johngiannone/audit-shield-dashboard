@@ -109,8 +109,8 @@ function generateLetterContent(data: FTALetterRequest, irsAddress: IRSServiceCen
   const currentDate = formatDate(new Date());
   const formattedPenalty = formatCurrency(data.penaltyAmount);
   
-  // Clean penalty type - avoid "Failure to File Penalty penalty" redundancy
-  const penaltyTypeClean = data.penaltyType;
+  // Clean penalty type - remove redundant "penalty" if already in the type
+  const penaltyTypeClean = data.penaltyType.replace(/\s+penalty$/i, '').trim() || data.penaltyType;
   
   return `
 ${data.userName}
@@ -121,6 +121,7 @@ ${currentDate}
 
 CERTIFIED MAIL - RETURN RECEIPT REQUESTED
 
+Internal Revenue Service
 ${irsAddress.address_line_1}
 ${irsAddress.address_line_2}
 Attn: Penalty Abatement Request
@@ -142,7 +143,7 @@ PENALTY INFORMATION:
 - Penalty Amount: ${formattedPenalty}
 
 REQUEST FOR ABATEMENT:
-I respectfully request that the IRS abate the ${penaltyTypeClean} of ${formattedPenalty} assessed for Tax Year ${data.taxYear} based on my history of tax compliance. I also request the abatement of any associated interest.
+I respectfully request that the IRS abate the ${penaltyTypeClean} of ${formattedPenalty} assessed for Tax Year ${data.taxYear} based on my history of tax compliance. I also request the abatement of any accrued interest associated with these penalties.
 
 QUALIFICATION FOR FIRST-TIME ABATEMENT:
 I meet all requirements for the First-Time Abatement administrative waiver:
@@ -159,10 +160,13 @@ Under IRM 20.1.1.3.3.2.1, the IRS provides penalty relief to taxpayers who have 
 REQUEST:
 Based on the above, I respectfully request that you:
 1. Abate the ${penaltyTypeClean} of ${formattedPenalty}
-2. Abate any associated interest that accrued on the penalty amount
+2. Abate any accrued interest associated with these penalties
 3. Adjust my account accordingly
 
-Thank you for your consideration of this request. If you require any additional information, please contact me at the address above. I attest that I have not been required to file a return or have had no penalties for the 3 tax years prior to the tax year in which we received the penalty.
+Thank you for your consideration. I attest that I have not been required to file a return or have had no penalties for the 3 tax years prior to the tax year in which I received this penalty.
+
+
+
 
 Sincerely,
 
@@ -170,10 +174,6 @@ Sincerely,
 
 
 __________________________________________
-Taxpayer Signature                    Date
-
-
-
 
 ${data.userName}
 (Printed Name)
