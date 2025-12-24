@@ -93,6 +93,7 @@ interface EmailDelivery {
 }
 
 interface ScanResult {
+  agency_type?: 'IRS' | 'State_CA';
   notice_number: string | null;
   tax_year: number | null;
   taxpayer_name: string | null;
@@ -142,6 +143,7 @@ export default function PenaltyEraser() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [agencyType, setAgencyType] = useState<'IRS' | 'State_CA'>('IRS');
   
   // Saved letters state
   const [savedLetters, setSavedLetters] = useState<SavedLetter[]>([]);
@@ -300,6 +302,10 @@ export default function PenaltyEraser() {
       const analysis = result.analysis as ScanResult;
       setScanResult(analysis);
       
+      // Set agency type based on detection
+      const detectedAgency = analysis.agency_type || 'IRS';
+      setAgencyType(detectedAgency);
+      
       // Pre-fill form with scanned data
       const totalPenalty = (analysis.failure_to_file_penalty || 0) + (analysis.failure_to_pay_penalty || 0) + (analysis.other_penalties || 0);
       
@@ -326,7 +332,8 @@ export default function PenaltyEraser() {
         ssnLast4: analysis.ssn_last_4 || prev.ssnLast4
       }));
 
-      toast.success('Notice scanned successfully! Please review the detected information.');
+      const agencyLabel = detectedAgency === 'State_CA' ? 'California FTB' : 'IRS';
+      toast.success(`${agencyLabel} notice scanned successfully! Please review the detected information.`);
       
     } catch (error: any) {
       console.error('Scan error:', error);
@@ -430,6 +437,7 @@ export default function PenaltyEraser() {
             penaltyAmount: parseFloat(noticeData.penaltyAmount),
             noticeNumber: noticeData.noticeType,
             penaltyType: noticeData.penaltyType,
+            agencyType: agencyType,
             saveToDatabase: !!user
           }),
         }
@@ -445,13 +453,17 @@ export default function PenaltyEraser() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `FTA_Request_${noticeData.taxYear}_${noticeData.noticeType}.pdf`;
+      const letterType = agencyType === 'State_CA' ? 'CA_OTA' : 'FTA';
+      a.download = `${letterType}_Request_${noticeData.taxYear}_${noticeData.noticeType}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      toast.success('FTA request letter downloaded and saved');
+      const successMsg = agencyType === 'State_CA' 
+        ? 'California OTA request letter downloaded and saved'
+        : 'FTA request letter downloaded and saved';
+      toast.success(successMsg);
       
       // Refresh saved letters list
       if (user) {

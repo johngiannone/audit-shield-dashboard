@@ -17,6 +17,7 @@ interface FTALetterRequest {
   penaltyAmount: number;
   noticeNumber: string;
   penaltyType: string;
+  agencyType?: 'IRS' | 'State_CA';
   saveToDatabase?: boolean;
 }
 
@@ -105,6 +106,147 @@ IMPORTANT NOTES:
 `;
 }
 
+// California FTB One-Time Abatement Instruction Sheet
+function generateCAInstructionSheet(data: FTALetterRequest): string {
+  return `
+═══════════════════════════════════════════════════════════════════════════════
+              CALIFORNIA ONE-TIME ABATEMENT (OTA) REQUEST
+                      MAILING INSTRUCTIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+Taxpayer: ${data.userName}
+Tax Year: ${data.taxYear}
+Notice #: ${data.noticeNumber}
+Penalty:  ${formatCurrency(data.penaltyAmount)}
+
+───────────────────────────────────────────────────────────────────────────────
+
+STEP 1: SIGN THE LETTER
+        Review the penalty abatement request letter on the following page(s).
+        Sign and date the letter on the signature line.
+
+───────────────────────────────────────────────────────────────────────────────
+
+STEP 2: MAKE A COPY
+        Make a copy of the signed letter for your records.
+
+───────────────────────────────────────────────────────────────────────────────
+
+STEP 3: MAIL VIA CERTIFIED MAIL (Return Receipt Requested)
+
+        Mail your signed letter to:
+
+        ┌─────────────────────────────────────────────────────────────────────┐
+        │                                                                     │
+        │     Franchise Tax Board                                             │
+        │     PO Box 942840                                                   │
+        │     Sacramento, CA 94240-0040                                       │
+        │                                                                     │
+        └─────────────────────────────────────────────────────────────────────┘
+
+───────────────────────────────────────────────────────────────────────────────
+
+STEP 4: KEEP YOUR RECEIPT
+        Keep your Certified Mail receipt as proof of mailing.
+        The receipt number can be used to track delivery at usps.com.
+
+───────────────────────────────────────────────────────────────────────────────
+
+IMPORTANT NOTES:
+
+  • California R&TC Section 19132.5 allows ONE penalty abatement per taxpayer.
+  
+  • You must have filed all required returns to qualify.
+  
+  • The FTB typically responds within 30-60 days.
+  
+  • If approved, any penalty amount already paid will be refunded or credited.
+  
+  • This is a one-time relief - you cannot use this provision again.
+
+═══════════════════════════════════════════════════════════════════════════════
+                         (Letter begins on next page)
+═══════════════════════════════════════════════════════════════════════════════
+`;
+}
+
+// California FTB One-Time Abatement Letter Content
+function generateCALetterContent(data: FTALetterRequest): string {
+  const currentDate = formatDate(new Date());
+  const formattedPenalty = formatCurrency(data.penaltyAmount);
+  
+  // Clean penalty type
+  const penaltyTypeClean = data.penaltyType.replace(/\s+penalty$/i, '').trim() || data.penaltyType;
+  
+  return `
+${data.userName}
+${data.address}
+${data.city}, ${data.state} ${data.zip}
+
+${currentDate}
+
+CERTIFIED MAIL - RETURN RECEIPT REQUESTED
+
+Franchise Tax Board
+PO Box 942840
+Sacramento, CA 94240-0040
+
+Re: Request for One-Time Abatement (OTA)
+    California R&TC Section 19132.5
+    Notice: ${data.noticeNumber}
+    Tax Year: ${data.taxYear}
+    SSN: XXX-XX-${data.ssnLast4}
+    Taxpayer: ${data.userName}
+
+Dear Sir or Madam:
+
+I am writing to request a one-time abatement of the failure-to-file penalty assessed for Tax Year ${data.taxYear} pursuant to California Revenue and Taxation Code Section 19132.5.
+
+PENALTY INFORMATION:
+- Notice Number: ${data.noticeNumber}
+- Tax Year: ${data.taxYear}
+- Penalty Type: ${penaltyTypeClean}
+- Penalty Amount: ${formattedPenalty}
+
+REQUEST FOR ABATEMENT:
+I am requesting a one-time abatement of the ${penaltyTypeClean} of ${formattedPenalty}. I have not previously been granted abatement under R&TC 19132.5 and have filed all required returns.
+
+QUALIFICATION FOR ONE-TIME ABATEMENT:
+Under California R&TC Section 19132.5, I qualify for one-time penalty abatement because:
+
+1. I have not previously received abatement under this section.
+
+2. I have filed all currently required California tax returns.
+
+3. I have paid, or arranged to pay, any tax due.
+
+LEGAL BASIS:
+California Revenue and Taxation Code Section 19132.5 provides that the Franchise Tax Board shall abate a demand for payment penalty for taxpayers who have a clean compliance history and have not previously been granted relief under this provision.
+
+REQUEST:
+Based on the above, I respectfully request that you:
+1. Abate the ${penaltyTypeClean} of ${formattedPenalty}
+2. Abate any accrued interest associated with this penalty
+3. Adjust my account accordingly
+
+Thank you for your consideration. I attest that I have not previously received one-time abatement under R&TC Section 19132.5 and have filed all required California tax returns.
+
+
+
+
+Sincerely,
+
+
+
+
+__________________________________________
+
+${data.userName}
+(Printed Name)
+`;
+}
+
+// IRS Letter Content (existing)
 function generateLetterContent(data: FTALetterRequest, irsAddress: IRSServiceCenter): string {
   const currentDate = formatDate(new Date());
   const formattedPenalty = formatCurrency(data.penaltyAmount);
@@ -369,22 +511,29 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Generating FTA letter for ${data.userName}, Tax Year ${data.taxYear}, State: ${data.state}`);
+    const agencyType = data.agencyType || 'IRS';
+    console.log(`Generating ${agencyType} letter for ${data.userName}, Tax Year ${data.taxYear}, State: ${data.state}`);
 
-    // Lookup IRS service center based on state
-    const irsAddress = await getIRSServiceCenter(data.state || 'CA');
-    console.log(`Using IRS Service Center: ${irsAddress.service_center_name}`);
+    let instructionSheet: string;
+    let letterContent: string;
 
-    // Generate instruction sheet (page 1)
-    const instructionSheet = generateInstructionSheet(irsAddress, data);
-    
-    // Generate letter content (page 2+)
-    const letterContent = generateLetterContent(data, irsAddress);
+    if (agencyType === 'State_CA') {
+      // California FTB One-Time Abatement flow
+      console.log('Using California FTB One-Time Abatement template');
+      instructionSheet = generateCAInstructionSheet(data);
+      letterContent = generateCALetterContent(data);
+    } else {
+      // IRS First-Time Abatement flow (default)
+      const irsAddress = await getIRSServiceCenter(data.state || 'CA');
+      console.log(`Using IRS Service Center: ${irsAddress.service_center_name}`);
+      instructionSheet = generateInstructionSheet(irsAddress, data);
+      letterContent = generateLetterContent(data, irsAddress);
+    }
     
     // Generate multi-page PDF
     const pdfBytes = generatePDFBytes(instructionSheet, letterContent);
     
-    console.log(`Generated 2-page PDF with ${pdfBytes.length} bytes`);
+    console.log(`Generated 2-page ${agencyType} PDF with ${pdfBytes.length} bytes`);
 
     // Save to database if requested and user is authenticated
     const authHeader = req.headers.get('Authorization');
