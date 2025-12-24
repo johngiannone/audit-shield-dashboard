@@ -110,10 +110,15 @@ function generateLetterContent(data: FTALetterRequest, irsAddress: IRSServiceCen
   const formattedPenalty = formatCurrency(data.penaltyAmount);
   
   return `
-CERTIFIED MAIL - RETURN RECEIPT REQUESTED
+${data.userName}
+${data.address}
+${data.city}, ${data.state} ${data.zip}
 
 ${currentDate}
 
+CERTIFIED MAIL - RETURN RECEIPT REQUESTED
+
+Internal Revenue Service
 ${irsAddress.address_line_1}
 ${irsAddress.address_line_2}
 Attn: Penalty Abatement Request
@@ -162,8 +167,6 @@ Sincerely,
 
 _______________________________
 ${data.userName}
-${data.address}
-${data.city}, ${data.state} ${data.zip}
 
 Date: ${currentDate}
 `;
