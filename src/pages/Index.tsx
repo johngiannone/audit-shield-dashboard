@@ -211,7 +211,7 @@ export default function Index() {
                   <span className="text-muted-foreground">Renewal</span>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-semibold text-foreground">Dec 31, 2025</span>
+                    <span className="font-semibold text-foreground">12/31/2025</span>
                   </div>
                 </div>
                 
