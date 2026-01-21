@@ -6,6 +6,7 @@ import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, Clou
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Helmet } from 'react-helmet-async';
 import { PricingCard } from '@/components/landing/PricingCard';
+import { TaxSeasonBanner } from '@/components/landing/TaxSeasonBanner';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -96,6 +97,9 @@ export default function Index() {
           {JSON.stringify(faqSchema)}
         </script>
       </Helmet>
+      
+      {/* Tax Season 2025 Promotional Banner */}
+      <TaxSeasonBanner />
       
       {/* Header */}
       <header className="container mx-auto px-6 py-4 flex items-center justify-between relative">
