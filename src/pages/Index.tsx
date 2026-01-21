@@ -76,7 +76,7 @@ export default function Index() {
         "name": "What if I already received a notice yesterday?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Our prepaid memberships are for future protection. If you already have a notice in hand, we can still help! Please click 'Report a Notice' in the top navigation to upload your letter. Our team will review it and provide a customized flat-rate quote for defense, separate from our annual membership plans."
+          "text": "Our prepaid memberships are for future protection only. If you already have a notice in hand, we work exclusively with Tax Audit Help LLC for audit defense and would be happy to refer you to one of their specialists. Please contact us and we'll connect you with the right expert for your situation."
         }
       },
       {
@@ -337,7 +337,7 @@ export default function Index() {
                 What if I already received a notice yesterday?
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground pb-5">
-                Our prepaid memberships are for future protection. If you already have a notice in hand, we can still help! Please click "Report a Notice" in the top navigation to upload your letter. Our team will review it and provide a customized flat-rate quote for defense, separate from our annual membership plans.
+                Our prepaid memberships are for future protection only. If you already have a notice in hand, we work exclusively with Tax Audit Help LLC for audit defense and would be happy to refer you to one of their specialists. Please contact us and we'll connect you with the right expert for your situation.
               </AccordionContent>
             </AccordionItem>
 
