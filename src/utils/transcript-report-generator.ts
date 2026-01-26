@@ -34,6 +34,61 @@ const PLAIN_ENGLISH: Record<string, string> = {
   '976': 'A duplicate return was filed - possible identity theft.',
 };
 
+/**
+ * IRS Action Steps - Specific recommended actions for each transaction code.
+ * These provide actionable guidance when critical or high-severity codes appear.
+ */
+const IRS_ACTION_STEPS: Record<string, string> = {
+  // Audit & Examination Codes
+  '420': 'Do NOT file an amended return at this time. Wait for the official IRS examination letter (Letter 2205 or 566). Gather all supporting documentation for the items likely under review. Do not contact the IRS until you receive written correspondence.',
+  '421': 'The IRS has reversed its audit decision. No action required, but retain all documentation in case of future review.',
+  '424': 'Prepare for a correspondence or office audit. Organize receipts, bank statements, and any records supporting deductions claimed. Consider consulting an Enrolled Agent or CPA before responding.',
+  '914': 'An active audit is underway. Do NOT make any changes to your return or file amendments. Wait for the Revenue Agent to contact you. Keep detailed records of all IRS communications.',
+  '922': 'This is a Criminal Investigation Division (CID) flag - extremely serious. STOP all communication with the IRS immediately. Contact a tax attorney (not just a CPA) before taking any action. Do not destroy any documents.',
+  
+  // Hold & Freeze Codes
+  '570': 'Your refund or credit is on hold. This is often temporary. Wait 60 days before calling the IRS. If you have moved, ensure your address is updated. Do not file duplicate returns.',
+  '571': 'The hold on your account has been released. Your refund should process within 2-3 weeks. No action required unless you do not receive it.',
+  '810': 'Your refund is frozen - this is serious. Do NOT call the IRS repeatedly as this will not speed up the process. Wait for a notice explaining the reason. Common causes: identity verification, offset for debt, or examination hold.',
+  '811': 'The refund freeze has been reversed. Your refund should be released within 1-2 weeks. Monitor your bank account for direct deposit.',
+  
+  // Notice Codes
+  '971': 'A notice has been mailed to you. Check your mail daily including any forwarding addresses. Respond by the deadline shown on the notice. Keep a copy of your response and send via certified mail.',
+  '972': 'This is a placeholder indicating no response was received to a prior notice. Check if you missed correspondence. Contact the IRS to request a copy of the original notice.',
+  
+  // Identity & Fraud Codes
+  '976': 'A duplicate return was filed - possible identity theft. File Form 14039 (Identity Theft Affidavit) immediately. Request an Identity Protection PIN for future returns. Monitor your credit reports.',
+  '977': 'An amended return (1040-X) was filed. If you did not file this amendment, report identity theft immediately using Form 14039.',
+  
+  // Collection & Balance Due
+  '290': 'Additional tax has been assessed. Review the notice for accuracy. If correct, pay within 21 days to minimize interest. If incorrect, file Form 843 or respond to the notice with documentation.',
+  '300': 'Additional tax assessed with interest. Pay the balance or contact the IRS to set up an installment agreement within 30 days to avoid further collection action.',
+  '196': 'Interest has been computed on your balance. This is routine. Pay the balance to stop interest from accruing.',
+  
+  // Payment & Refund Codes
+  '846': 'Great news - your refund was approved. It should arrive within 5 business days for direct deposit, or 4 weeks for paper check. No action needed.',
+  '840': 'A refund was issued via paper check. Allow 4-6 weeks for delivery. If not received, you can request a trace after 6 weeks.',
+  '826': 'Part or all of your refund was applied to another debt (offset). This could be federal tax debt, state debt, or child support. Contact the Bureau of Fiscal Service for details.',
+  
+  // Penalty Codes
+  '160': 'A penalty has been assessed. Review the penalty type on your notice. If you have reasonable cause (first-time, disaster, serious illness), request abatement using Form 843 or IRS.gov.',
+  '161': 'Penalty relief was granted. No action needed. The amount will be credited to your account.',
+  '166': 'Interest has been removed from your account. This is a positive adjustment. No action required.',
+  
+  // Return Processing
+  '150': 'Your return was accepted and processed. This is routine - no action needed unless you expected a different outcome.',
+  '806': 'Withholding credits from W-2s and 1099s have been applied. Verify this matches your records. If discrepancies exist, contact your employer.',
+  '766': 'A credit was applied to your account. Review to ensure it matches expected refundable credits (EIC, Child Tax Credit, etc.).',
+};
+
+/**
+ * Get the recommended action for a given IRS code.
+ * Falls back to database recommendedAction or generic message.
+ */
+export function getActionStep(code: string, fallback?: string): string {
+  return IRS_ACTION_STEPS[code] || fallback || 'Review your IRS account transcript carefully and consult a tax professional if you have questions about this code.';
+}
+
 export function generateTranscriptReport(result: DecodeResult, fileName?: string): jsPDF {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -159,14 +214,18 @@ export function generateTranscriptReport(result: DecodeResult, fileName?: string
       };
       const textColor = textColors[entry.severity] || [51, 65, 85];
 
-      // Entry background
-      doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
-      
-      // Calculate height needed
+      // Plain English description
       const plainEnglish = PLAIN_ENGLISH[entry.code] || entry.explanation || entry.description;
       const descLines = doc.splitTextToSize(plainEnglish, contentWidth - 80);
-      const actionLines = entry.recommendedAction ? doc.splitTextToSize(entry.recommendedAction, contentWidth - 30) : [];
-      const entryHeight = 25 + (descLines.length * 5) + (actionLines.length > 0 ? actionLines.length * 5 + 10 : 0);
+      
+      // Get action step from dictionary or fallback to entry's recommendedAction
+      const actionText = getActionStep(entry.code, entry.recommendedAction);
+      const showActionBox = (entry.severity === 'critical' || entry.severity === 'high') && actionText;
+      const actionLines = showActionBox ? doc.splitTextToSize(actionText, contentWidth - 40) : [];
+      
+      // Calculate height needed including red action box
+      const actionBoxHeight = showActionBox ? (actionLines.length * 4.5) + 18 : 0;
+      const entryHeight = 25 + (descLines.length * 5) + actionBoxHeight;
       
       checkPageBreak(entryHeight + 10);
       
@@ -195,18 +254,32 @@ export function generateTranscriptReport(result: DecodeResult, fileName?: string
       doc.setTextColor(51, 65, 85);
       doc.text(descLines, margin + 5, yPos + 20);
 
-      // Recommended action for critical/high
-      if ((entry.severity === 'critical' || entry.severity === 'high') && entry.recommendedAction) {
-        const actionY = yPos + 20 + (descLines.length * 5) + 5;
-        doc.setFillColor(255, 255, 255);
-        doc.roundedRect(margin + 5, actionY - 3, contentWidth - 10, actionLines.length * 5 + 6, 1, 1, 'F');
+      // RED ACTION BOX for critical/high severity codes
+      if (showActionBox) {
+        const actionBoxY = yPos + 20 + (descLines.length * 5) + 5;
+        const actionBoxInnerHeight = (actionLines.length * 4.5) + 10;
         
+        // Red background box
+        doc.setFillColor(254, 226, 226); // red-100 background
+        doc.setDrawColor(239, 68, 68);   // red-500 border
+        doc.setLineWidth(0.5);
+        doc.roundedRect(margin + 5, actionBoxY - 2, contentWidth - 10, actionBoxInnerHeight, 2, 2, 'FD');
+        
+        // Red left accent bar
+        doc.setFillColor(239, 68, 68); // red-500
+        doc.rect(margin + 5, actionBoxY - 2, 3, actionBoxInnerHeight, 'F');
+        
+        // Action header
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-        doc.text('Action:', margin + 8, actionY + 3);
+        doc.setTextColor(185, 28, 28); // red-700
+        doc.text('⚠ RECOMMENDED ACTION:', margin + 12, actionBoxY + 5);
+        
+        // Action text
         doc.setFont('helvetica', 'normal');
-        doc.text(actionLines, margin + 8 + doc.getTextWidth('Action: '), actionY + 3);
+        doc.setFontSize(8);
+        doc.setTextColor(127, 29, 29); // red-900
+        doc.text(actionLines, margin + 12, actionBoxY + 11);
       }
 
       yPos += entryHeight + 5;
