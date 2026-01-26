@@ -1,6 +1,11 @@
-import { Calendar, FileText, AlertTriangle, TrendingUp, ArrowRight } from 'lucide-react';
+import { useState } from 'react';
+import { Calendar, FileText, AlertTriangle, TrendingUp, ArrowRight, Mail, Loader2, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 const taxTips = [
   {
@@ -34,6 +39,58 @@ const taxTips = [
 ];
 
 export function TaxTipsSection() {
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({
+        title: 'Invalid email',
+        description: 'Please enter a valid email address.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      const { error } = await supabase
+        .from('newsletter_subscribers')
+        .insert({ email: email.trim().toLowerCase() });
+
+      if (error) {
+        if (error.code === '23505') {
+          toast({
+            title: 'Already subscribed',
+            description: 'This email is already on our list!',
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        setIsSubscribed(true);
+        setEmail('');
+        toast({
+          title: 'Subscribed!',
+          description: 'You\'ll receive our latest tax tips and insights.',
+        });
+      }
+    } catch (error) {
+      console.error('Newsletter signup error:', error);
+      toast({
+        title: 'Subscription failed',
+        description: 'Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="mt-24 max-w-6xl mx-auto" id="tax-tips">
       <div className="text-center mb-14">
@@ -86,10 +143,51 @@ export function TaxTipsSection() {
         ))}
       </div>
 
-      <div className="text-center mt-10">
-        <p className="text-sm text-muted-foreground">
-          More articles coming soon. Subscribe to our newsletter for the latest tax insights.
-        </p>
+      {/* Newsletter Signup */}
+      <div className="mt-14 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 rounded-2xl p-8 md:p-10 border border-primary/20">
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
+            <Mail className="h-7 w-7 text-primary" />
+          </div>
+          <h3 className="font-display text-2xl font-bold text-foreground mb-3">
+            Get Tax Tips in Your Inbox
+          </h3>
+          <p className="text-muted-foreground mb-6">
+            Subscribe to receive expert tax insights, audit prevention tips, and important deadline reminders.
+          </p>
+          
+          {isSubscribed ? (
+            <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400">
+              <CheckCircle className="h-5 w-5" />
+              <span className="font-medium">You're subscribed! Check your inbox.</span>
+            </div>
+          ) : (
+            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="flex-1"
+                disabled={isSubmitting}
+              />
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Subscribing...
+                  </>
+                ) : (
+                  'Subscribe'
+                )}
+              </Button>
+            </form>
+          )}
+          
+          <p className="text-xs text-muted-foreground mt-4">
+            No spam. Unsubscribe anytime. We respect your privacy.
+          </p>
+        </div>
       </div>
     </div>
   );
