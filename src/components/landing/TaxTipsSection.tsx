@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Calendar, FileText, AlertTriangle, TrendingUp, ArrowRight, Mail, Loader2, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 
 const taxTips = [
   {
+    slug: 'irs-audit-red-flags-2025',
     category: 'Audit Prevention',
     title: '7 Red Flags That Trigger IRS Audits in 2025',
     excerpt: 'Learn the most common mistakes that put taxpayers on the IRS radar—and how to avoid them before filing.',
@@ -16,6 +18,7 @@ const taxTips = [
     readTime: '5 min read',
   },
   {
+    slug: 'schedule-c-deductions-guide',
     category: 'Tax Planning',
     title: 'Schedule C Deductions: What Self-Employed Filers Miss',
     excerpt: 'Maximize your legitimate deductions while staying compliant. A guide for freelancers and small business owners.',
@@ -23,6 +26,7 @@ const taxTips = [
     readTime: '7 min read',
   },
   {
+    slug: 'irs-enforcement-priorities-2025',
     category: 'IRS Updates',
     title: 'New IRS Enforcement Priorities for 2025',
     excerpt: 'The IRS is increasing audits in specific areas. Here\'s what you need to know to stay protected.',
@@ -30,6 +34,7 @@ const taxTips = [
     readTime: '4 min read',
   },
   {
+    slug: 'important-tax-deadlines-2025',
     category: 'Deadlines',
     title: 'Key Tax Dates Every Taxpayer Should Know',
     excerpt: 'From quarterly estimates to extension deadlines—never miss an important tax date again.',
@@ -107,40 +112,51 @@ export function TaxTipsSection() {
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {taxTips.map((tip, index) => (
-          <Card 
-            key={index} 
-            interactive 
-            className="group animate-fade-in"
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            <CardContent className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <tip.icon className="h-5 w-5 text-primary" />
+          <Link key={tip.slug} to={`/blog/${tip.slug}`}>
+            <Card 
+              interactive 
+              className="group animate-fade-in h-full"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <tip.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {tip.category}
+                  </Badge>
                 </div>
-                <Badge variant="outline" className="text-xs">
-                  {tip.category}
-                </Badge>
-              </div>
-              
-              <h3 className="font-display text-lg font-semibold text-foreground mb-2 leading-tight group-hover:text-primary transition-colors">
-                {tip.title}
-              </h3>
-              
-              <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
-                {tip.excerpt}
-              </p>
-              
-              <div className="flex items-center justify-between pt-4 border-t border-border">
-                <span className="text-xs text-muted-foreground">{tip.readTime}</span>
-                <span className="text-primary text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
-                  Read more
-                  <ArrowRight className="h-3 w-3" />
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+                
+                <h3 className="font-display text-lg font-semibold text-foreground mb-2 leading-tight group-hover:text-primary transition-colors">
+                  {tip.title}
+                </h3>
+                
+                <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
+                  {tip.excerpt}
+                </p>
+                
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <span className="text-xs text-muted-foreground">{tip.readTime}</span>
+                  <span className="text-primary text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
+                    Read more
+                    <ArrowRight className="h-3 w-3" />
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
+      </div>
+      
+      {/* View All Link */}
+      <div className="text-center mt-8">
+        <Link to="/blog">
+          <Button variant="outline" size="lg">
+            View All Articles
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </Link>
       </div>
 
       {/* Newsletter Signup */}

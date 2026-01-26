@@ -37,6 +37,8 @@ import ModelConfig from "./pages/ModelConfig";
 import CorporateComplianceReview from "./pages/CorporateComplianceReview";
 import PenaltyEraser from "./pages/PenaltyEraser";
 import TranscriptDecoder from "./pages/TranscriptDecoder";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -88,6 +90,8 @@ const App = () => (
                   <Route path="/corporate-compliance-review" element={<CorporateComplianceReview />} />
                   <Route path="/penalty-eraser" element={<PenaltyEraser />} />
                   <Route path="/transcript-decoder" element={<TranscriptDecoder />} />
+                  <Route path="/blog" element={<Blog />} />
+                  <Route path="/blog/:slug" element={<BlogPost />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </ReferralTracker>
