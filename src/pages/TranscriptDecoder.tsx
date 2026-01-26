@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { downloadTranscriptReport } from "@/utils/transcript-report-generator";
+import { downloadTranscriptReport, getActionStep } from "@/utils/transcript-report-generator";
 import { TranscriptGuide } from "@/components/transcript/TranscriptGuide";
 
 
@@ -357,15 +357,40 @@ export default function TranscriptDecoder() {
                                   </p>
                                 )}
                                 
-                                {/* Recommended action for important codes */}
-                                {(entry.severity === 'critical' || entry.severity === 'high') && entry.recommendedAction && (
-                                  <div className="mt-3 p-2 rounded bg-background border">
-                                    <p className="text-sm">
-                                      <span className="font-medium">Recommended Action:</span>{' '}
-                                      {entry.recommendedAction}
-                                    </p>
-                                  </div>
-                                )}
+                                {/* Recommended action for codes with specific action steps */}
+                                {(() => {
+                                  const actionStep = getActionStep(entry.code, entry.recommendedAction);
+                                  if (!actionStep) return null;
+                                  
+                                  const isHighPriority = entry.severity === 'critical' || entry.severity === 'high';
+                                  
+                                  return (
+                                    <div className={cn(
+                                      "mt-3 p-3 rounded-lg border-l-4",
+                                      isHighPriority 
+                                        ? "bg-red-500/10 border-l-red-500" 
+                                        : "bg-amber-500/10 border-l-amber-500"
+                                    )}>
+                                      <div className="flex items-start gap-2">
+                                        <AlertTriangle className={cn(
+                                          "h-4 w-4 mt-0.5 flex-shrink-0",
+                                          isHighPriority ? "text-red-500" : "text-amber-500"
+                                        )} />
+                                        <div>
+                                          <p className={cn(
+                                            "text-sm font-semibold mb-1",
+                                            isHighPriority ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"
+                                          )}>
+                                            Recommended Action
+                                          </p>
+                                          <p className="text-sm text-foreground leading-relaxed">
+                                            {actionStep}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                               
                               <div className="text-right flex-shrink-0">
