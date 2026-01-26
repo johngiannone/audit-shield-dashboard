@@ -39,6 +39,7 @@ import PenaltyEraser from "./pages/PenaltyEraser";
 import TranscriptDecoder from "./pages/TranscriptDecoder";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
+import AgentSettings from "./pages/AgentSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -92,6 +93,7 @@ const App = () => (
                   <Route path="/transcript-decoder" element={<TranscriptDecoder />} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:slug" element={<BlogPost />} />
+                  <Route path="/agent-settings" element={<AgentSettings />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </ReferralTracker>

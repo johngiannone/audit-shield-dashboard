@@ -291,7 +291,7 @@ export default function AgentCaseDetail() {
       // Fetch agent profile
       const { data: agentProfile, error: agentError } = await supabase
         .from('profiles')
-        .select('full_name, address, phone, brand_firm_name')
+        .select('full_name, address, phone, brand_firm_name, caf_number, ptin')
         .eq('id', profileId)
         .single();
 
@@ -321,6 +321,8 @@ export default function AgentCaseDetail() {
           address: agentProfile.address || '',
           phone: agentProfile.phone || '',
           firmName: agentProfile.brand_firm_name || undefined,
+          cafNumber: agentProfile.caf_number || undefined,
+          ptin: agentProfile.ptin || undefined,
         },
         {
           name: clientProfile.full_name,
