@@ -1,4 +1,4 @@
-import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette, ShieldCheck, ScanSearch, Files, Bot, Eraser, FileSearch } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette, ShieldCheck, ScanSearch, Files, Bot, Eraser, FileSearch, Settings } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useBranding } from '@/hooks/useBranding';
@@ -34,6 +34,7 @@ const enrolledAgentNavItems = [
   { title: 'Case Queue', url: '/queue', icon: Inbox },
   { title: 'My Caseload', url: '/caseload', icon: Briefcase },
   { title: 'Risk Assessments', url: '/risk-assessments', icon: ScanSearch },
+  { title: 'Settings', url: '/agent-settings', icon: Settings },
 ];
 
 const taxPreparerNavItems = [

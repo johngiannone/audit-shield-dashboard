@@ -955,12 +955,14 @@ export type Database = {
           brand_firm_name: string | null
           brand_logo_url: string | null
           brand_primary_color: string | null
+          caf_number: string | null
           created_at: string
           email: string | null
           full_name: string | null
           id: string
           managed_by: string | null
           phone: string | null
+          ptin: string | null
           referral_code: string | null
           referred_by: string | null
           updated_at: string
@@ -973,12 +975,14 @@ export type Database = {
           brand_firm_name?: string | null
           brand_logo_url?: string | null
           brand_primary_color?: string | null
+          caf_number?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
           managed_by?: string | null
           phone?: string | null
+          ptin?: string | null
           referral_code?: string | null
           referred_by?: string | null
           updated_at?: string
@@ -991,12 +995,14 @@ export type Database = {
           brand_firm_name?: string | null
           brand_logo_url?: string | null
           brand_primary_color?: string | null
+          caf_number?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
           managed_by?: string | null
           phone?: string | null
+          ptin?: string | null
           referral_code?: string | null
           referred_by?: string | null
           updated_at?: string
