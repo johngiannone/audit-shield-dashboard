@@ -18,7 +18,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Loader2, Building, Calendar, User, FileText, ExternalLink, AlertTriangle, Bell, UserMinus } from 'lucide-react';
+import { ArrowLeft, Loader2, Building, Calendar, User, FileText, ExternalLink, AlertTriangle, Bell, UserMinus, FileSignature } from 'lucide-react';
+import { downloadForm2848 } from '@/utils/form-2848-generator';
 import { useToast } from '@/hooks/use-toast';
 import { CaseNotes } from '@/components/cases/CaseNotes';
 import { CaseTimeline } from '@/components/cases/CaseTimeline';
@@ -57,6 +58,7 @@ export default function AgentCaseDetail() {
   const [taxReturnUrl, setTaxReturnUrl] = useState<string | null>(null);
   const [sendingReminder, setSendingReminder] = useState(false);
   const [unassigning, setUnassigning] = useState(false);
+  const [generatingPOA, setGeneratingPOA] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -281,6 +283,70 @@ export default function AgentCaseDetail() {
     }
   };
 
+  const generatePOA = async () => {
+    if (!caseDetail || !profileId || !user) return;
+
+    setGeneratingPOA(true);
+    try {
+      // Fetch agent profile
+      const { data: agentProfile, error: agentError } = await supabase
+        .from('profiles')
+        .select('full_name, address, phone, brand_firm_name')
+        .eq('id', profileId)
+        .single();
+
+      if (agentError) throw agentError;
+
+      // Fetch client profile
+      const { data: clientProfile, error: clientError } = await supabase
+        .from('profiles')
+        .select('full_name, address, phone')
+        .eq('id', caseDetail.client_id)
+        .single();
+
+      if (clientError) throw clientError;
+
+      if (!agentProfile?.full_name || !clientProfile?.full_name) {
+        toast({
+          title: 'Missing Information',
+          description: 'Agent or client profile information is incomplete.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      downloadForm2848(
+        {
+          name: agentProfile.full_name,
+          address: agentProfile.address || '',
+          phone: agentProfile.phone || '',
+          firmName: agentProfile.brand_firm_name || undefined,
+        },
+        {
+          name: clientProfile.full_name,
+          address: clientProfile.address || '',
+          phone: clientProfile.phone || undefined,
+          taxYear: caseDetail.tax_year,
+          taxFormType: '1040',
+        }
+      );
+
+      toast({
+        title: 'POA Generated',
+        description: 'Form 2848 has been downloaded.',
+      });
+    } catch (error) {
+      console.error('POA generation error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate Form 2848',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingPOA(false);
+    }
+  };
+
   const handleViewDocument = (documentType: string, url: string) => {
     // Log security event
     securityLog.viewedDocument(caseDetail?.id || '', documentType);
@@ -341,6 +407,18 @@ export default function AgentCaseDetail() {
               summary={caseDetail.summary}
               agency={caseDetail.notice_agency}
             />
+            <Button
+              variant="outline"
+              onClick={generatePOA}
+              disabled={generatingPOA}
+            >
+              {generatingPOA ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <FileSignature className="h-4 w-4 mr-2" />
+              )}
+              Generate POA (2848)
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
