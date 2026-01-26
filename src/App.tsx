@@ -8,6 +8,7 @@ import { BrandingProvider } from "@/hooks/useBranding";
 import { HelmetProvider } from "react-helmet-async";
 import { useReferralTracking } from "@/hooks/useReferralTracking";
 import Index from "./pages/Index";
+import FreeScan from "./pages/FreeScan";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Plans from "./pages/Plans";
@@ -62,6 +63,7 @@ const App = () => (
               <ReferralTracker>
                 <Routes>
                   <Route path="/" element={<Index />} />
+                  <Route path="/free-scan" element={<FreeScan />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/plans" element={<Plans />} />
