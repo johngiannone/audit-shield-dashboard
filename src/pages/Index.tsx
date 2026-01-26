@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Helmet } from 'react-helmet-async';
 import { PricingCard } from '@/components/landing/PricingCard';
 import { TaxSeasonBanner } from '@/components/landing/TaxSeasonBanner';
+import { TaxTipsSection } from '@/components/landing/TaxTipsSection';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -512,6 +513,9 @@ export default function Index() {
             </div>
           </div>
         </div>
+
+        {/* Tax Tips Section */}
+        <TaxTipsSection />
       </main>
 
       {/* Pre-Footer CTA */}
