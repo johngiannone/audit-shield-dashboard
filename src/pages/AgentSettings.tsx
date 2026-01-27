@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Save, User, Shield } from 'lucide-react';
+import { Loader2, Save, User, Shield, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { MaskedText } from '@/components/ui/masked-text';
 
 interface AgentProfile {
   full_name: string;
@@ -27,6 +28,7 @@ export default function AgentSettings() {
   
   const [dataLoading, setDataLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editingCredentials, setEditingCredentials] = useState(false);
   const [profile, setProfile] = useState<AgentProfile>({
     full_name: '',
     email: '',
@@ -199,43 +201,92 @@ export default function AgentSettings() {
         {/* IRS Credentials */}
         <Card className="border-0 shadow-md">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              IRS Credentials
-            </CardTitle>
-            <CardDescription>
-              Your professional identification numbers for IRS representation
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  IRS Credentials
+                </CardTitle>
+                <CardDescription>
+                  Your professional identification numbers for IRS representation
+                </CardDescription>
+              </div>
+              {(profile.caf_number || profile.ptin) && !editingCredentials && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingCredentials(true)}
+                >
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="caf_number">CAF Number</Label>
-                <Input
-                  id="caf_number"
-                  value={profile.caf_number}
-                  onChange={(e) => handleChange('caf_number', e.target.value)}
-                  placeholder="0000-00000-X"
-                  maxLength={15}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Centralized Authorization File number assigned by the IRS
-                </p>
+            {/* Read-only display when credentials exist and not editing */}
+            {(profile.caf_number || profile.ptin) && !editingCredentials ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-sm">CAF Number</Label>
+                  <div className="py-2">
+                    <MaskedText
+                      value={profile.caf_number}
+                      type="caf"
+                      visibleChars={4}
+                      className="text-base"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Centralized Authorization File number assigned by the IRS
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-sm">PTIN</Label>
+                  <div className="py-2">
+                    <MaskedText
+                      value={profile.ptin}
+                      type="ptin"
+                      visibleChars={4}
+                      className="text-base"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Preparer Tax Identification Number
+                  </p>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="ptin">PTIN</Label>
-                <Input
-                  id="ptin"
-                  value={profile.ptin}
-                  onChange={(e) => handleChange('ptin', e.target.value)}
-                  placeholder="P00000000"
-                  maxLength={10}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Preparer Tax Identification Number
-                </p>
+            ) : (
+              /* Editable inputs when no credentials or editing */
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="caf_number">CAF Number</Label>
+                  <Input
+                    id="caf_number"
+                    value={profile.caf_number}
+                    onChange={(e) => handleChange('caf_number', e.target.value)}
+                    placeholder="0000-00000-X"
+                    maxLength={15}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Centralized Authorization File number assigned by the IRS
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ptin">PTIN</Label>
+                  <Input
+                    id="ptin"
+                    value={profile.ptin}
+                    onChange={(e) => handleChange('ptin', e.target.value)}
+                    placeholder="P00000000"
+                    maxLength={10}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Preparer Tax Identification Number
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="p-3 rounded-lg bg-info/10 border border-info/20">
               <p className="text-sm text-info">
