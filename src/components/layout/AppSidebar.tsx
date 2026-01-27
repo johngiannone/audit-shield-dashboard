@@ -1,5 +1,6 @@
 import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette, ShieldCheck, ScanSearch, Files, Bot, Eraser, FileSearch, Settings } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useBranding } from '@/hooks/useBranding';
 import { useState, useEffect } from 'react';
@@ -20,37 +21,38 @@ import {
 import { cn } from '@/lib/utils';
 
 const clientNavItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: Home },
-  { title: 'My Cases', url: '/my-cases', icon: FolderOpen },
-  { title: 'My Plans', url: '/plans', icon: FileText },
-  { title: 'Report a Notice', url: '/report', icon: AlertTriangle },
-  { title: 'Audit Risk Check', url: '/audit-risk', icon: ScanSearch },
-  { title: 'Penalty Eraser', url: '/penalty-eraser', icon: Eraser },
-  { title: 'Transcript Decoder', url: '/transcript-decoder', icon: FileSearch },
+  { titleKey: 'nav.dashboard', url: '/dashboard', icon: Home },
+  { titleKey: 'nav.myCases', url: '/my-cases', icon: FolderOpen },
+  { titleKey: 'nav.myPlans', url: '/plans', icon: FileText },
+  { titleKey: 'nav.reportNotice', url: '/report', icon: AlertTriangle },
+  { titleKey: 'nav.auditRiskCheck', url: '/audit-risk', icon: ScanSearch },
+  { titleKey: 'nav.penaltyEraser', url: '/penalty-eraser', icon: Eraser },
+  { titleKey: 'nav.transcriptDecoder', url: '/transcript-decoder', icon: FileSearch },
 ];
 
 const enrolledAgentNavItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: Home },
-  { title: 'Case Queue', url: '/queue', icon: Inbox },
-  { title: 'My Caseload', url: '/caseload', icon: Briefcase },
-  { title: 'Risk Assessments', url: '/risk-assessments', icon: ScanSearch },
-  { title: 'Settings', url: '/agent-settings', icon: Settings },
+  { titleKey: 'nav.dashboard', url: '/dashboard', icon: Home },
+  { titleKey: 'nav.caseQueue', url: '/queue', icon: Inbox },
+  { titleKey: 'nav.myCaseload', url: '/caseload', icon: Briefcase },
+  { titleKey: 'nav.riskAssessments', url: '/risk-assessments', icon: ScanSearch },
+  { titleKey: 'nav.settings', url: '/agent-settings', icon: Settings },
 ];
 
 const taxPreparerNavItems = [
-  { title: 'Dashboard', url: '/dashboard', icon: Home },
-  { title: 'My Clients', url: '/my-clients', icon: UsersRound },
-  { title: 'Bulk Enroll', url: '/bulk-enroll', icon: UserPlus },
-  { title: 'Batch Risk Scan', url: '/batch-risk-scan', icon: Files },
-  { title: 'Branding', url: '/branding', icon: Palette },
+  { titleKey: 'nav.dashboard', url: '/dashboard', icon: Home },
+  { titleKey: 'nav.myClients', url: '/my-clients', icon: UsersRound },
+  { titleKey: 'nav.bulkEnroll', url: '/bulk-enroll', icon: UserPlus },
+  { titleKey: 'nav.batchRiskScan', url: '/batch-risk-scan', icon: Files },
+  { titleKey: 'nav.branding', url: '/branding', icon: Palette },
 ];
 
 const superAdminNavItems = [
-  { title: 'Compliance', url: '/compliance', icon: ShieldCheck },
-  { title: 'AI Models', url: '/admin/model-config', icon: Bot },
+  { titleKey: 'nav.compliance', url: '/compliance', icon: ShieldCheck },
+  { titleKey: 'nav.aiModels', url: '/admin/model-config', icon: Bot },
 ];
 
 export function AppSidebar() {
+  const { t } = useTranslation();
   const { role, user } = useAuth();
   const { branding, isWhiteLabeled } = useBranding();
   const location = useLocation();
@@ -142,10 +144,10 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => {
+            {navItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 return (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.titleKey}>
                     <SidebarMenuButton asChild>
                       <NavLink
                         to={item.url}
@@ -160,7 +162,7 @@ export function AppSidebar() {
                           'h-5 w-5 transition-colors',
                           isActive ? 'text-sidebar-primary' : ''
                         )} />
-                        {!collapsed && <span>{item.title}</span>}
+                        {!collapsed && <span>{t(item.titleKey)}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
