@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +41,7 @@ interface ManagedClient {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, role, loading, resendVerificationEmail } = useAuth();
   const { toast } = useToast();
   
@@ -209,6 +211,27 @@ export default function Dashboard() {
     }
   };
 
+  // Get welcome title based on role
+  const getWelcomeTitle = () => {
+    if (role === 'enrolled_agent') return t('dashboard.agentDashboard');
+    if (role === 'tax_preparer') return t('dashboard.taxPreparerPortal');
+    return t('dashboard.welcomeBack');
+  };
+
+  // Get welcome description based on role
+  const getWelcomeDescription = () => {
+    if (role === 'enrolled_agent') return t('dashboard.manageClientsCases');
+    if (role === 'tax_preparer') return t('dashboard.manageClientMemberships');
+    return t('dashboard.auditDefenseStatus');
+  };
+
+  // Get CTA button text based on role
+  const getCtaButtonText = () => {
+    if (role === 'enrolled_agent') return t('dashboard.viewCaseQueue');
+    if (role === 'tax_preparer') return t('dashboard.bulkEnrollClients');
+    return t('dashboard.reportNewNotice');
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
@@ -216,10 +239,10 @@ export default function Dashboard() {
         {isEmailUnverified && !dismissedVerificationBanner && (
           <Alert className="border-warning/30 bg-warning/10">
             <Mail className="h-4 w-4 text-warning" />
-            <AlertTitle className="text-warning">Email not verified</AlertTitle>
+            <AlertTitle className="text-warning">{t('dashboard.emailNotVerified')}</AlertTitle>
             <AlertDescription className="mt-2">
               <p className="text-muted-foreground mb-3">
-                Please verify your email address ({user.email}) to ensure you receive important notifications about your cases.
+                {t('dashboard.verifyEmailDescription', { email: user.email })}
               </p>
               <div className="flex items-center gap-3">
                 <Button
@@ -232,10 +255,10 @@ export default function Dashboard() {
                   {isResending ? (
                     <>
                       <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                      Sending...
+                      {t('dashboard.sending')}
                     </>
                   ) : (
-                    'Resend verification email'
+                    t('dashboard.resendVerificationEmail')
                   )}
                 </Button>
                 <button
@@ -243,7 +266,7 @@ export default function Dashboard() {
                   className="text-sm text-muted-foreground hover:text-foreground"
                   onClick={dismissVerificationBanner}
                 >
-                  Dismiss
+                  {t('dashboard.dismiss')}
                 </button>
               </div>
             </AlertDescription>
@@ -263,21 +286,17 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">
-              {role === 'enrolled_agent' ? 'Agent Dashboard' : role === 'tax_preparer' ? 'Tax Preparer Portal' : 'Welcome Back'}
+              {getWelcomeTitle()}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {role === 'enrolled_agent' 
-                ? 'Manage your cases and help clients navigate audits'
-                : role === 'tax_preparer'
-                ? 'Manage client memberships and enrollment'
-                : 'Your audit defense status at a glance'}
+              {getWelcomeDescription()}
             </p>
           </div>
           <Button 
             onClick={() => navigate(role === 'enrolled_agent' ? '/queue' : role === 'tax_preparer' ? '/bulk-enroll' : '/report')}
             className="w-full md:w-auto"
           >
-            {role === 'enrolled_agent' ? 'View Case Queue' : role === 'tax_preparer' ? 'Bulk Enroll Clients' : 'Report New Notice'}
+            {getCtaButtonText()}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
@@ -289,7 +308,7 @@ export default function Dashboard() {
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Triage
+                    {t('status.triage')}
                   </CardTitle>
                   <Inbox className="h-5 w-5 text-info" />
                 </CardHeader>
@@ -297,14 +316,14 @@ export default function Dashboard() {
                   <div className="text-3xl font-bold font-display">
                     {cases.filter(c => c.status === 'triage').length}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Waiting for assignment</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('dashboard.triageDescription')}</p>
                 </CardContent>
               </Card>
 
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Agent Action
+                    {t('status.agent_action')}
                   </CardTitle>
                   <Clock className="h-5 w-5 text-warning" />
                 </CardHeader>
@@ -312,14 +331,14 @@ export default function Dashboard() {
                   <div className="text-3xl font-bold font-display">
                     {cases.filter(c => c.status === 'agent_action').length}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Waiting on agent work</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('dashboard.agentActionDescription')}</p>
                 </CardContent>
               </Card>
 
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Resolved
+                    {t('status.resolved')}
                   </CardTitle>
                   <CheckCircle className="h-5 w-5 text-success" />
                 </CardHeader>
@@ -327,7 +346,7 @@ export default function Dashboard() {
                   <div className="text-3xl font-bold font-display">
                     {cases.filter(c => c.status === 'resolved').length}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Successfully closed</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('dashboard.resolvedDescription')}</p>
                 </CardContent>
               </Card>
             </>
@@ -336,7 +355,7 @@ export default function Dashboard() {
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Total Clients
+                    {t('dashboard.totalClients')}
                   </CardTitle>
                   <Users className="h-5 w-5 text-primary" />
                 </CardHeader>
@@ -344,14 +363,14 @@ export default function Dashboard() {
                   <div className="text-3xl font-bold font-display">
                     {dataLoading ? '-' : totalClients}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Enrolled clients</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('dashboard.enrolledClients')}</p>
                 </CardContent>
               </Card>
 
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Purchased
+                    {t('dashboard.purchased')}
                   </CardTitle>
                   <CreditCard className="h-5 w-5 text-success" />
                 </CardHeader>
@@ -359,14 +378,14 @@ export default function Dashboard() {
                   <div className="text-3xl font-bold font-display">
                     {dataLoading ? '-' : purchasedClients}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Paid memberships</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('dashboard.paidMemberships')}</p>
                 </CardContent>
               </Card>
 
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Comped
+                    {t('dashboard.comped')}
                   </CardTitle>
                   <Gift className="h-5 w-5 text-info" />
                 </CardHeader>
@@ -374,14 +393,14 @@ export default function Dashboard() {
                   <div className="text-3xl font-bold font-display">
                     {dataLoading ? '-' : compedClients}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Free memberships</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('dashboard.freeMemberships')}</p>
                 </CardContent>
               </Card>
 
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Activated
+                    {t('dashboard.activated')}
                   </CardTitle>
                   <CheckCircle className="h-5 w-5 text-success" />
                 </CardHeader>
@@ -389,7 +408,7 @@ export default function Dashboard() {
                   <div className="text-3xl font-bold font-display">
                     {dataLoading ? '-' : activatedCount}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Logged in at least once</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('dashboard.activatedClients')}</p>
                 </CardContent>
               </Card>
             </>
@@ -398,7 +417,7 @@ export default function Dashboard() {
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Active Plans
+                    {t('dashboard.activePlans')}
                   </CardTitle>
                   <FileText className="h-5 w-5 text-success" />
                 </CardHeader>
@@ -406,14 +425,14 @@ export default function Dashboard() {
                   <div className="text-3xl font-bold font-display">
                     {plans.filter(p => p.status === 'active').length}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Coverage active</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('dashboard.currentlyProtected')}</p>
                 </CardContent>
               </Card>
 
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Open Cases
+                    {t('dashboard.openCases')}
                   </CardTitle>
                   <AlertTriangle className="h-5 w-5 text-warning" />
                 </CardHeader>
@@ -421,14 +440,14 @@ export default function Dashboard() {
                   <div className="text-3xl font-bold font-display">
                     {cases.filter(c => c.status !== 'resolved').length}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Being handled</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('dashboard.activeCases')}</p>
                 </CardContent>
               </Card>
 
               <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Resolved
+                    {t('status.resolved')}
                   </CardTitle>
                   <CheckCircle className="h-5 w-5 text-success" />
                 </CardHeader>
@@ -436,7 +455,7 @@ export default function Dashboard() {
                   <div className="text-3xl font-bold font-display">
                     {cases.filter(c => c.status === 'resolved').length}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Completed</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('dashboard.resolvedDescription')}</p>
                 </CardContent>
               </Card>
             </>
@@ -452,7 +471,7 @@ export default function Dashboard() {
               className="flex-1"
             >
               <Users className="mr-2 h-4 w-4" />
-              View All Clients
+              {t('dashboard.viewAllClients')}
             </Button>
           </div>
         )}
@@ -466,9 +485,9 @@ export default function Dashboard() {
         {role !== 'tax_preparer' && (
           <Card className="border-0 shadow-md">
             <CardHeader>
-              <CardTitle className="font-display">Recent Cases</CardTitle>
+              <CardTitle className="font-display">{t('dashboard.recentCases')}</CardTitle>
               <CardDescription>
-                {role === 'enrolled_agent' ? 'Latest cases in the system' : 'Your recent audit cases'}
+                {t('dashboard.latestCasesDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -479,14 +498,14 @@ export default function Dashboard() {
               ) : cases.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No cases yet</p>
+                  <p>{t('dashboard.noCasesYet')}</p>
                   {role === 'client' && (
                     <Button 
                       variant="link" 
                       onClick={() => navigate('/report')}
                       className="mt-2"
                     >
-                      Report your first notice
+                      {t('dashboard.submitFirstNotice')}
                     </Button>
                   )}
                 </div>
@@ -506,12 +525,12 @@ export default function Dashboard() {
                             {caseItem.notice_agency} - {caseItem.notice_type}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Tax Year {caseItem.tax_year}
+                            {t('caseDetail.taxYear')} {caseItem.tax_year}
                           </p>
                         </div>
                       </div>
                       <Badge variant="outline" className={getStatusBadge(caseItem.status)}>
-                        {caseItem.status.replace('_', ' ')}
+                        {t(`status.${caseItem.status}`, { defaultValue: caseItem.status.replace('_', ' ') })}
                       </Badge>
                     </div>
                   ))}
