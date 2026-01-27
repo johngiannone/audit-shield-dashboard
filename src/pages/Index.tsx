@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Shield, ArrowRight, Loader2, Lock, Award, BadgeCheck, ShieldCheck, CloudUpload, Users, Gavel, CheckCircle, Calendar, Briefcase, Star, X, Clock, DollarSign, Frown, Smile, ChevronUp } from 'lucide-react';
@@ -12,6 +13,7 @@ import { TaxTipsSection } from '@/components/landing/TaxTipsSection';
 export default function Index() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { t } = useTranslation();
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   useEffect(() => {
@@ -42,54 +44,82 @@ export default function Index() {
     "mainEntity": [
       {
         "@type": "Question",
-        "name": "What exactly does 'Audit Defense' cover?",
+        "name": t('landing.faq.q1'),
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "If you receive a notice from the IRS or State tax authorities, we handle everything. This includes drafting correspondence, making phone calls to the agency, and physically representing you at audit meetings if necessary. We defend your tax return to ensure you only pay what you legally owe—not a penny more."
+          "text": t('landing.faq.a1')
         }
       },
       {
         "@type": "Question",
-        "name": "Do I still have to pay the taxes if I lose?",
+        "name": t('landing.faq.q2'),
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Our membership covers 100% of the professional fees to defend you (which can cost $3,500+ without insurance). However, any additional taxes, penalties, or interest determined to be owed to the IRS are your responsibility. Our job is to minimize or eliminate that amount through expert defense."
+          "text": t('landing.faq.a2')
         }
       },
       {
         "@type": "Question",
-        "name": "I am self-employed / have a side hustle. Which plan do I need?",
+        "name": t('landing.faq.q3'),
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "You need the Platinum Business plan. The Silver and Gold plans cover personal W-2 income and standard deductions. If you file a Schedule C (Sole Proprietorship) or have 1099 income, your audit risk is significantly higher, requiring the specialized defense included in the Platinum tier."
+          "text": t('landing.faq.a3')
         }
       },
       {
         "@type": "Question",
-        "name": "Does the 'Gold Shield' cover tax returns I filed years ago?",
+        "name": t('landing.faq.q4'),
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes! The Gold Shield plan provides Retroactive Coverage. It protects the current tax year plus the previous three tax years (the standard IRS statute of limitations). As long as you haven't received a notice for those years before buying the plan, they are fully covered."
+          "text": t('landing.faq.a4')
         }
       },
       {
         "@type": "Question",
-        "name": "What if I already received a notice yesterday?",
+        "name": t('landing.faq.q5'),
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Our prepaid memberships are for future protection only. If you already have a notice in hand, we work exclusively with Tax Audit Help LLC for audit defense and would be happy to refer you to one of their specialists. Please contact us and we'll connect you with the right expert for your situation."
+          "text": t('landing.faq.a5')
         }
       },
       {
         "@type": "Question",
-        "name": "Who will be handling my case?",
+        "name": t('landing.faq.q6'),
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "You are assigned a dedicated Enrolled Agent (EA) or CPA. Enrolled Agents are federally licensed tax practitioners empowered by the U.S. Department of the Treasury to represent taxpayers before the IRS. We do not outsource your defense to unqualified support staff."
+          "text": t('landing.faq.a6')
         }
       }
     ]
   };
+
+  const coverageFeatures = [
+    t('landing.hero.features.irsDefense'),
+    t('landing.hero.features.stateCoverage'),
+    t('landing.hero.features.unlimitedConsultations'),
+    t('landing.hero.features.zeroCost')
+  ];
+
+  const howItWorksSteps = [
+    { 
+      step: '1', 
+      title: t('landing.howItWorks.step1Title'), 
+      desc: t('landing.howItWorks.step1Desc'),
+      icon: CloudUpload
+    },
+    { 
+      step: '2', 
+      title: t('landing.howItWorks.step2Title'), 
+      desc: t('landing.howItWorks.step2Desc'),
+      icon: Users
+    },
+    { 
+      step: '3', 
+      title: t('landing.howItWorks.step3Title'), 
+      desc: t('landing.howItWorks.step3Desc'),
+      icon: Gavel
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -108,15 +138,15 @@ export default function Index() {
           <div className="w-10 h-10 rounded-lg gradient-primary flex items-center justify-center shadow-md">
             <Shield className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-display text-xl font-semibold text-foreground hidden sm:inline">Return Shield</span>
+          <span className="font-display text-xl font-semibold text-foreground hidden sm:inline">{t('landing.brandName')}</span>
         </div>
         
         <div className="flex items-center gap-2 md:gap-4">
           <Link to="/partners">
-            <Button variant="ghost" size="sm" className="hidden md:inline-flex">For Tax Pros</Button>
+            <Button variant="ghost" size="sm" className="hidden md:inline-flex">{t('landing.forTaxPros')}</Button>
           </Link>
           <Link to="/auth">
-            <Button variant="outline" size="sm">Sign In</Button>
+            <Button variant="outline" size="sm">{t('auth.signIn')}</Button>
           </Link>
         </div>
       </header>
@@ -127,17 +157,17 @@ export default function Index() {
           {/* Left Side - Copy */}
           <div className="animate-slide-up relative z-10">
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-4">
-              Audit Protection for Your Tax Return. <span className="text-primary">Just $99/Year.</span>
+              {t('landing.hero.title')} <span className="text-primary">{t('landing.hero.price')}</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-              The IRS is hiring thousands of new agents. Lock in your defense team now. If you get audited, we handle everything for <span className="font-semibold text-foreground">$0 extra fees</span>.
+              {t('landing.hero.subtitle')} <span className="font-semibold text-foreground">{t('landing.hero.zeroFees')}</span>.
             </p>
             
             {/* Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
               <Link to="/auth">
                 <Button size="lg" className="w-full sm:w-auto text-base px-8">
-                  Get Coverage Now
+                  {t('landing.hero.cta')}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
@@ -147,7 +177,7 @@ export default function Index() {
                 className="w-full sm:w-auto text-base px-8"
                 onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
               >
-                View Membership Plans
+                {t('landing.hero.viewPlans')}
               </Button>
             </div>
 
@@ -158,19 +188,19 @@ export default function Index() {
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <BadgeCheck className="h-5 w-5 text-primary" />
                 </div>
-                <span className="text-sm font-medium">Enrolled Agents</span>
+                <span className="text-sm font-medium">{t('landing.trustSignals.enrolledAgents')}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <Lock className="h-5 w-5 text-primary" />
                 </div>
-                <span className="text-sm font-medium">Bank-Level Security</span>
+                <span className="text-sm font-medium">{t('landing.trustSignals.bankSecurity')}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <Award className="h-5 w-5 text-primary" />
                 </div>
-                <span className="text-sm font-medium">A+ Rating</span>
+                <span className="text-sm font-medium">{t('landing.trustSignals.aRating')}</span>
               </div>
             </div>
           </div>
@@ -186,8 +216,8 @@ export default function Index() {
                       <ShieldCheck className="h-7 w-7 text-white" />
                     </div>
                     <div>
-                      <p className="text-white/80 text-sm font-medium">Protection Status</p>
-                      <p className="text-white text-xl font-bold">ACTIVE</p>
+                      <p className="text-white/80 text-sm font-medium">{t('landing.hero.protectionStatus')}</p>
+                      <p className="text-white text-xl font-bold">{t('landing.hero.active')}</p>
                     </div>
                   </div>
                   <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
@@ -197,19 +227,19 @@ export default function Index() {
               {/* Status Card Body */}
               <div className="p-6 space-y-5">
                 <div className="flex items-center justify-between py-3 border-b border-border">
-                  <span className="text-muted-foreground">Coverage Year</span>
+                  <span className="text-muted-foreground">{t('landing.hero.coverageYear')}</span>
                   <span className="font-semibold text-foreground">2025</span>
                 </div>
                 <div className="flex items-center justify-between py-3 border-b border-border">
-                  <span className="text-muted-foreground">Plan Type</span>
-                  <span className="font-semibold text-foreground">Premium Protection</span>
+                  <span className="text-muted-foreground">{t('landing.hero.planType')}</span>
+                  <span className="font-semibold text-foreground">{t('landing.hero.premiumProtection')}</span>
                 </div>
                 <div className="flex items-center justify-between py-3 border-b border-border">
-                  <span className="text-muted-foreground">Defense Team</span>
-                  <span className="font-semibold text-foreground">Enrolled Agent Assigned</span>
+                  <span className="text-muted-foreground">{t('landing.hero.defenseTeam')}</span>
+                  <span className="font-semibold text-foreground">{t('landing.hero.agentAssigned')}</span>
                 </div>
                 <div className="flex items-center justify-between py-3">
-                  <span className="text-muted-foreground">Renewal</span>
+                  <span className="text-muted-foreground">{t('landing.hero.renewal')}</span>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="font-semibold text-foreground">12/31/2026</span>
@@ -218,7 +248,7 @@ export default function Index() {
                 
                 {/* Coverage Features */}
                 <div className="pt-4 space-y-3">
-                  {['Full IRS Audit Defense', 'State Tax Coverage', 'Unlimited Consultations', '$0 Out-of-Pocket'].map((feature, i) => (
+                  {coverageFeatures.map((feature, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm">
                       <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                       <span className="text-foreground">{feature}</span>
@@ -240,7 +270,7 @@ export default function Index() {
                 10,000<span className="text-primary">+</span>
               </div>
               <div className="text-sm uppercase tracking-widest text-muted-foreground mt-2 font-medium">
-                Cases Resolved
+                {t('landing.trustStrip.casesResolved')}
               </div>
             </div>
             <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
@@ -248,7 +278,7 @@ export default function Index() {
                 $50M<span className="text-primary">+</span>
               </div>
               <div className="text-sm uppercase tracking-widest text-muted-foreground mt-2 font-medium">
-                Tax Savings Saved
+                {t('landing.trustStrip.taxSavings')}
               </div>
             </div>
             <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
@@ -256,7 +286,7 @@ export default function Index() {
                 &lt;4<span className="text-primary">hrs</span>
               </div>
               <div className="text-sm uppercase tracking-widest text-muted-foreground mt-2 font-medium">
-                Average Response Time
+                {t('landing.trustStrip.responseTime')}
               </div>
             </div>
           </div>
@@ -266,10 +296,10 @@ export default function Index() {
         <div className="mt-24 max-w-5xl mx-auto" id="pricing">
           <div className="text-center mb-14">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Choose Your Protection Plan
+              {t('landing.pricing.title')}
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              One flat fee. Zero deductibles. Full representation if you get audited.
+              {t('landing.pricing.subtitle')}
             </p>
           </div>
 
@@ -282,72 +312,72 @@ export default function Index() {
           <div className="mt-10 text-center">
             <div className="inline-flex items-center gap-2 text-muted-foreground">
               <Lock className="h-4 w-4" />
-              <span className="text-sm">Membership includes 100% of professional fees. No hidden costs.</span>
+              <span className="text-sm">{t('landing.pricing.trustFooter')}</span>
         </div>
 
         {/* FAQ Section */}
         <div className="mt-24 max-w-4xl mx-auto bg-secondary/30 rounded-3xl p-8 md:p-12" id="faq">
           <div className="text-center mb-10">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Frequently Asked Questions
+              {t('landing.faq.title')}
             </h2>
             <p className="text-muted-foreground text-lg">
-              Everything you need to know about our audit defense coverage
+              {t('landing.faq.subtitle')}
             </p>
           </div>
 
           <Accordion type="single" collapsible className="space-y-4">
             <AccordionItem value="item-1" className="bg-card rounded-xl border border-border px-6 data-[state=open]:shadow-md transition-shadow">
               <AccordionTrigger className="font-display text-left text-foreground hover:no-underline py-5">
-                What exactly does "Audit Defense" cover?
+                {t('landing.faq.q1')}
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground pb-5">
-                If you receive a notice from the IRS or State tax authorities, we handle everything. This includes drafting correspondence, making phone calls to the agency, and physically representing you at audit meetings if necessary. We defend your tax return to ensure you only pay what you legally owe—not a penny more.
+                {t('landing.faq.a1')}
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-2" className="bg-card rounded-xl border border-border px-6 data-[state=open]:shadow-md transition-shadow">
               <AccordionTrigger className="font-display text-left text-foreground hover:no-underline py-5">
-                Do I still have to pay the taxes if I lose?
+                {t('landing.faq.q2')}
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground pb-5">
-                Yes. Our membership covers 100% of the professional fees to defend you (which can cost $3,500+ without insurance). However, any additional taxes, penalties, or interest determined to be owed to the IRS are your responsibility. Our job is to minimize or eliminate that amount through expert defense.
+                {t('landing.faq.a2')}
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-3" className="bg-card rounded-xl border border-border px-6 data-[state=open]:shadow-md transition-shadow">
               <AccordionTrigger className="font-display text-left text-foreground hover:no-underline py-5">
-                I am self-employed / have a side hustle. Which plan do I need?
+                {t('landing.faq.q3')}
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground pb-5">
-                You need the Platinum Business plan. The Silver and Gold plans cover personal W-2 income and standard deductions. If you file a Schedule C (Sole Proprietorship) or have 1099 income, your audit risk is significantly higher, requiring the specialized defense included in the Platinum tier.
+                {t('landing.faq.a3')}
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-4" className="bg-card rounded-xl border border-border px-6 data-[state=open]:shadow-md transition-shadow">
               <AccordionTrigger className="font-display text-left text-foreground hover:no-underline py-5">
-                Does the "Gold Shield" cover tax returns I filed years ago?
+                {t('landing.faq.q4')}
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground pb-5">
-                Yes! The Gold Shield plan provides Retroactive Coverage. It protects the current tax year plus the previous three tax years (the standard IRS statute of limitations). As long as you haven't received a notice for those years before buying the plan, they are fully covered.
+                {t('landing.faq.a4')}
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-5" className="bg-card rounded-xl border border-border px-6 data-[state=open]:shadow-md transition-shadow">
               <AccordionTrigger className="font-display text-left text-foreground hover:no-underline py-5">
-                What if I already received a notice yesterday?
+                {t('landing.faq.q5')}
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground pb-5">
-                Our prepaid memberships are for future protection only. If you already have a notice in hand, we work exclusively with Tax Audit Help LLC for audit defense and would be happy to refer you to one of their specialists. Please contact us and we'll connect you with the right expert for your situation.
+                {t('landing.faq.a5')}
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-6" className="bg-card rounded-xl border border-border px-6 data-[state=open]:shadow-md transition-shadow">
               <AccordionTrigger className="font-display text-left text-foreground hover:no-underline py-5">
-                Who will be handling my case?
+                {t('landing.faq.q6')}
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground pb-5">
-                You are assigned a dedicated Enrolled Agent (EA) or CPA. Enrolled Agents are federally licensed tax practitioners empowered by the U.S. Department of the Treasury to represent taxpayers before the IRS. We do not outsource your defense to unqualified support staff.
+                {t('landing.faq.a6')}
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -359,10 +389,10 @@ export default function Index() {
         <div className="mt-24 max-w-5xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Why Prepay for Protection?
+              {t('landing.whyPrepay.title')}
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              See the difference our coverage makes when the IRS comes calling
+              {t('landing.whyPrepay.subtitle')}
             </p>
           </div>
 
@@ -374,7 +404,7 @@ export default function Index() {
                   <X className="h-6 w-6 text-red-600 dark:text-red-400" />
                 </div>
                 <h3 className="font-display text-xl font-semibold text-foreground">
-                  The Cost of an Audit <span className="text-red-600 dark:text-red-400">Without Us</span>
+                  {t('landing.whyPrepay.withoutUs.title')} <span className="text-red-600 dark:text-red-400">{t('landing.whyPrepay.withoutUs.highlight')}</span>
                 </h3>
               </div>
               
@@ -384,8 +414,8 @@ export default function Index() {
                     <DollarSign className="h-5 w-5 text-red-600 dark:text-red-400" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Average Professional Fees</p>
-                    <p className="font-display text-2xl font-bold text-red-600 dark:text-red-400">$3,500+</p>
+                    <p className="text-muted-foreground text-sm">{t('landing.whyPrepay.withoutUs.feesLabel')}</p>
+                    <p className="font-display text-2xl font-bold text-red-600 dark:text-red-400">{t('landing.whyPrepay.withoutUs.feesValue')}</p>
                   </div>
                 </li>
                 <li className="flex items-start gap-4">
@@ -393,8 +423,8 @@ export default function Index() {
                     <Clock className="h-5 w-5 text-red-600 dark:text-red-400" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Hours of Your Time Lost</p>
-                    <p className="font-display text-2xl font-bold text-red-600 dark:text-red-400">40+ Hours</p>
+                    <p className="text-muted-foreground text-sm">{t('landing.whyPrepay.withoutUs.timeLabel')}</p>
+                    <p className="font-display text-2xl font-bold text-red-600 dark:text-red-400">{t('landing.whyPrepay.withoutUs.timeValue')}</p>
                   </div>
                 </li>
                 <li className="flex items-start gap-4">
@@ -402,8 +432,8 @@ export default function Index() {
                     <Frown className="h-5 w-5 text-red-600 dark:text-red-400" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Stress Level</p>
-                    <p className="font-display text-2xl font-bold text-red-600 dark:text-red-400">High</p>
+                    <p className="text-muted-foreground text-sm">{t('landing.whyPrepay.withoutUs.stressLabel')}</p>
+                    <p className="font-display text-2xl font-bold text-red-600 dark:text-red-400">{t('landing.whyPrepay.withoutUs.stressValue')}</p>
                   </div>
                 </li>
               </ul>
@@ -416,7 +446,7 @@ export default function Index() {
                   <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
                 </div>
                 <h3 className="font-display text-xl font-semibold text-foreground">
-                  The Cost <span className="text-green-600 dark:text-green-400">With Return Shield</span>
+                  {t('landing.whyPrepay.withUs.title')} <span className="text-green-600 dark:text-green-400">{t('landing.whyPrepay.withUs.highlight')}</span>
                 </h3>
               </div>
               
@@ -426,8 +456,8 @@ export default function Index() {
                     <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Your Cost</p>
-                    <p className="font-display text-2xl font-bold text-green-600 dark:text-green-400">$0 <span className="text-base font-normal text-muted-foreground">(Included in Plan)</span></p>
+                    <p className="text-muted-foreground text-sm">{t('landing.whyPrepay.withUs.costLabel')}</p>
+                    <p className="font-display text-2xl font-bold text-green-600 dark:text-green-400">{t('landing.whyPrepay.withUs.costValue')} <span className="text-base font-normal text-muted-foreground">{t('landing.whyPrepay.withUs.costNote')}</span></p>
                   </div>
                 </li>
                 <li className="flex items-start gap-4">
@@ -435,8 +465,8 @@ export default function Index() {
                     <Clock className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Your Time</p>
-                    <p className="font-display text-2xl font-bold text-green-600 dark:text-green-400">0 Hours</p>
+                    <p className="text-muted-foreground text-sm">{t('landing.whyPrepay.withUs.timeLabel')}</p>
+                    <p className="font-display text-2xl font-bold text-green-600 dark:text-green-400">{t('landing.whyPrepay.withUs.timeValue')}</p>
                   </div>
                 </li>
                 <li className="flex items-start gap-4">
@@ -444,8 +474,8 @@ export default function Index() {
                     <Smile className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground text-sm">Stress Level</p>
-                    <p className="font-display text-2xl font-bold text-green-600 dark:text-green-400">Zero</p>
+                    <p className="text-muted-foreground text-sm">{t('landing.whyPrepay.withUs.stressLabel')}</p>
+                    <p className="font-display text-2xl font-bold text-green-600 dark:text-green-400">{t('landing.whyPrepay.withUs.stressValue')}</p>
                   </div>
                 </li>
               </ul>
@@ -457,10 +487,10 @@ export default function Index() {
         <div className="mt-24 max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-4">
-              From Notice to Resolution in 3 Steps
+              {t('landing.howItWorks.title')}
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Our streamlined process makes audit defense simple and stress-free
+              {t('landing.howItWorks.subtitle')}
             </p>
           </div>
 
@@ -471,26 +501,7 @@ export default function Index() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-10">
-              {[
-                { 
-                  step: '1', 
-                  title: 'Upload Notice', 
-                  desc: 'Snap a photo of your IRS or State letter.',
-                  icon: CloudUpload
-                },
-                { 
-                  step: '2', 
-                  title: 'Get Matched', 
-                  desc: 'A dedicated Enrolled Agent is assigned to your case within hours.',
-                  icon: Users
-                },
-                { 
-                  step: '3', 
-                  title: 'Defense & Resolution', 
-                  desc: 'We communicate with the agency directly to resolve your case.',
-                  icon: Gavel
-                },
-              ].map((item, i) => (
+              {howItWorksSteps.map((item, i) => (
                 <div 
                   key={i} 
                   className="relative animate-fade-in" 
@@ -523,10 +534,10 @@ export default function Index() {
         <div className="container mx-auto px-6 text-center relative z-10">
           <div className="max-w-3xl mx-auto animate-fade-in">
             <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
-              The IRS Clock is Ticking
+              {t('landing.cta.title')}
             </h2>
             <p className="text-primary-foreground/80 text-lg md:text-xl mb-8 leading-relaxed">
-              Don't wait until you receive a notice. Lock in your protection today and file with confidence.
+              {t('landing.cta.subtitle')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/auth">
@@ -535,7 +546,7 @@ export default function Index() {
                   variant="secondary"
                   className="w-full sm:w-auto text-base px-10 font-semibold"
                 >
-                  Get Protected Now
+                  {t('landing.cta.button')}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
@@ -550,7 +561,7 @@ export default function Index() {
         className={`fixed bottom-8 right-8 z-50 p-3 rounded-full bg-primary text-primary-foreground shadow-lg transition-all duration-300 hover:scale-110 ${
           showBackToTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
         }`}
-        aria-label="Back to top"
+        aria-label={t('common.backToTop')}
       >
         <ChevronUp className="h-5 w-5" />
       </button>

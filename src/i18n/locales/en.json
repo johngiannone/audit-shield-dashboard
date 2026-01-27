@@ -12,7 +12,8 @@
     "spanish": "Español",
     "dismiss": "Dismiss",
     "error": "Error",
-    "success": "Success"
+    "success": "Success",
+    "backToTop": "Back to top"
   },
   "roles": {
     "client": "Client",
@@ -100,55 +101,104 @@
     "verifyingCode": "Verifying..."
   },
   "landing": {
+    "brandName": "Return Shield",
+    "forTaxPros": "For Tax Pros",
     "taxSeason": "Tax Season 2025",
     "daysUntilDeadline": "{{days}} days until April 15th deadline",
     "getProtected": "Get Protected",
-    "heroTitle": "Audit Protection for Your Tax Return.",
-    "heroPrice": "Just $99/Year.",
-    "heroDescription": "The IRS is hiring thousands of new agents. Lock in your defense team now. If you get audited, we handle everything for",
-    "zeroExtraFees": "$0 extra fees",
-    "getCoverageNow": "Get Coverage Now",
-    "viewMembershipPlans": "View Membership Plans",
-    "enrolledAgents": "Enrolled Agents",
-    "bankLevelSecurity": "Bank-Level Security",
-    "aRating": "A+ Rating",
-    "protectionStatus": "Protection Status",
-    "active": "ACTIVE",
-    "premiumProtection": "Premium Protection",
-    "enrolledAgentAssigned": "Enrolled Agent Assigned",
-    "casesResolved": "Cases Resolved",
-    "taxSavingsSaved": "Tax Savings Saved",
-    "averageResponseTime": "Average Response Time",
-    "chooseYourPlan": "Choose Your Protection Plan",
-    "membershipIncludes": "Membership includes 100% of professional fees. No hidden costs.",
-    "whyPrepay": "Why Prepay?",
-    "withoutUs": "Without Us",
-    "withReturnShield": "With Return Shield",
-    "stressLevel": "Stress Level",
-    "hoursLost": "Hours of Your Time Lost",
-    "howItWorks": "How It Works",
-    "step1Title": "Upload Notice",
-    "step1Description": "Upload your IRS or state notice and we'll analyze it within 24 hours.",
-    "step2Title": "Get Matched",
-    "step2Description": "We assign a dedicated Enrolled Agent or CPA to your case.",
-    "step3Title": "Defense & Resolution",
-    "step3Description": "Your specialist handles all IRS communication and fights for the best outcome.",
-    "irsClockTicking": "The IRS Clock is Ticking",
-    "dontWait": "Don't wait until you receive a notice. Get protected now.",
-    "getProtectedNow": "Get Protected Now",
-    "faqTitle": "Frequently Asked Questions",
-    "faq1Question": "What exactly does 'Audit Defense' cover?",
-    "faq1Answer": "If you receive a notice from the IRS or State tax authorities, we handle everything. This includes drafting correspondence, making phone calls to the agency, and physically representing you at audit meetings if necessary. We defend your tax return to ensure you only pay what you legally owe—not a penny more.",
-    "faq2Question": "Do I still have to pay the taxes if I lose?",
-    "faq2Answer": "Yes. Our membership covers 100% of the professional fees to defend you (which can cost $3,500+ without insurance). However, any additional taxes, penalties, or interest determined to be owed to the IRS are your responsibility. Our job is to minimize or eliminate that amount through expert defense.",
-    "faq3Question": "I am self-employed / have a side hustle. Which plan do I need?",
-    "faq3Answer": "You need the Platinum Business plan. The Silver and Gold plans cover personal W-2 income and standard deductions. If you file a Schedule C (Sole Proprietorship) or have 1099 income, your audit risk is significantly higher, requiring the specialized defense included in the Platinum tier.",
-    "faq4Question": "Does the 'Gold Shield' cover tax returns I filed years ago?",
-    "faq4Answer": "Yes! The Gold Shield plan provides Retroactive Coverage. It protects the current tax year plus the previous three tax years (the standard IRS statute of limitations). As long as you haven't received a notice for those years before buying the plan, they are fully covered.",
-    "faq5Question": "What if I already received a notice yesterday?",
-    "faq5Answer": "Our prepaid memberships are for future protection only. If you already have a notice in hand, we work exclusively with Tax Audit Help LLC for audit defense and would be happy to refer you to one of their specialists. Please contact us and we'll connect you with the right expert for your situation.",
-    "faq6Question": "Who will be handling my case?",
-    "faq6Answer": "You are assigned a dedicated Enrolled Agent (EA) or CPA. Enrolled Agents are federally licensed tax practitioners empowered by the U.S. Department of the Treasury to represent taxpayers before the IRS. We do not outsource your defense to unqualified support staff."
+    "hero": {
+      "title": "Audit Protection for Your Tax Return.",
+      "price": "Just $99/Year.",
+      "subtitle": "The IRS is hiring thousands of new agents. Lock in your defense team now. If you get audited, we handle everything for",
+      "zeroFees": "$0 extra fees",
+      "cta": "Get Coverage Now",
+      "viewPlans": "View Membership Plans",
+      "protectionStatus": "Protection Status",
+      "active": "ACTIVE",
+      "coverageYear": "Coverage Year",
+      "planType": "Plan Type",
+      "premiumProtection": "Premium Protection",
+      "defenseTeam": "Defense Team",
+      "agentAssigned": "Enrolled Agent Assigned",
+      "renewal": "Renewal",
+      "features": {
+        "irsDefense": "Full IRS Audit Defense",
+        "stateCoverage": "State Tax Coverage",
+        "unlimitedConsultations": "Unlimited Consultations",
+        "zeroCost": "$0 Out-of-Pocket"
+      }
+    },
+    "trustSignals": {
+      "enrolledAgents": "Enrolled Agents",
+      "bankSecurity": "Bank-Level Security",
+      "aRating": "A+ Rating"
+    },
+    "trustStrip": {
+      "casesResolved": "Cases Resolved",
+      "taxSavings": "Tax Savings Saved",
+      "responseTime": "Average Response Time"
+    },
+    "pricing": {
+      "title": "Choose Your Protection Plan",
+      "subtitle": "One flat fee. Zero deductibles. Full representation if you get audited.",
+      "trustFooter": "Membership includes 100% of professional fees. No hidden costs."
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "subtitle": "Everything you need to know about our audit defense coverage",
+      "q1": "What exactly does \"Audit Defense\" cover?",
+      "a1": "If you receive a notice from the IRS or State tax authorities, we handle everything. This includes drafting correspondence, making phone calls to the agency, and physically representing you at audit meetings if necessary. We defend your tax return to ensure you only pay what you legally owe—not a penny more.",
+      "q2": "Do I still have to pay the taxes if I lose?",
+      "a2": "Yes. Our membership covers 100% of the professional fees to defend you (which can cost $3,500+ without insurance). However, any additional taxes, penalties, or interest determined to be owed to the IRS are your responsibility. Our job is to minimize or eliminate that amount through expert defense.",
+      "q3": "I am self-employed / have a side hustle. Which plan do I need?",
+      "a3": "You need the Platinum Business plan. The Silver and Gold plans cover personal W-2 income and standard deductions. If you file a Schedule C (Sole Proprietorship) or have 1099 income, your audit risk is significantly higher, requiring the specialized defense included in the Platinum tier.",
+      "q4": "Does the \"Gold Shield\" cover tax returns I filed years ago?",
+      "a4": "Yes! The Gold Shield plan provides Retroactive Coverage. It protects the current tax year plus the previous three tax years (the standard IRS statute of limitations). As long as you haven't received a notice for those years before buying the plan, they are fully covered.",
+      "q5": "What if I already received a notice yesterday?",
+      "a5": "Our prepaid memberships are for future protection only. If you already have a notice in hand, we work exclusively with Tax Audit Help LLC for audit defense and would be happy to refer you to one of their specialists. Please contact us and we'll connect you with the right expert for your situation.",
+      "q6": "Who will be handling my case?",
+      "a6": "You are assigned a dedicated Enrolled Agent (EA) or CPA. Enrolled Agents are federally licensed tax practitioners empowered by the U.S. Department of the Treasury to represent taxpayers before the IRS. We do not outsource your defense to unqualified support staff."
+    },
+    "whyPrepay": {
+      "title": "Why Prepay for Protection?",
+      "subtitle": "See the difference our coverage makes when the IRS comes calling",
+      "withoutUs": {
+        "title": "The Cost of an Audit",
+        "highlight": "Without Us",
+        "feesLabel": "Average Professional Fees",
+        "feesValue": "$3,500+",
+        "timeLabel": "Hours of Your Time Lost",
+        "timeValue": "40+ Hours",
+        "stressLabel": "Stress Level",
+        "stressValue": "High"
+      },
+      "withUs": {
+        "title": "The Cost",
+        "highlight": "With Return Shield",
+        "costLabel": "Your Cost",
+        "costValue": "$0",
+        "costNote": "(Included in Plan)",
+        "timeLabel": "Your Time",
+        "timeValue": "0 Hours",
+        "stressLabel": "Stress Level",
+        "stressValue": "Zero"
+      }
+    },
+    "howItWorks": {
+      "title": "From Notice to Resolution in 3 Steps",
+      "subtitle": "Our streamlined process makes audit defense simple and stress-free",
+      "step1Title": "Upload Notice",
+      "step1Desc": "Snap a photo of your IRS or State letter.",
+      "step2Title": "Get Matched",
+      "step2Desc": "A dedicated Enrolled Agent is assigned to your case within hours.",
+      "step3Title": "Defense & Resolution",
+      "step3Desc": "We communicate with the agency directly to resolve your case."
+    },
+    "cta": {
+      "title": "The IRS Clock is Ticking",
+      "subtitle": "Don't wait until you receive a notice. Lock in your protection today and file with confidence.",
+      "button": "Get Protected Now"
+    }
   },
   "dashboardTitles": {
     "client": "Client Portal",
