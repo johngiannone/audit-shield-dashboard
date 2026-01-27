@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +48,7 @@ interface CaseDetail {
 export default function AgentCaseDetail() {
   const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, role, loading } = useAuth();
   const { toast } = useToast();
 
@@ -393,7 +395,7 @@ export default function AgentCaseDetail() {
             </Button>
             <div>
               <h1 className="font-display text-2xl font-bold text-foreground">
-                Case Workspace
+                {t('caseDetail.caseWorkspace')}
               </h1>
               <p className="text-muted-foreground">
                 {caseDetail.notice_type} • {caseDetail.notice_agency}
@@ -419,7 +421,7 @@ export default function AgentCaseDetail() {
               ) : (
                 <FileSignature className="h-4 w-4 mr-2" />
               )}
-              Generate POA (2848)
+              {t('caseDetail.generatePOA')}
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -433,24 +435,23 @@ export default function AgentCaseDetail() {
                   ) : (
                     <UserMinus className="h-4 w-4 mr-2" />
                   )}
-                  Unassign Case
+                  {t('caseDetail.unassignCase')}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Unassign this case?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('caseDetail.unassignConfirmTitle')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will return the case to the queue where it can be picked up by another agent. 
-                    Any notes you've added will remain on the case.
+                    {t('caseDetail.unassignConfirmDescription')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={unassignCase}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    Unassign Case
+                    {t('caseDetail.unassignCase')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -465,7 +466,7 @@ export default function AgentCaseDetail() {
             <Card className="border-0 shadow-md">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Case Details</CardTitle>
+                  <CardTitle className="text-base">{t('caseDetail.caseDetails')}</CardTitle>
                   <Select
                     value={caseDetail.status}
                     onValueChange={updateStatus}
@@ -476,15 +477,15 @@ export default function AgentCaseDetail() {
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Badge variant="outline" className={getStatusColor(caseDetail.status)}>
-                          {caseDetail.status.replace('_', ' ')}
+                          {t(`status.${caseDetail.status}`, { defaultValue: caseDetail.status.replace('_', ' ') })}
                         </Badge>
                       )}
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="triage">Triage</SelectItem>
-                      <SelectItem value="agent_action">Agent Action</SelectItem>
-                      <SelectItem value="client_action">Client Action</SelectItem>
-                      <SelectItem value="resolved">Resolved</SelectItem>
+                      <SelectItem value="triage">{t('status.triage')}</SelectItem>
+                      <SelectItem value="agent_action">{t('status.agent_action')}</SelectItem>
+                      <SelectItem value="client_action">{t('status.client_action')}</SelectItem>
+                      <SelectItem value="resolved">{t('status.resolved')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -493,7 +494,7 @@ export default function AgentCaseDetail() {
                 <div className="flex items-start gap-3">
                   <User className="h-4 w-4 text-primary mt-1" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Client</p>
+                    <p className="text-xs text-muted-foreground">{t('caseDetail.client')}</p>
                     <p className="text-sm font-medium">{caseDetail.client_name || 'Unknown'}</p>
                   </div>
                 </div>
@@ -501,7 +502,7 @@ export default function AgentCaseDetail() {
                 <div className="flex items-start gap-3">
                   <Calendar className="h-4 w-4 text-primary mt-1" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Tax Year</p>
+                    <p className="text-xs text-muted-foreground">{t('caseDetail.taxYear')}</p>
                     <p className="text-sm font-medium">{caseDetail.tax_year}</p>
                   </div>
                 </div>
@@ -525,7 +526,7 @@ export default function AgentCaseDetail() {
                 <div className="flex items-start gap-3">
                   <Building className="h-4 w-4 text-primary mt-1" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Agency</p>
+                    <p className="text-xs text-muted-foreground">{t('caseDetail.agency')}</p>
                     <p className="text-sm font-medium">{caseDetail.notice_agency}</p>
                   </div>
                 </div>
@@ -533,14 +534,14 @@ export default function AgentCaseDetail() {
                 <div className="flex items-start gap-3">
                   <FileText className="h-4 w-4 text-primary mt-1" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Notice Type</p>
+                    <p className="text-xs text-muted-foreground">{t('caseDetail.noticeType')}</p>
                     <p className="text-sm font-medium">{caseDetail.notice_type}</p>
                   </div>
                 </div>
 
                 {caseDetail.summary && (
                   <div className="pt-3 border-t">
-                    <p className="text-xs text-muted-foreground mb-1">AI Summary</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t('caseDetail.aiSummary')}</p>
                     <p className="text-sm text-foreground leading-relaxed">
                       {caseDetail.summary}
                     </p>
@@ -549,7 +550,7 @@ export default function AgentCaseDetail() {
 
                 {/* Key Documents Section */}
                 <div className="pt-3 border-t">
-                  <p className="text-xs text-muted-foreground mb-3 uppercase font-medium">Key Documents</p>
+                  <p className="text-xs text-muted-foreground mb-3 uppercase font-medium">{t('caseDetail.keyDocuments')}</p>
                   <div className="space-y-3">
                     {/* Notice Document */}
                     <div className="flex items-center justify-between">
