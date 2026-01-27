@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Calendar, ArrowRight, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 
 export const TaxSeasonBanner = () => {
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(true);
   const [daysUntilDeadline, setDaysUntilDeadline] = useState(0);
 
@@ -22,11 +24,11 @@ export const TaxSeasonBanner = () => {
       <div className="container mx-auto flex items-center justify-center gap-3 text-sm">
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-primary" />
-          <span className="font-semibold text-primary">Tax Season 2025</span>
+          <span className="font-semibold text-primary">{t('landing.taxSeason')}</span>
         </div>
         <span className="hidden sm:inline text-white/80">|</span>
         <span className="hidden sm:inline text-white/90">
-          <span className="font-bold text-white">{daysUntilDeadline} days</span> until April 15th deadline
+          {t('landing.daysUntilDeadline', { days: daysUntilDeadline })}
         </span>
         <Link to="/auth" className="ml-2">
           <Button 
@@ -34,14 +36,14 @@ export const TaxSeasonBanner = () => {
             variant="secondary" 
             className="h-7 px-3 text-xs font-semibold"
           >
-            Get Protected
+            {t('landing.getProtected')}
             <ArrowRight className="ml-1 h-3 w-3" />
           </Button>
         </Link>
         <button
           onClick={() => setIsVisible(false)}
           className="absolute right-4 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors"
-          aria-label="Dismiss banner"
+          aria-label={t('common.dismiss')}
         >
           <X className="h-4 w-4" />
         </button>
