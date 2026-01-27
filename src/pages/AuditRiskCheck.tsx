@@ -21,6 +21,7 @@ import { RiskGauge } from '@/components/audit/RiskGauge';
 import { RiskFlagCard } from '@/components/audit/RiskFlagCard';
 import { DefenseUpsellBanner } from '@/components/audit/DefenseUpsellBanner';
 import { RiskBentoGrid } from '@/components/audit/RiskBentoGrid';
+import { MaskedText } from '@/components/ui/masked-text';
 import { cn } from '@/lib/utils';
 import { 
   Tooltip,
@@ -856,6 +857,17 @@ This log format complies with IRS requirements under Treas. Reg. 1.274-5T(c)(2)`
                               {charity.verified && charity.matchedName && charity.matchedName !== charity.name && (
                                 <p className="text-xs text-muted-foreground ml-6">
                                   Matched: {charity.matchedName}
+                                </p>
+                              )}
+                              {charity.verified && charity.ein && (
+                                <p className="text-xs text-muted-foreground ml-6">
+                                  EIN: <MaskedText 
+                                    value={charity.ein} 
+                                    type="ein" 
+                                    resourceId={charity.ein}
+                                    visibleChars={4}
+                                    className="text-xs"
+                                  />
                                 </p>
                               )}
                               {!charity.verified && (

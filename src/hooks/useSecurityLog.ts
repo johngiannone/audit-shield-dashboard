@@ -16,7 +16,8 @@ export type SecurityAction =
   | 'document_uploaded'
   | 'document_deleted'
   | 'message_sent'
-  | 'admin_access';
+  | 'admin_access'
+  | 'viewed_pii';
 
 interface LogSecurityEventParams {
   action: SecurityAction;
@@ -142,4 +143,20 @@ export const securityLog = {
       resourceType: 'auth',
       metadata: { email, reason: reason || 'Invalid credentials' },
     }),
+
+  viewedPii: (piiType: string, resourceId?: string, maskedValue?: string) =>
+    logSecurityEvent({
+      action: 'viewed_pii',
+      resourceType: piiType,
+      resourceId,
+      metadata: { pii_type: piiType, masked_value: maskedValue },
+    }),
 };
+
+// React hook wrapper for components
+export function useSecurityLog() {
+  return {
+    logSecurityEvent,
+    ...securityLog,
+  };
+}
