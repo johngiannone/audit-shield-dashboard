@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,16 +43,10 @@ interface CaseDocument {
   created_at: string;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  triage: 'Triage',
-  agent_action: 'Agent Action',
-  client_action: 'Client Action',
-  resolved: 'Resolved',
-};
-
 export default function ClientCaseDetail() {
   const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, role, loading } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -284,7 +279,7 @@ export default function ClientCaseDetail() {
               {caseDetail.notice_type}
             </h1>
             <p className="text-muted-foreground">
-              {caseDetail.notice_agency} • Tax Year {caseDetail.tax_year}
+              {caseDetail.notice_agency} • {t('caseDetail.taxYear')} {caseDetail.tax_year}
             </p>
           </div>
         </div>
@@ -292,15 +287,15 @@ export default function ClientCaseDetail() {
         {/* Progress Bar */}
         <Card className="border-0 shadow-md">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Case Progress</CardTitle>
+            <CardTitle className="text-lg">{t('caseDetail.caseProgress')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Status</span>
+                <span className="text-muted-foreground">{t('caseDetail.statusHistory').split(' ')[0]}</span>
                 <Badge className={getStatusColor(caseDetail.status)}>
                   {getStatusIcon(caseDetail.status)}
-                  <span className="ml-1">{STATUS_LABELS[caseDetail.status] || caseDetail.status}</span>
+                  <span className="ml-1">{t(`status.${caseDetail.status}`, { defaultValue: caseDetail.status })}</span>
                 </Badge>
               </div>
               <div className="w-full bg-muted rounded-full h-3">
@@ -310,9 +305,9 @@ export default function ClientCaseDetail() {
                 />
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Submitted</span>
-                <span>In Review</span>
-                <span>Resolved</span>
+                <span>{t('caseDetail.submitted')}</span>
+                <span>{t('caseDetail.inReview')}</span>
+                <span>{t('status.resolved')}</span>
               </div>
             </div>
           </CardContent>
@@ -322,40 +317,40 @@ export default function ClientCaseDetail() {
           {/* Case Details */}
           <Card className="border-0 shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg">Case Details</CardTitle>
+              <CardTitle className="text-lg">{t('caseDetail.caseDetails')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start gap-3">
                 <Building className="h-5 w-5 text-primary mt-0.5" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Agency</p>
+                  <p className="text-sm text-muted-foreground">{t('caseDetail.agency')}</p>
                   <p className="font-medium">{caseDetail.notice_agency}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <FileText className="h-5 w-5 text-primary mt-0.5" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Notice Type</p>
+                  <p className="text-sm text-muted-foreground">{t('caseDetail.noticeType')}</p>
                   <p className="font-medium">{caseDetail.notice_type}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <Calendar className="h-5 w-5 text-primary mt-0.5" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Tax Year</p>
+                  <p className="text-sm text-muted-foreground">{t('caseDetail.taxYear')}</p>
                   <p className="font-medium">{caseDetail.tax_year}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <User className="h-5 w-5 text-primary mt-0.5" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Assigned Agent</p>
-                  <p className="font-medium">{caseDetail.agent_name || 'Pending Assignment'}</p>
+                  <p className="text-sm text-muted-foreground">{t('caseDetail.assignedAgent')}</p>
+                  <p className="font-medium">{caseDetail.agent_name || t('caseDetail.pendingAssignment')}</p>
                 </div>
               </div>
               {caseDetail.summary && (
                 <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-2">AI Summary</p>
+                  <p className="text-sm text-muted-foreground mb-2">{t('caseDetail.aiSummary')}</p>
                   <p className="text-sm">{caseDetail.summary}</p>
                 </div>
               )}
@@ -365,8 +360,8 @@ export default function ClientCaseDetail() {
           {/* Status Timeline */}
           <Card className="border-0 shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg">Status History</CardTitle>
-              <CardDescription>Track your case progress</CardDescription>
+              <CardTitle className="text-lg">{t('caseDetail.statusHistory')}</CardTitle>
+              <CardDescription>{t('caseDetail.trackCaseProgress')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -381,7 +376,7 @@ export default function ClientCaseDetail() {
                     )}
                   </div>
                   <div className="pb-4">
-                    <p className="font-medium">{STATUS_LABELS[caseDetail.status] || caseDetail.status}</p>
+                    <p className="font-medium">{t(`status.${caseDetail.status}`, { defaultValue: caseDetail.status })}</p>
                     <p className="text-sm text-muted-foreground">Current Status</p>
                   </div>
                 </div>
@@ -400,8 +395,8 @@ export default function ClientCaseDetail() {
                     <div className="pb-4">
                       <p className="font-medium">
                         {history.old_status 
-                          ? `Changed to ${STATUS_LABELS[history.new_status] || history.new_status}`
-                          : `Case Created`
+                          ? `Changed to ${t(`status.${history.new_status}`, { defaultValue: history.new_status })}`
+                          : t('caseDetail.caseCreated')
                         }
                       </p>
                       <p className="text-sm text-muted-foreground">
@@ -419,7 +414,7 @@ export default function ClientCaseDetail() {
                     <FileText className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="font-medium">Case Submitted</p>
+                    <p className="font-medium">{t('caseDetail.caseSubmitted')}</p>
                     <p className="text-sm text-muted-foreground">
                       {new Date(caseDetail.created_at).toLocaleDateString()} at{' '}
                       {new Date(caseDetail.created_at).toLocaleTimeString()}
@@ -445,8 +440,8 @@ export default function ClientCaseDetail() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Documents</CardTitle>
-                <CardDescription>Upload supporting documents for your case</CardDescription>
+                <CardTitle className="text-lg">{t('caseDetail.documents')}</CardTitle>
+                <CardDescription>{t('caseDetail.documentsDescription')}</CardDescription>
               </div>
               <div>
                 <input
@@ -466,7 +461,7 @@ export default function ClientCaseDetail() {
                   ) : (
                     <Upload className="h-4 w-4 mr-2" />
                   )}
-                  Upload Document
+                  {t('caseDetail.uploadDocument')}
                 </Button>
               </div>
             </div>
@@ -475,8 +470,8 @@ export default function ClientCaseDetail() {
             {documents.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <File className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No documents uploaded yet</p>
-                <p className="text-sm">Upload any supporting documents for your case</p>
+                <p>{t('caseDetail.noDocumentsYet')}</p>
+                <p className="text-sm">{t('caseDetail.documentsDescription')}</p>
               </div>
             ) : (
               <div className="space-y-3">
