@@ -12,7 +12,8 @@
     "spanish": "Español",
     "dismiss": "Descartar",
     "error": "Error",
-    "success": "Éxito"
+    "success": "Éxito",
+    "backToTop": "Volver arriba"
   },
   "roles": {
     "client": "Cliente",
@@ -100,55 +101,104 @@
     "verifyingCode": "Verificando..."
   },
   "landing": {
+    "brandName": "Return Shield",
+    "forTaxPros": "Para Profesionales de Impuestos",
     "taxSeason": "Temporada de Impuestos 2025",
     "daysUntilDeadline": "{{days}} días hasta la fecha límite del 15 de abril",
     "getProtected": "Obtén Protección",
-    "heroTitle": "Protección de Auditoría para Tu Declaración de Impuestos.",
-    "heroPrice": "Solo $99/Año.",
-    "heroDescription": "El IRS está contratando miles de nuevos agentes. Asegura tu equipo de defensa ahora. Si te auditan, manejamos todo por",
-    "zeroExtraFees": "$0 cargos adicionales",
-    "getCoverageNow": "Obtén Cobertura Ahora",
-    "viewMembershipPlans": "Ver Planes de Membresía",
-    "enrolledAgents": "Agentes Inscritos",
-    "bankLevelSecurity": "Seguridad Bancaria",
-    "aRating": "Calificación A+",
-    "protectionStatus": "Estado de Protección",
-    "active": "ACTIVO",
-    "premiumProtection": "Protección Premium",
-    "enrolledAgentAssigned": "Agente Inscrito Asignado",
-    "casesResolved": "Casos Resueltos",
-    "taxSavingsSaved": "Ahorros Fiscales",
-    "averageResponseTime": "Tiempo de Respuesta Promedio",
-    "chooseYourPlan": "Elige Tu Plan de Protección",
-    "membershipIncludes": "La membresía incluye el 100% de los honorarios profesionales. Sin costos ocultos.",
-    "whyPrepay": "¿Por Qué Prepagar?",
-    "withoutUs": "Sin Nosotros",
-    "withReturnShield": "Con Return Shield",
-    "stressLevel": "Nivel de Estrés",
-    "hoursLost": "Horas de Tu Tiempo Perdidas",
-    "howItWorks": "Cómo Funciona",
-    "step1Title": "Sube Tu Aviso",
-    "step1Description": "Sube tu aviso del IRS o estatal y lo analizaremos en 24 horas.",
-    "step2Title": "Te Asignamos",
-    "step2Description": "Asignamos un Agente Inscrito o CPA dedicado a tu caso.",
-    "step3Title": "Defensa y Resolución",
-    "step3Description": "Tu especialista maneja toda la comunicación con el IRS y lucha por el mejor resultado.",
-    "irsClockTicking": "El Reloj del IRS Está Corriendo",
-    "dontWait": "No esperes hasta recibir un aviso. Obtén protección ahora.",
-    "getProtectedNow": "Obtén Protección Ahora",
-    "faqTitle": "Preguntas Frecuentes",
-    "faq1Question": "¿Qué cubre exactamente la 'Defensa de Auditoría'?",
-    "faq1Answer": "Si recibes un aviso del IRS o autoridades fiscales estatales, manejamos todo. Esto incluye redactar correspondencia, hacer llamadas telefónicas a la agencia y representarte físicamente en reuniones de auditoría si es necesario. Defendemos tu declaración de impuestos para asegurar que solo pagues lo que legalmente debes, ni un centavo más.",
-    "faq2Question": "¿Todavía tengo que pagar los impuestos si pierdo?",
-    "faq2Answer": "Sí. Nuestra membresía cubre el 100% de los honorarios profesionales para defenderte (que pueden costar $3,500+ sin seguro). Sin embargo, cualquier impuesto adicional, multas o intereses determinados que se deban al IRS son tu responsabilidad. Nuestro trabajo es minimizar o eliminar esa cantidad a través de una defensa experta.",
-    "faq3Question": "Soy trabajador por cuenta propia / tengo un trabajo secundario. ¿Qué plan necesito?",
-    "faq3Answer": "Necesitas el plan Platinum Business. Los planes Silver y Gold cubren ingresos personales W-2 y deducciones estándar. Si presentas un Anexo C (Propietario Único) o tienes ingresos 1099, tu riesgo de auditoría es significativamente mayor, requiriendo la defensa especializada incluida en el nivel Platinum.",
-    "faq4Question": "¿El 'Gold Shield' cubre declaraciones de impuestos que presenté hace años?",
-    "faq4Answer": "¡Sí! El plan Gold Shield proporciona Cobertura Retroactiva. Protege el año fiscal actual más los tres años fiscales anteriores (el estatuto de limitaciones estándar del IRS). Mientras no hayas recibido un aviso para esos años antes de comprar el plan, están completamente cubiertos.",
-    "faq5Question": "¿Qué pasa si ya recibí un aviso ayer?",
-    "faq5Answer": "Nuestras membresías prepagadas son solo para protección futura. Si ya tienes un aviso en mano, trabajamos exclusivamente con Tax Audit Help LLC para defensa de auditoría y estaremos encantados de referirte a uno de sus especialistas. Contáctanos y te conectaremos con el experto adecuado para tu situación.",
-    "faq6Question": "¿Quién manejará mi caso?",
-    "faq6Answer": "Se te asigna un Agente Inscrito (EA) o CPA dedicado. Los Agentes Inscritos son profesionales fiscales con licencia federal autorizados por el Departamento del Tesoro de EE.UU. para representar a los contribuyentes ante el IRS. No subcontratamos tu defensa a personal no calificado."
+    "hero": {
+      "title": "Protección de Auditoría para Tu Declaración.",
+      "price": "Solo $99/Año.",
+      "subtitle": "El IRS está contratando miles de nuevos agentes. Asegura tu equipo de defensa ahora. Si te auditan, manejamos todo por",
+      "zeroFees": "$0 cargos adicionales",
+      "cta": "Obtén Cobertura Ahora",
+      "viewPlans": "Ver Planes de Membresía",
+      "protectionStatus": "Estado de Protección",
+      "active": "ACTIVO",
+      "coverageYear": "Año de Cobertura",
+      "planType": "Tipo de Plan",
+      "premiumProtection": "Protección Premium",
+      "defenseTeam": "Equipo de Defensa",
+      "agentAssigned": "Agente Inscrito Asignado",
+      "renewal": "Renovación",
+      "features": {
+        "irsDefense": "Defensa Completa ante el IRS",
+        "stateCoverage": "Cobertura de Impuestos Estatales",
+        "unlimitedConsultations": "Consultas Ilimitadas",
+        "zeroCost": "$0 de Tu Bolsillo"
+      }
+    },
+    "trustSignals": {
+      "enrolledAgents": "Agentes Inscritos",
+      "bankSecurity": "Seguridad Bancaria",
+      "aRating": "Calificación A+"
+    },
+    "trustStrip": {
+      "casesResolved": "Casos Resueltos",
+      "taxSavings": "Ahorros Fiscales",
+      "responseTime": "Tiempo de Respuesta Promedio"
+    },
+    "pricing": {
+      "title": "Elige Tu Plan de Protección",
+      "subtitle": "Una tarifa fija. Cero deducibles. Representación completa si te auditan.",
+      "trustFooter": "La membresía incluye el 100% de los honorarios profesionales. Sin costos ocultos."
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "subtitle": "Todo lo que necesitas saber sobre nuestra cobertura de defensa de auditoría",
+      "q1": "¿Qué cubre exactamente la \"Defensa de Auditoría\"?",
+      "a1": "Si recibes un aviso del IRS o autoridades fiscales estatales, manejamos todo. Esto incluye redactar correspondencia, hacer llamadas telefónicas a la agencia y representarte físicamente en reuniones de auditoría si es necesario. Defendemos tu declaración de impuestos para asegurar que solo pagues lo que legalmente debes, ni un centavo más.",
+      "q2": "¿Todavía tengo que pagar los impuestos si pierdo?",
+      "a2": "Sí. Nuestra membresía cubre el 100% de los honorarios profesionales para defenderte (que pueden costar $3,500+ sin seguro). Sin embargo, cualquier impuesto adicional, multas o intereses determinados que se deban al IRS son tu responsabilidad. Nuestro trabajo es minimizar o eliminar esa cantidad a través de una defensa experta.",
+      "q3": "Soy trabajador por cuenta propia / tengo un trabajo secundario. ¿Qué plan necesito?",
+      "a3": "Necesitas el plan Platinum Business. Los planes Silver y Gold cubren ingresos personales W-2 y deducciones estándar. Si presentas un Anexo C (Propietario Único) o tienes ingresos 1099, tu riesgo de auditoría es significativamente mayor, requiriendo la defensa especializada incluida en el nivel Platinum.",
+      "q4": "¿El \"Gold Shield\" cubre declaraciones de impuestos que presenté hace años?",
+      "a4": "¡Sí! El plan Gold Shield proporciona Cobertura Retroactiva. Protege el año fiscal actual más los tres años fiscales anteriores (el estatuto de limitaciones estándar del IRS). Mientras no hayas recibido un aviso para esos años antes de comprar el plan, están completamente cubiertos.",
+      "q5": "¿Qué pasa si ya recibí un aviso ayer?",
+      "a5": "Nuestras membresías prepagadas son solo para protección futura. Si ya tienes un aviso en mano, trabajamos exclusivamente con Tax Audit Help LLC para defensa de auditoría y estaremos encantados de referirte a uno de sus especialistas. Contáctanos y te conectaremos con el experto adecuado para tu situación.",
+      "q6": "¿Quién manejará mi caso?",
+      "a6": "Se te asigna un Agente Inscrito (EA) o CPA dedicado. Los Agentes Inscritos son profesionales fiscales con licencia federal autorizados por el Departamento del Tesoro de EE.UU. para representar a los contribuyentes ante el IRS. No subcontratamos tu defensa a personal no calificado."
+    },
+    "whyPrepay": {
+      "title": "¿Por Qué Prepagar por Protección?",
+      "subtitle": "Mira la diferencia que nuestra cobertura hace cuando el IRS llama",
+      "withoutUs": {
+        "title": "El Costo de una Auditoría",
+        "highlight": "Sin Nosotros",
+        "feesLabel": "Honorarios Profesionales Promedio",
+        "feesValue": "$3,500+",
+        "timeLabel": "Horas de Tu Tiempo Perdidas",
+        "timeValue": "40+ Horas",
+        "stressLabel": "Nivel de Estrés",
+        "stressValue": "Alto"
+      },
+      "withUs": {
+        "title": "El Costo",
+        "highlight": "Con Return Shield",
+        "costLabel": "Tu Costo",
+        "costValue": "$0",
+        "costNote": "(Incluido en el Plan)",
+        "timeLabel": "Tu Tiempo",
+        "timeValue": "0 Horas",
+        "stressLabel": "Nivel de Estrés",
+        "stressValue": "Cero"
+      }
+    },
+    "howItWorks": {
+      "title": "Del Aviso a la Resolución en 3 Pasos",
+      "subtitle": "Nuestro proceso simplificado hace que la defensa de auditoría sea simple y sin estrés",
+      "step1Title": "Sube el Aviso",
+      "step1Desc": "Toma una foto de tu carta del IRS o estatal.",
+      "step2Title": "Te Asignamos",
+      "step2Desc": "Un Agente Inscrito dedicado es asignado a tu caso en horas.",
+      "step3Title": "Defensa y Resolución",
+      "step3Desc": "Nos comunicamos directamente con la agencia para resolver tu caso."
+    },
+    "cta": {
+      "title": "El Reloj del IRS Está Corriendo",
+      "subtitle": "No esperes hasta recibir un aviso. Asegura tu protección hoy y presenta con confianza.",
+      "button": "Obtén Protección Ahora"
+    }
   },
   "dashboardTitles": {
     "client": "Portal del Cliente",
