@@ -96,9 +96,19 @@
     "nameTooLong": "Name is too long",
     "emailTooLong": "Email is too long",
     "inviteCodeRequired": "Invite code is required",
-    "validCode": "Valid code",
-    "invalidCode": "Invalid code",
-    "verifyingCode": "Verifying..."
+    "validCode": "Valid invite code!",
+    "invalidCode": "Invalid or expired invite code",
+    "verifyingCode": "Verifying...",
+    "haveInviteCode": "Have an invite code?",
+    "signUpAsClient": "Sign up as Client",
+    "signUpAsTaxPreparer": "Sign up as Tax Preparer",
+    "enterInviteCode": "Enter your invite code",
+    "createTaxPreparerAccount": "Create Tax Preparer Account",
+    "enterNewPassword": "Enter your new password below.",
+    "invalidCredentials": "Invalid email or password. Please try again.",
+    "resendFailed": "Failed to Resend",
+    "emailSent": "Email Sent",
+    "verificationResent": "We sent another verification link to your email."
   },
   "landing": {
     "brandName": "Return Shield",

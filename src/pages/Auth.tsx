@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,24 +14,26 @@ import { LinkedInIcon } from '@/components/icons/LinkedInIcon';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { securityLog } from '@/hooks/useSecurityLog';
 
-const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+// Validation schemas will use translation function passed at validation time
+const createLoginSchema = (t: (key: string) => string) => z.object({
+  email: z.string().email(t('auth.invalidEmail')),
+  password: z.string().min(6, t('auth.passwordMinLength')),
 });
 
-const signupSchema = z.object({
-  fullName: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
-  email: z.string().email('Please enter a valid email address').max(255, 'Email is too long'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+const createSignupSchema = (t: (key: string) => string) => z.object({
+  fullName: z.string().min(2, t('auth.nameMinLength')).max(100, t('auth.nameTooLong')),
+  email: z.string().email(t('auth.invalidEmail')).max(255, t('auth.emailTooLong')),
+  password: z.string().min(6, t('auth.passwordMinLength')),
 });
 
-const taxPreparerSignupSchema = signupSchema.extend({
-  inviteCode: z.string().min(1, 'Invite code is required'),
+const createTaxPreparerSignupSchema = (t: (key: string) => string) => createSignupSchema(t).extend({
+  inviteCode: z.string().min(1, t('auth.inviteCodeRequired')),
 });
 
 export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useTranslation();
   const { signIn, signUp, signInWithLinkedIn, signInWithGoogle, signInWithApple, resetPassword, updatePassword, resendVerificationEmail, validateInviteCode, user, loading } = useAuth();
   const { toast } = useToast();
   
@@ -104,7 +107,7 @@ export default function Auth() {
     if (error) {
       setIsOAuthLoading(null);
       toast({
-        title: 'LinkedIn Sign In Failed',
+        title: t('auth.loginFailed'),
         description: error.message,
         variant: 'destructive',
       });
@@ -117,7 +120,7 @@ export default function Auth() {
     if (error) {
       setIsOAuthLoading(null);
       toast({
-        title: 'Google Sign In Failed',
+        title: t('auth.loginFailed'),
         description: error.message,
         variant: 'destructive',
       });
@@ -130,7 +133,7 @@ export default function Auth() {
     if (error) {
       setIsOAuthLoading(null);
       toast({
-        title: 'Apple Sign In Failed',
+        title: t('auth.loginFailed'),
         description: error.message,
         variant: 'destructive',
       });
@@ -140,10 +143,11 @@ export default function Auth() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const loginSchema = createLoginSchema(t);
     const result = loginSchema.safeParse(loginForm);
     if (!result.success) {
       toast({
-        title: 'Validation Error',
+        title: t('auth.validationError'),
         description: result.error.errors[0].message,
         variant: 'destructive',
       });
@@ -158,9 +162,9 @@ export default function Auth() {
       // Log failed login attempt
       securityLog.loginFailed(loginForm.email, error.message);
       toast({
-        title: 'Login Failed',
+        title: t('auth.loginFailed'),
         description: error.message === 'Invalid login credentials' 
-          ? 'Invalid email or password. Please try again.'
+          ? t('auth.invalidCredentials')
           : error.message,
         variant: 'destructive',
       });
@@ -174,8 +178,8 @@ export default function Auth() {
     e.preventDefault();
     if (!forgotEmail) {
       toast({
-        title: 'Email Required',
-        description: 'Please enter your email address.',
+        title: t('auth.emailRequired'),
+        description: t('auth.emailRequiredDescription'),
         variant: 'destructive',
       });
       return;
@@ -187,14 +191,14 @@ export default function Auth() {
 
     if (error) {
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: error.message,
         variant: 'destructive',
       });
     } else {
       toast({
-        title: 'Check Your Email',
-        description: 'We sent you a password reset link.',
+        title: t('auth.checkYourEmail'),
+        description: t('auth.resetLinkSent'),
       });
       setShowForgotPassword(false);
       setForgotEmail('');
@@ -205,8 +209,8 @@ export default function Auth() {
     e.preventDefault();
     if (newPassword.length < 6) {
       toast({
-        title: 'Password Too Short',
-        description: 'Password must be at least 6 characters.',
+        title: t('auth.passwordTooShort'),
+        description: t('auth.passwordTooShortDescription'),
         variant: 'destructive',
       });
       return;
@@ -218,14 +222,14 @@ export default function Auth() {
 
     if (error) {
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description: error.message,
         variant: 'destructive',
       });
     } else {
       toast({
-        title: 'Password Updated',
-        description: 'Your password has been reset successfully.',
+        title: t('auth.passwordUpdated'),
+        description: t('auth.passwordUpdatedDescription'),
       });
       setShowResetPassword(false);
       setNewPassword('');
@@ -237,7 +241,7 @@ export default function Auth() {
     e.preventDefault();
     
     // Use appropriate schema based on signup type
-    const schema = isTaxPreparerSignup ? taxPreparerSignupSchema : signupSchema;
+    const schema = isTaxPreparerSignup ? createTaxPreparerSignupSchema(t) : createSignupSchema(t);
     const formData = isTaxPreparerSignup 
       ? { ...signupForm, inviteCode } 
       : signupForm;
@@ -245,7 +249,7 @@ export default function Auth() {
     const result = schema.safeParse(formData);
     if (!result.success) {
       toast({
-        title: 'Validation Error',
+        title: t('auth.validationError'),
         description: result.error.errors[0].message,
         variant: 'destructive',
       });
@@ -255,8 +259,8 @@ export default function Auth() {
     // For tax preparer signup, validate invite code first
     if (isTaxPreparerSignup && inviteCodeValid !== true) {
       toast({
-        title: 'Invalid Invite Code',
-        description: 'Please enter a valid invite code to sign up as a Tax Preparer.',
+        title: t('auth.invalidInviteCode'),
+        description: t('auth.invalidInviteCodeDescription'),
         variant: 'destructive',
       });
       return;
@@ -286,23 +290,23 @@ export default function Auth() {
     if (error) {
       if (error.message.includes('already registered')) {
         toast({
-          title: 'Account Exists',
-          description: 'This email is already registered. Please log in instead.',
+          title: t('auth.accountExists'),
+          description: t('auth.accountExistsDescription'),
           variant: 'destructive',
         });
       } else {
         toast({
-          title: 'Sign Up Failed',
+          title: t('auth.signUpFailed'),
           description: error.message,
           variant: 'destructive',
         });
       }
     } else {
       toast({
-        title: 'Account Created!',
+        title: t('auth.accountCreated'),
         description: isTaxPreparerSignup 
-          ? 'Welcome to Return Shield! You can now log in as a Tax Preparer.'
-          : 'Check your email to verify your account.',
+          ? t('auth.taxPreparerWelcome')
+          : t('auth.accountCreatedDescription'),
       });
     }
   };
@@ -316,14 +320,14 @@ export default function Auth() {
     
     if (error) {
       toast({
-        title: 'Failed to Resend',
+        title: t('auth.resendFailed'),
         description: error.message,
         variant: 'destructive',
       });
     } else {
       toast({
-        title: 'Email Sent',
-        description: 'We sent another verification link to your email.',
+        title: t('auth.emailSent'),
+        description: t('auth.verificationResent'),
       });
     }
   };
@@ -347,12 +351,12 @@ export default function Auth() {
       {isOAuthLoading === 'linkedin' ? (
         <>
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          Connecting...
+          {t('auth.connecting')}
         </>
       ) : (
         <>
           <LinkedInIcon className="mr-2 h-5 w-5" />
-          Continue with LinkedIn
+          {t('auth.continueWithLinkedIn')}
         </>
       )}
     </Button>
@@ -369,7 +373,7 @@ export default function Auth() {
       {isOAuthLoading === 'google' ? (
         <>
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          Connecting...
+          {t('auth.connecting')}
         </>
       ) : (
         <>
@@ -391,7 +395,7 @@ export default function Auth() {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          Continue with Google
+          {t('auth.continueWithGoogle')}
         </>
       )}
     </Button>
@@ -408,14 +412,14 @@ export default function Auth() {
       {isOAuthLoading === 'apple' ? (
         <>
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          Connecting...
+          {t('auth.connecting')}
         </>
       ) : (
         <>
           <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
           </svg>
-          Continue with Apple
+          {t('auth.continueWithApple')}
         </>
       )}
     </Button>
@@ -428,7 +432,7 @@ export default function Auth() {
       </div>
       <div className="relative flex justify-center text-xs uppercase">
         <span className="bg-card px-2 text-muted-foreground">
-          Or continue with email
+          {t('auth.orContinueWithEmail')}
         </span>
       </div>
     </div>
@@ -437,11 +441,11 @@ export default function Auth() {
   const EmailVerificationBanner = () => (
     <Alert className="mb-6 border-primary/20 bg-primary/5">
       <Mail className="h-4 w-4" />
-      <AlertTitle>Verify your email</AlertTitle>
+      <AlertTitle>{t('auth.verifyEmail')}</AlertTitle>
       <AlertDescription className="mt-2">
         <p className="mb-3">
-          We sent a verification link to <strong>{pendingVerificationEmail}</strong>. 
-          Please check your inbox and click the link to activate your account.
+          {t('auth.verificationSent')} <strong>{pendingVerificationEmail}</strong>. 
+          {t('auth.checkInbox')}
         </p>
         <div className="flex items-center gap-3">
           <Button
@@ -453,10 +457,10 @@ export default function Auth() {
             {isResending ? (
               <>
                 <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                Sending...
+                {t('auth.sending')}
               </>
             ) : (
-              'Resend verification email'
+              t('auth.resendVerification')
             )}
           </Button>
           <button
@@ -464,7 +468,7 @@ export default function Auth() {
             className="text-sm text-muted-foreground hover:text-foreground"
             onClick={() => setPendingVerificationEmail(null)}
           >
-            Dismiss
+            {t('common.dismiss')}
           </button>
         </div>
       </AlertDescription>
@@ -489,17 +493,17 @@ export default function Auth() {
           <Tabs defaultValue="login" className="w-full">
             <CardHeader className="pb-4">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Create Account</TabsTrigger>
+                <TabsTrigger value="login">{t('auth.signIn')}</TabsTrigger>
+                <TabsTrigger value="signup">{t('auth.createAccount')}</TabsTrigger>
               </TabsList>
             </CardHeader>
 
             <CardContent>
               {/* Login Tab */}
               <TabsContent value="login" className="mt-0">
-                <CardTitle className="text-xl mb-2">Welcome back</CardTitle>
+                <CardTitle className="text-xl mb-2">{t('auth.welcomeBack')}</CardTitle>
                 <CardDescription className="mb-6">
-                  Enter your credentials to access your account
+                  {t('auth.signInDescription')}
                 </CardDescription>
                 
                 <GoogleButton disabled={isSubmitting} />
@@ -513,7 +517,7 @@ export default function Auth() {
                 
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
+                    <Label htmlFor="login-email">{t('auth.email')}</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -529,7 +533,7 @@ export default function Auth() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
+                    <Label htmlFor="login-password">{t('auth.password')}</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -547,7 +551,7 @@ export default function Auth() {
                       onClick={() => setShowForgotPassword(true)}
                       className="text-sm text-primary hover:underline"
                     >
-                      Forgot password?
+                      {t('auth.forgotPassword')}
                     </button>
                   </div>
 
@@ -555,10 +559,10 @@ export default function Auth() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
+                        {t('auth.signingIn')}
                       </>
                     ) : (
-                      'Sign In'
+                      t('auth.signInButton')
                     )}
                   </Button>
                 </form>
@@ -567,12 +571,12 @@ export default function Auth() {
               {/* Signup Tab */}
               <TabsContent value="signup" className="mt-0">
                 <CardTitle className="text-xl mb-2">
-                  {isTaxPreparerSignup ? 'Join as Tax Preparer' : 'Create your account'}
+                  {isTaxPreparerSignup ? t('auth.taxPreparerSignup') : t('auth.createNewAccount')}
                 </CardTitle>
                 <CardDescription className="mb-6">
                   {isTaxPreparerSignup 
-                    ? 'Use your invite code to register as a Tax Preparer'
-                    : 'Get started with Return Shield protection'
+                    ? t('auth.taxPreparerDescription')
+                    : t('auth.signUpDescription')
                   }
                 </CardDescription>
 
@@ -582,7 +586,7 @@ export default function Auth() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Ticket className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">Have an invite code?</span>
+                        <span className="text-sm">{t('auth.haveInviteCode')}</span>
                       </div>
                       <Button
                         type="button"
@@ -594,7 +598,7 @@ export default function Auth() {
                           setInviteCodeValid(null);
                         }}
                       >
-                        {isTaxPreparerSignup ? 'Sign up as Client' : 'Sign up as Tax Preparer'}
+                        {isTaxPreparerSignup ? t('auth.signUpAsClient') : t('auth.signUpAsTaxPreparer')}
                       </Button>
                     </div>
                   </div>
@@ -603,13 +607,13 @@ export default function Auth() {
                 {/* Invite Code Field for Tax Preparer */}
                 {isTaxPreparerSignup && (
                   <div className="mb-6 p-4 rounded-lg border border-primary/20 bg-primary/5">
-                    <Label htmlFor="invite-code" className="text-sm font-medium">Invite Code</Label>
+                    <Label htmlFor="invite-code" className="text-sm font-medium">{t('auth.inviteCode')}</Label>
                     <div className="relative mt-2">
                       <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="invite-code"
                         type="text"
-                        placeholder="Enter your invite code"
+                        placeholder={t('auth.enterInviteCode')}
                         className="pl-10 pr-10 uppercase font-mono"
                         value={inviteCode}
                         onChange={(e) => handleInviteCodeChange(e.target.value)}
@@ -627,10 +631,10 @@ export default function Auth() {
                       )}
                     </div>
                     {inviteCodeValid === false && (
-                      <p className="text-xs text-destructive mt-1">Invalid or expired invite code</p>
+                      <p className="text-xs text-destructive mt-1">{t('auth.invalidCode')}</p>
                     )}
                     {inviteCodeValid === true && (
-                      <p className="text-xs text-emerald-500 mt-1">Valid invite code!</p>
+                      <p className="text-xs text-emerald-500 mt-1">{t('auth.validCode')}</p>
                     )}
                   </div>
                 )}
@@ -650,7 +654,7 @@ export default function Auth() {
                 
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
+                    <Label htmlFor="signup-name">{t('auth.fullName')}</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -666,7 +670,7 @@ export default function Auth() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email">{t('auth.email')}</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -682,7 +686,7 @@ export default function Auth() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password">{t('auth.password')}</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -705,10 +709,10 @@ export default function Auth() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
+                        {t('auth.creatingAccount')}
                       </>
                     ) : (
-                      isTaxPreparerSignup ? 'Create Tax Preparer Account' : 'Create Account'
+                      isTaxPreparerSignup ? t('auth.createTaxPreparerAccount') : t('auth.signUpButton')
                     )}
                   </Button>
                 </form>
@@ -722,13 +726,13 @@ export default function Auth() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <Card className="w-full max-w-md">
               <CardHeader>
-                <CardTitle>Reset Password</CardTitle>
-                <CardDescription>Enter your email and we'll send you a reset link.</CardDescription>
+                <CardTitle>{t('auth.resetPassword')}</CardTitle>
+                <CardDescription>{t('auth.resetPasswordDescription')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleForgotPassword} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="forgot-email">Email</Label>
+                    <Label htmlFor="forgot-email">{t('auth.email')}</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -744,10 +748,10 @@ export default function Auth() {
                   </div>
                   <div className="flex gap-2">
                     <Button type="button" variant="outline" onClick={() => setShowForgotPassword(false)} className="flex-1">
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                     <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                      {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send Reset Link'}
+                      {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('auth.sendResetLink')}
                     </Button>
                   </div>
                 </form>
@@ -761,13 +765,13 @@ export default function Auth() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <Card className="w-full max-w-md">
               <CardHeader>
-                <CardTitle>Set New Password</CardTitle>
-                <CardDescription>Enter your new password below.</CardDescription>
+                <CardTitle>{t('auth.newPassword')}</CardTitle>
+                <CardDescription>{t('auth.enterNewPassword')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleUpdatePassword} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="new-password">New Password</Label>
+                    <Label htmlFor="new-password">{t('auth.newPassword')}</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -783,7 +787,7 @@ export default function Auth() {
                     </div>
                   </div>
                   <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Update Password'}
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('auth.updatePassword')}
                   </Button>
                 </form>
               </CardContent>
