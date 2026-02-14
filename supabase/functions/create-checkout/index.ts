@@ -75,7 +75,7 @@ serve(async (req) => {
     }
 
     // Calculate covered years for metadata
-    const coveredYears = [2024, ...years].sort((a, b) => b - a);
+    const coveredYears = [2025, ...years].sort((a, b) => b - a);
 
     const origin = req.headers.get("origin") || "https://your-app.lovable.app";
 

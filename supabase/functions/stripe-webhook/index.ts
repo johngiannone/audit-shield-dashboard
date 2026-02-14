@@ -91,7 +91,7 @@ serve(async (req) => {
         }
       }
 
-      const coveredYears = coveredYearsStr ? JSON.parse(coveredYearsStr) : [2024];
+      const coveredYears = coveredYearsStr ? JSON.parse(coveredYearsStr) : [2025];
       logStep("Metadata parsed", { userId, planType, coveredYears, customerId, subscriptionId, referralCode });
 
       // Get profile_id from user_id
@@ -180,7 +180,7 @@ serve(async (req) => {
         .from("audit_plans")
         .select("id")
         .eq("profile_id", profile.id)
-        .eq("tax_year", 2024)
+        .eq("tax_year", 2025)
         .maybeSingle();
 
       if (existingPlan) {
@@ -208,7 +208,7 @@ serve(async (req) => {
           .from("audit_plans")
           .insert({
             profile_id: profile.id,
-            tax_year: 2024,
+            tax_year: 2025,
             status: "active",
             plan_level: planType,
             covered_years: coveredYears,
