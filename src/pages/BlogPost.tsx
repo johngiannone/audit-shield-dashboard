@@ -37,7 +37,8 @@ export default function BlogPost() {
       "@id": `https://returnshield.com/blog/${post.slug}`
     },
     "articleSection": post.category,
-    "wordCount": post.content.split(/\s+/).length
+    "wordCount": post.content.split(/\s+/).length,
+    ...(post.ogImage ? { "image": `https://returnshield.com${post.ogImage}` } : {})
   };
 
   const breadcrumbSchema = {
@@ -86,11 +87,15 @@ export default function BlogPost() {
         <meta property="og:description" content={post.excerpt} />
         <meta property="og:type" content="article" />
         <meta property="og:url" content={`https://returnshield.com/blog/${post.slug}`} />
+        {post.ogImage && <meta property="og:image" content={`https://returnshield.com${post.ogImage}`} />}
+        {post.ogImage && <meta property="og:image:width" content="1200" />}
+        {post.ogImage && <meta property="og:image:height" content="640" />}
         <meta property="article:published_time" content={post.publishedAt} />
         <meta property="article:section" content={post.category} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={post.title} />
         <meta name="twitter:description" content={post.excerpt} />
+        {post.ogImage && <meta name="twitter:image" content={`https://returnshield.com${post.ogImage}`} />}
         <script type="application/ld+json">
           {JSON.stringify(articleSchema)}
         </script>
