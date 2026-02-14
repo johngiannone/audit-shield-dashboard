@@ -16,7 +16,7 @@ interface PricingCardProps {
   type: 'individual' | 'business';
 }
 
-const ADDON_PRICE = 29;
+const ADDON_PRICES = { individual: 39, business: 99 } as const;
 const RETROACTIVE_YEARS = [
   { year: 2024, label: '2024 Return' },
   { year: 2023, label: '2023 Return' },
@@ -32,7 +32,8 @@ export function PricingCard({ type }: PricingCardProps) {
 
   const isIndividual = type === 'individual';
   const basePrice = isIndividual ? 49 : 199;
-  const addonTotal = selectedYears.length * ADDON_PRICE;
+  const addonPrice = ADDON_PRICES[type];
+  const addonTotal = selectedYears.length * addonPrice;
   const totalPrice = basePrice + addonTotal;
 
   const toggleYear = (year: number) => {
@@ -175,7 +176,7 @@ export function PricingCard({ type }: PricingCardProps) {
                       <span className="text-xs font-semibold">Protected</span>
                     </div>
                   ) : (
-                    <span className="text-sm font-medium text-muted-foreground">+${ADDON_PRICE}</span>
+                    <span className="text-sm font-medium text-muted-foreground">+${addonPrice}</span>
                   )}
                 </label>
               );
