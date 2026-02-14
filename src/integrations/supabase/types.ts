@@ -1207,6 +1207,13 @@ export type Database = {
         Returns: boolean
       }
       is_user_activated: { Args: { p_user_id: string }; Returns: boolean }
+      purge_expired_data: {
+        Args: never
+        Returns: {
+          deleted_count: number
+          table_name: string
+        }[]
+      }
     }
     Enums: {
       app_role:
