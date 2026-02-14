@@ -976,7 +976,7 @@ export default function PenaltyEraser() {
                         <SelectValue placeholder="Select tax year" />
                       </SelectTrigger>
                       <SelectContent>
-                        {[2024, 2023, 2022, 2021, 2020, 2019].map(year => (
+                        {[2025, 2024, 2023, 2022, 2021, 2020].map(year => (
                           <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                         ))}
                       </SelectContent>

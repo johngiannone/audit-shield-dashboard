@@ -336,7 +336,7 @@ export default function BulkEnroll() {
                     <SelectItem value="gold">
                       <div className="flex flex-col">
                         <span className="font-medium">Gold Shield</span>
-                        <span className="text-xs text-muted-foreground">All open years 2021-2024 ($99 value)</span>
+                        <span className="text-xs text-muted-foreground">All open years 2022-2025 ($99 value)</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="platinum">

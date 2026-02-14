@@ -479,7 +479,7 @@ export default function Plans() {
                     <span className="text-muted-foreground">/year</span>
                   </div>
                   <ul className="space-y-2">
-                    {['2024 Tax Year Coverage', 'Federal & State Defense', 'Identity Theft Restoration'].map((feature, i) => (
+                    {['2025 Tax Year Coverage', 'Federal & State Defense', 'Identity Theft Restoration'].map((feature, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
                         <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                         {feature}
@@ -493,7 +493,7 @@ export default function Plans() {
                     disabled={isPurchasing}
                   >
                     {isPurchasing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Protect 2024 Return
+                    Protect 2025 Return
                   </Button>
                 </CardContent>
               </Card>
@@ -520,7 +520,7 @@ export default function Plans() {
                     <Badge className="ml-2 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Best Value</Badge>
                   </div>
                   <div className="bg-primary/10 rounded-lg px-3 py-2">
-                    <p className="text-xs font-semibold text-primary">Covers 2021-2024</p>
+                    <p className="text-xs font-semibold text-primary">Covers 2022-2025</p>
                   </div>
                   <ul className="space-y-2">
                     {['All Silver features', 'Retroactive Audit Defense', 'Priority Agent Access'].map((feature, i) => (
