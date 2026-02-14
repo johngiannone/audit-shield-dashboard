@@ -1,4 +1,4 @@
-import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette, ShieldCheck, ScanSearch, Files, Bot, Eraser, FileSearch, Settings } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Inbox, Briefcase, Home, FolderOpen, UserPlus, UsersRound, Palette, ShieldCheck, ScanSearch, Files, Bot, Eraser, FileSearch, Settings, Archive } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,6 +28,7 @@ const clientNavItems = [
   { titleKey: 'nav.auditRiskCheck', url: '/audit-risk', icon: ScanSearch },
   { titleKey: 'nav.penaltyEraser', url: '/penalty-eraser', icon: Eraser },
   { titleKey: 'nav.transcriptDecoder', url: '/transcript-decoder', icon: FileSearch },
+  { titleKey: 'nav.auditVault', url: '/audit-vault', icon: Archive },
 ];
 
 const enrolledAgentNavItems = [

@@ -42,6 +42,7 @@ import TranscriptDecoder from "./pages/TranscriptDecoder";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import AgentSettings from "./pages/AgentSettings";
+import AuditVault from "./pages/AuditVault";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -83,6 +84,7 @@ const App = () => (
                   <Route path="/risk-assessments" element={<ProtectedRoute><RiskAssessments /></ProtectedRoute>} />
                   <Route path="/penalty-eraser" element={<ProtectedRoute><PenaltyEraser /></ProtectedRoute>} />
                   <Route path="/transcript-decoder" element={<ProtectedRoute><TranscriptDecoder /></ProtectedRoute>} />
+                  <Route path="/audit-vault" element={<ProtectedRoute><AuditVault /></ProtectedRoute>} />
                   <Route path="/compliance" element={<ProtectedRoute><Compliance /></ProtectedRoute>} />
                   <Route path="/corporate-compliance-review" element={<ProtectedRoute><CorporateComplianceReview /></ProtectedRoute>} />
                   <Route path="/affiliates" element={<ProtectedRoute><Affiliates /></ProtectedRoute>} />

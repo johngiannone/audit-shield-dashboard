@@ -1168,6 +1168,53 @@ export type Database = {
         }
         Relationships: []
       }
+      vault_documents: {
+        Row: {
+          created_at: string
+          expense_category: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          profile_id: string
+          tax_year: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expense_category: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          profile_id: string
+          tax_year: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expense_category?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          profile_id?: string
+          tax_year?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vault_documents_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zip_code_economics: {
         Row: {
           created_at: string
