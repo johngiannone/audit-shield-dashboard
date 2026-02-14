@@ -79,7 +79,8 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      const profile = codeData.profiles as { id: string; full_name: string | null; email: string | null } | null;
+      const profileArr = codeData.profiles as { id: string; full_name: string | null; email: string | null }[] | null;
+      const profile = profileArr?.[0] ?? null;
 
       // Only return first name initial + last name for privacy (no full email)
       const fullName = profile?.full_name || "Client";

@@ -134,12 +134,12 @@ export function CaseRiskAssessment({ caseId, clientId, taxReturnUrl, clientName 
 
     setIsSaving(true);
     try {
-      const { error } = await supabase.from('risk_assessments').insert({
+      const { error } = await supabase.from('risk_assessments').insert([{
         profile_id: clientId,
         risk_score: assessment.score,
-        red_flags: assessment.flags as unknown as Record<string, unknown>[],
+        red_flags: JSON.parse(JSON.stringify(assessment.flags)),
         analyzed_at: new Date().toISOString(),
-      });
+      }]);
 
       if (error) throw error;
 

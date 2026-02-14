@@ -183,7 +183,7 @@ function evaluateIndividualRisks(
         severity: "high",
         details: `Charitable contributions (${(charityRatio * 100).toFixed(1)}% of AGI) exceed 15% threshold. IRS may scrutinize.`,
       });
-    } else if (enrichment.benchmarks && charityRatio > enrichment.benchmarks.avgCharitableDeduction * 2) {
+    } else if (enrichment.benchmarks?.avgCharitableDeduction != null && charityRatio > enrichment.benchmarks.avgCharitableDeduction * 2) {
       flags.push({
         flag: "Above Average Charitable Deductions",
         severity: "medium",

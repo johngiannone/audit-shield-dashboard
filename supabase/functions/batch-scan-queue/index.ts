@@ -153,9 +153,8 @@ async function getBatchResults(
 
 async function handleRequest(req: Request): Promise<Response> {
   // Handle CORS preflight
-  if (handleCorsPreflightIfNeeded(req)) {
-    return new Response("ok", { headers: getCorsHeaders() });
-  }
+  const corsResponse = handleCorsPreflightIfNeeded(req);
+  if (corsResponse) return corsResponse;
 
   // Only allow POST and GET requests
   if (!["POST", "GET"].includes(req.method)) {
@@ -165,25 +164,25 @@ async function handleRequest(req: Request): Promise<Response> {
       }),
       {
         status: 405,
-        headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       }
     );
   }
 
   try {
+    const adminClient = createAdminClient();
+
     // Authenticate user
-    const authUser = await authenticateUser(req);
+    const authUser = await authenticateUser(req, adminClient);
     if (!authUser) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         {
           status: 401,
-          headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         }
       );
     }
-
-    const adminClient = createAdminClient();
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
     const batchId = url.searchParams.get("batch_id");
@@ -205,7 +204,7 @@ async function handleRequest(req: Request): Promise<Response> {
             {
               status: 400,
               headers: {
-                ...getCorsHeaders(),
+                ...getCorsHeaders(req),
                 "Content-Type": "application/json",
               },
             }
@@ -220,7 +219,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
         return new Response(JSON.stringify(batch), {
           status: 201,
-          headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -231,7 +230,7 @@ async function handleRequest(req: Request): Promise<Response> {
             {
               status: 400,
               headers: {
-                ...getCorsHeaders(),
+                ...getCorsHeaders(req),
                 "Content-Type": "application/json",
               },
             }
@@ -242,7 +241,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
         return new Response(JSON.stringify(progress), {
           status: 200,
-          headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -253,7 +252,7 @@ async function handleRequest(req: Request): Promise<Response> {
             {
               status: 400,
               headers: {
-                ...getCorsHeaders(),
+                ...getCorsHeaders(req),
                 "Content-Type": "application/json",
               },
             }
@@ -264,7 +263,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
         return new Response(JSON.stringify({ batch_id: batchId, results }), {
           status: 200,
-          headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
         });
       }
 
@@ -275,7 +274,7 @@ async function handleRequest(req: Request): Promise<Response> {
           }),
           {
             status: 400,
-            headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
+            headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
           }
         );
     }
@@ -291,7 +290,7 @@ async function handleRequest(req: Request): Promise<Response> {
       }),
       {
         status: 500,
-        headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       }
     );
   }
