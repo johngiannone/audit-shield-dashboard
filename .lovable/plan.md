@@ -1,84 +1,100 @@
 
-# Plan: IRS Form 2848 (Power of Attorney) Generator
 
-## Overview
-Add a feature to generate IRS Form 2848 (Power of Attorney and Declaration of Representative) from the Agent Case Detail page. When clicked, the button will fetch both the agent's and client's profile data and generate a pre-filled PDF.
+## Fix Build Errors Across Edge Functions
 
-## Implementation Steps
+The recent GitHub push introduced breaking inconsistencies between shared utility function signatures and their call sites across multiple edge functions. Here is the full breakdown and fix plan.
 
-### Step 1: Create Form 2848 Generator Utility
-**File:** `src/utils/form-2848-generator.ts` (new file)
+---
 
-Create a utility module following the same pattern as `fta-letter-generator.ts`:
+### Root Causes
 
-**Data Interfaces:**
-- `AgentData` - Representative information (name, address, phone, CAF number, PTIN, firm name)
-- `ClientData` - Taxpayer information (name, address, SSN, tax year, tax matters)
+**1. `getCorsHeaders(req)` signature mismatch**
+The shared `_shared/cors.ts` updated `getCorsHeaders` to require a `Request` parameter, but **4 edge functions** still call it without arguments (`getCorsHeaders()`):
+- `batch-scan-queue/index.ts` (11 occurrences)
+- `export-calendar/index.ts` (6 occurrences)
+- `gdpr-delete/index.ts` (10+ occurrences)
+- `gdpr-export/index.ts` (multiple occurrences)
+- `purge-expired-data/index.ts` (4 occurrences)
 
-**Core Functions:**
-- `generateForm2848(agentData, clientData)` - Creates the PDF with IRS Form 2848 layout
-- `downloadForm2848(agentData, clientData)` - Triggers browser download
+**2. `authenticateUser(req, supabase)` signature mismatch**
+The shared `_shared/supabase.ts` defines `authenticateUser(req: Request, supabase: SupabaseClient)`, but three functions call it incorrectly:
+- `gdpr-delete/index.ts` -- calls `authenticateUser(adminClient, authHeader)` (args swapped/wrong types)
+- `gdpr-export/index.ts` -- same incorrect pattern
+- `export-calendar/index.ts` -- same incorrect pattern
+- `batch-scan-queue/index.ts` -- calls `authenticateUser(req)` (missing second argument)
 
-**Form Layout Sections:**
-1. **Part I - Power of Attorney** (Taxpayer Information)
-   - Taxpayer name, address, SSN/EIN
-   - Daytime phone number
+**3. Type cast error in `activate-client/index.ts`**
+Line 82 casts an array to a single object:
+```typescript
+const profile = codeData.profiles as { id: string; ... } | null;
+```
+Since the Supabase join returns an array, this needs to handle the array type.
 
-2. **Part II - Representative(s)** 
-   - Representative name, CAF number, PTIN, phone
-   - Address (street, city, state, ZIP)
-   - Designation (Enrolled Agent checkbox)
-   - Signature line with date
+**4. Null safety in `analyze-audit-risk/score.ts`**
+Line 186 accesses `enrichment.benchmarks.avgCharitableDeduction` without a null check on `avgCharitableDeduction`.
 
-3. **Part III - Tax Matters**
-   - Tax form number (1040, etc.)
-   - Tax year(s) covered
-   - Tax matter description
+**5. Type error in `_shared/security.ts`**
+Line 49 inserts into `rate_limits` table but the TypeScript types don't recognize the table schema, resulting in a `never` type error. This needs a type assertion.
 
-4. **Part IV - Specific Acts Authorized**
-   - Standard checkboxes for common authorizations
+---
 
-5. **Part V - Declaration of Representative**
-   - Signature line for representative
+### Fix Plan
 
-6. **Footer** - Form number reference (IRS Form 2848, Rev. 2021)
+#### File 1: `supabase/functions/batch-scan-queue/index.ts`
+- Thread the `req` parameter through the `handleRequest` function
+- Change all `getCorsHeaders()` calls to `getCorsHeaders(req)`
+- Change `authenticateUser(req)` to `authenticateUser(req, adminClient)` with `adminClient` created before auth
+- Fix the `handleCorsPreflightIfNeeded` return check (it returns `Response | null`, not a boolean)
 
-### Step 2: Update AgentCaseDetail Page
-**File:** `src/pages/AgentCaseDetail.tsx`
+#### File 2: `supabase/functions/export-calendar/index.ts`
+- Change all `getCorsHeaders()` calls to `getCorsHeaders(req)` (req is already available in the serve callback)
+- Change `authenticateUser(adminClient, authHeader)` to `authenticateUser(req, adminClient)`
+- Remove manual auth header extraction since `authenticateUser` handles it internally
 
-**Changes:**
-1. Add import for the new generator utility
-2. Add state for `generatingPOA` loading indicator
-3. Create `generatePOA` async function that:
-   - Fetches current agent's full profile data
-   - Fetches client's full profile data using `caseDetail.client_id`
-   - Calls `downloadForm2848()` with the data
-   - Shows toast on success/error
+#### File 3: `supabase/functions/gdpr-delete/index.ts`
+- Change all `getCorsHeaders()` calls to `getCorsHeaders(req)`
+- Change `authenticateUser(adminClient, authHeader)` to `authenticateUser(req, adminClient)`
+- Remove manual auth header extraction
 
-4. Add "Generate POA (2848)" button in header actions area (next to "Unassign Case"):
-   - Uses `FileSignature` icon from lucide-react
-   - Shows loading spinner when generating
-   - Disabled during generation
+#### File 4: `supabase/functions/gdpr-export/index.ts`
+- Same fixes as gdpr-delete: pass `req` to `getCorsHeaders` and fix `authenticateUser` call
 
-## User Experience Flow
-1. Agent views a case in the Case Workspace
-2. Agent clicks "Generate POA (2848)" button in header
-3. System fetches agent and client profile data
-4. PDF downloads automatically with filename like `Form_2848_ClientName_2024.pdf`
-5. Toast notification confirms successful generation
+#### File 5: `supabase/functions/purge-expired-data/index.ts`
+- Change all `getCorsHeaders()` calls to `getCorsHeaders(req)`
+- Fix `handleCorsPreflightIfNeeded` return check if needed
 
-## Technical Details
+#### File 6: `supabase/functions/activate-client/index.ts`
+- Line 82: Change the type assertion to handle the array response:
+```typescript
+const profileArr = codeData.profiles as { id: string; full_name: string | null; email: string | null; }[] | null;
+const profile = profileArr?.[0] ?? null;
+```
 
-**Profile Data Usage:**
-- Agent: `full_name`, `address`, `phone`, `brand_firm_name` (for firm name)
-- Client: `full_name`, `address`, `phone`
-- Case: `tax_year` for the tax matters section
+#### File 7: `supabase/functions/analyze-audit-risk/score.ts`
+- Line 186: Add null guard for `avgCharitableDeduction`:
+```typescript
+} else if (enrichment.benchmarks?.avgCharitableDeduction != null && charityRatio > enrichment.benchmarks.avgCharitableDeduction * 2) {
+```
 
-**Form Pre-filling Notes:**
-- Some fields (SSN, CAF#, PTIN) will have placeholder text since they aren't stored in profiles
-- The form will include clear instructions for manually completing these fields
-- Tax form type will default to "1040" based on the case context
+#### File 8: `supabase/functions/_shared/security.ts`
+- Line 49: Add type assertion for the `rate_limits` insert to bypass the schema mismatch:
+```typescript
+await (supabaseAdmin.from("rate_limits") as any).insert({ ... });
+```
 
-**Error Handling:**
-- Missing required profile data shows warning toast
-- PDF generation errors caught and displayed to user
+---
+
+### Summary
+
+| File | Errors Fixed |
+|------|-------------|
+| `batch-scan-queue/index.ts` | 13 (`getCorsHeaders` + `authenticateUser` + preflight check) |
+| `export-calendar/index.ts` | 7 (`getCorsHeaders` + `authenticateUser`) |
+| `gdpr-delete/index.ts` | ~12 (`getCorsHeaders` + `authenticateUser`) |
+| `gdpr-export/index.ts` | ~8 (`getCorsHeaders` + `authenticateUser`) |
+| `purge-expired-data/index.ts` | 4 (`getCorsHeaders`) |
+| `activate-client/index.ts` | 1 (type cast) |
+| `analyze-audit-risk/score.ts` | 1 (null safety) |
+| `_shared/security.ts` | 1 (type assertion) |
+| **Total** | **~47 errors resolved** |
+
