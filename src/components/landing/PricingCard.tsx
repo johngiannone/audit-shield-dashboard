@@ -18,9 +18,9 @@ interface PricingCardProps {
 
 const ADDON_PRICE = 29;
 const RETROACTIVE_YEARS = [
+  { year: 2024, label: '2024 Return' },
   { year: 2023, label: '2023 Return' },
   { year: 2022, label: '2022 Return' },
-  { year: 2021, label: '2021 Return' },
 ];
 
 export function PricingCard({ type }: PricingCardProps) {
@@ -83,7 +83,7 @@ export function PricingCard({ type }: PricingCardProps) {
     title: 'Individual Shield',
     subtitle: 'W-2 & Investment Income',
     features: [
-      '2024 Tax Year Coverage',
+      '2025 Tax Year Coverage',
       'Federal & State Defense',
       'Identity Theft Restoration',
       'Dedicated Enrolled Agent',
@@ -96,7 +96,7 @@ export function PricingCard({ type }: PricingCardProps) {
     title: 'Business Shield',
     subtitle: 'Schedule C & 1099 Income',
     features: [
-      '2024 Tax Year Coverage',
+      '2025 Tax Year Coverage',
       'Self-Employment Defense',
       'Business Expense Verification',
       'Payroll Tax Inquiry Defense',
@@ -139,7 +139,7 @@ export function PricingCard({ type }: PricingCardProps) {
               <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <h4 className="font-display text-sm font-semibold text-amber-800 dark:text-amber-300">
-                  Your 2021-2023 returns are currently exposed
+                  Your 2022-2024 returns are currently exposed
                 </h4>
                 <p className="text-xs text-amber-700 dark:text-amber-400">
                   1 in 4 audits target returns filed in previous years. Add protection now to lock in coverage.

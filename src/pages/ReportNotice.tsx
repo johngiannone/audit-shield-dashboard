@@ -33,7 +33,7 @@ export default function ReportNotice() {
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   
   // Step 1: Notice upload state
-  const [taxYear, setTaxYear] = useState<string>('2024');
+  const [taxYear, setTaxYear] = useState<string>('2025');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -430,7 +430,7 @@ export default function ReportNotice() {
     }
   };
 
-  const taxYears = ['2024', '2023', '2022', '2021'];
+  const taxYears = ['2025', '2024', '2023', '2022'];
 
   if (loading || !user) {
     return (

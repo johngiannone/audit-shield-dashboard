@@ -176,7 +176,7 @@ export function AppSidebar() {
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         {!collapsed && (
           <div className="text-xs text-sidebar-foreground/60 text-center">
-            {role === 'client' && isWhiteLabeled ? `Powered by Return Shield` : '© 2024 Return Shield'}
+            {role === 'client' && isWhiteLabeled ? `Powered by Return Shield` : '© 2025 Return Shield'}
           </div>
         )}
       </SidebarFooter>

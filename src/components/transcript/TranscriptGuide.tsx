@@ -60,11 +60,11 @@ const GUIDE_STEPS = [
   },
   {
     step: 4,
-    title: "Download the 2024 PDF",
-    description: "Under 'Account Transcripts', click on '2024 Account Transcript [PDF] EN' to download. Save the file to your device, then upload it here!",
+    title: "Download the 2025 PDF",
+    description: "Under 'Account Transcripts', click on '2025 Account Transcript [PDF] EN' to download. Save the file to your device, then upload it here!",
     icon: Download,
     images: [
-      { src: irsStep4, caption: "Click 'EN' next to '2024 Record of Account Transcript [PDF]'" }
+      { src: irsStep4, caption: "Click 'EN' next to '2025 Record of Account Transcript [PDF]'" }
     ],
     tip: "The PDF filename will include 'Account' in it. If it says 'Return', you downloaded the wrong one!"
   }
