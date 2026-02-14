@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
 import { RealtimeChannel } from '@supabase/supabase-js';
-import supabase from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Case {
   id: string;
-  agent_profile_id: string | null;
-  client_profile_id: string | null;
-  case_number: string;
-  case_type: string;
-  status: 'open' | 'closed' | 'pending' | 'resolved';
-  deadline: string | null;
+  assigned_agent_id: string | null;
+  client_id: string;
+  notice_type: string;
+  notice_agency: string;
+  status: string;
   response_due_date: string | null;
   created_at: string;
   updated_at: string;
+  tax_year: number;
+  summary: string | null;
+  file_path: string | null;
+  tax_return_path: string | null;
   [key: string]: any;
 }
 
@@ -43,7 +46,7 @@ export const useRealtimeCases = (profileId: string): UseRealtimeCasesReturn => {
           .from('cases')
           .select('*')
           .or(
-            `agent_profile_id.eq.${profileId},client_profile_id.eq.${profileId}`
+            `assigned_agent_id.eq.${profileId},client_id.eq.${profileId}`
           );
 
         if (fetchError) {
@@ -62,7 +65,7 @@ export const useRealtimeCases = (profileId: string): UseRealtimeCasesReturn => {
               event: 'INSERT',
               schema: 'public',
               table: 'cases',
-              filter: `agent_profile_id=eq.${profileId},client_profile_id=eq.${profileId}`,
+              filter: `assigned_agent_id=eq.${profileId}`,
             },
             (payload) => {
               const newCase = payload.new as Case;
@@ -78,7 +81,7 @@ export const useRealtimeCases = (profileId: string): UseRealtimeCasesReturn => {
               event: 'UPDATE',
               schema: 'public',
               table: 'cases',
-              filter: `agent_profile_id=eq.${profileId},client_profile_id=eq.${profileId}`,
+              filter: `assigned_agent_id=eq.${profileId}`,
             },
             (payload) => {
               const updatedCase = payload.new as Case;
@@ -93,7 +96,7 @@ export const useRealtimeCases = (profileId: string): UseRealtimeCasesReturn => {
               event: 'DELETE',
               schema: 'public',
               table: 'cases',
-              filter: `agent_profile_id=eq.${profileId},client_profile_id=eq.${profileId}`,
+              filter: `assigned_agent_id=eq.${profileId}`,
             },
             (payload) => {
               const deletedId = (payload.old as Case).id;

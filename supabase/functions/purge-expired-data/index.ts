@@ -82,9 +82,8 @@ async function purgeExpiredData(): Promise<{
 
 async function handleRequest(req: Request): Promise<Response> {
   // Handle CORS preflight
-  if (handleCorsPreflightIfNeeded(req)) {
-    return new Response("ok", { headers: getCorsHeaders() });
-  }
+  const corsResponse = handleCorsPreflightIfNeeded(req);
+  if (corsResponse) return corsResponse;
 
   // Only allow POST requests
   if (req.method !== "POST") {
@@ -94,7 +93,7 @@ async function handleRequest(req: Request): Promise<Response> {
       }),
       {
         status: 405,
-        headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       }
     );
   }
@@ -103,7 +102,7 @@ async function handleRequest(req: Request): Promise<Response> {
     const result = await purgeExpiredData();
     return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   } catch (error) {
     const errorMessage =
@@ -118,7 +117,7 @@ async function handleRequest(req: Request): Promise<Response> {
       }),
       {
         status: 500,
-        headers: { ...getCorsHeaders(), "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       }
     );
   }

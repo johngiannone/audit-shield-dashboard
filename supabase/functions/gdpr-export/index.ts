@@ -29,7 +29,7 @@ serve(async (req: Request) => {
         {
           status: 405,
           headers: {
-            ...getCorsHeaders(),
+            ...getCorsHeaders(req),
             'Content-Type': 'application/json',
           },
         }
@@ -37,27 +37,11 @@ serve(async (req: Request) => {
     }
 
     // Authenticate user
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({
-          error: 'Unauthorized',
-          message: 'Authorization header is required',
-        }),
-        {
-          status: 401,
-          headers: {
-            ...getCorsHeaders(),
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-    }
-
     const adminClient = createAdminClient();
-    const user = await authenticateUser(adminClient, authHeader);
-
-    if (!user) {
+    let user: { id: string; email: string };
+    try {
+      user = await authenticateUser(req, adminClient);
+    } catch {
       return new Response(
         JSON.stringify({
           error: 'Unauthorized',
@@ -66,7 +50,7 @@ serve(async (req: Request) => {
         {
           status: 401,
           headers: {
-            ...getCorsHeaders(),
+            ...getCorsHeaders(req),
             'Content-Type': 'application/json',
           },
         }
@@ -149,7 +133,7 @@ serve(async (req: Request) => {
     return new Response(JSON.stringify(exportData, null, 2), {
       status: 200,
       headers: {
-        ...getCorsHeaders(),
+        ...getCorsHeaders(req),
         'Content-Type': 'application/json; charset=utf-8',
         'Content-Disposition':
           `attachment; filename="gdpr-export-${user.id}-${new Date().toISOString().split('T')[0]}.json"`,
@@ -165,7 +149,7 @@ serve(async (req: Request) => {
       {
         status: 500,
         headers: {
-          ...getCorsHeaders(),
+          ...getCorsHeaders(req),
           'Content-Type': 'application/json',
         },
       }

@@ -46,7 +46,7 @@ export async function checkRateLimit(
 
     if (allowed) {
       // Record this request
-      await supabaseAdmin.from("rate_limits").insert({
+      await (supabaseAdmin.from("rate_limits") as any).insert({
         key,
         created_at: now.toISOString(),
       });
