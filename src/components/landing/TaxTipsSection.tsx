@@ -12,8 +12,8 @@ const taxTips = [
   {
     slug: 'irs-audit-red-flags-2025',
     category: 'Audit Prevention',
-    title: '7 Red Flags That Trigger IRS Audits in 2025',
-    excerpt: 'Learn the most common mistakes that put taxpayers on the IRS radar—and how to avoid them before filing.',
+    title: 'Seven Red Flags That Trigger IRS Audits in 2025',
+    excerpt: 'How to recognize—and avoid—the filing patterns most likely to draw federal scrutiny.',
     icon: AlertTriangle,
     readTime: '5 min read',
   },
