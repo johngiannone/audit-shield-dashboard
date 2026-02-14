@@ -15,6 +15,7 @@ export const blogPosts = [
     readTime: '5 min read',
     publishedAt: '2025-01-14',
     author: 'Return Shield Team',
+    ogImage: '/images/og-irs-audit-red-flags.jpg',
     content: `
 ## What Puts a Tax Return on the IRS Radar
 
