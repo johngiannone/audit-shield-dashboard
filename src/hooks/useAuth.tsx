@@ -165,10 +165,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    // Brute force protection: track failed login attempts per email
+    const failedKey = `login_fail_${email.toLowerCase()}`;
+    const lockoutKey = `login_lockout_${email.toLowerCase()}`;
+    const lockoutUntil = localStorage.getItem(lockoutKey);
+
+    if (lockoutUntil && Date.now() < parseInt(lockoutUntil, 10)) {
+      const remainingMs = parseInt(lockoutUntil, 10) - Date.now();
+      const remainingMin = Math.ceil(remainingMs / 60000);
+      return {
+        error: new Error(
+          `Too many failed attempts. Please try again in ${remainingMin} minute${remainingMin > 1 ? 's' : ''}.`
+        ),
+      };
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    if (error) {
+      // Increment failed attempts
+      const attempts = parseInt(localStorage.getItem(failedKey) || '0', 10) + 1;
+      localStorage.setItem(failedKey, String(attempts));
+
+      // Lock out after 5 failed attempts for 15 minutes
+      if (attempts >= 5) {
+        localStorage.setItem(lockoutKey, String(Date.now() + 15 * 60 * 1000));
+        localStorage.removeItem(failedKey);
+      }
+    } else {
+      // Clear on success
+      localStorage.removeItem(failedKey);
+      localStorage.removeItem(lockoutKey);
+    }
+
     return { error };
   };
 

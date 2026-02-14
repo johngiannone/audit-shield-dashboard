@@ -1,10 +1,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { getCorsHeaders, handleCorsPreflightIfNeeded } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// CORS headers are now dynamic - see getCorsHeaders()
 
 interface ActivateRequest {
   code: string;
@@ -16,9 +14,9 @@ interface ValidateRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsPreflightResponse = handleCorsPreflightIfNeeded(req);
+  if (corsPreflightResponse) return corsPreflightResponse;
+  const corsHeaders = getCorsHeaders(req);
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -81,13 +79,21 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      const profile = codeData.profiles as any;
+      const profile = codeData.profiles as { id: string; full_name: string | null; email: string | null } | null;
+
+      // Only return first name initial + last name for privacy (no full email)
+      const fullName = profile?.full_name || "Client";
+      const email = profile?.email || "";
+      // Mask email: show first 2 chars + ***@domain
+      const maskedEmail = email
+        ? email.substring(0, 2) + "***@" + email.split("@")[1]
+        : "";
 
       return new Response(
         JSON.stringify({
           valid: true,
-          clientName: profile?.full_name || "Client",
-          clientEmail: profile?.email || "",
+          clientName: fullName,
+          clientEmail: maskedEmail,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -103,9 +109,23 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (!password || password.length < 6) {
+    if (!password || password.length < 10) {
       return new Response(
-        JSON.stringify({ success: false, error: "Password must be at least 6 characters" }),
+        JSON.stringify({ success: false, error: "Password must be at least 10 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Require at least one uppercase, one lowercase, and one number
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasDigit = /\d/.test(password);
+    if (!hasUpper || !hasLower || !hasDigit) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Password must include at least one uppercase letter, one lowercase letter, and one number",
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

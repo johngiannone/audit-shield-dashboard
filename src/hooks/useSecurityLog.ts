@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Json } from '@/integrations/supabase/types';
 
-export type SecurityAction = 
+export type SecurityAction =
   | 'viewed_document'
   | 'downloaded_document'
   | 'signed_contract'
@@ -9,6 +9,7 @@ export type SecurityAction =
   | 'deleted_client'
   | 'login_success'
   | 'login_failed'
+  | 'login_lockout'
   | 'password_changed'
   | 'case_assigned'
   | 'case_unassigned'
@@ -17,7 +18,13 @@ export type SecurityAction =
   | 'document_deleted'
   | 'message_sent'
   | 'admin_access'
-  | 'viewed_pii';
+  | 'viewed_pii'
+  | 'activation_attempt'
+  | 'activation_success'
+  | 'webhook_processed'
+  | 'rate_limit_exceeded'
+  | 'file_upload'
+  | 'suspicious_activity';
 
 interface LogSecurityEventParams {
   action: SecurityAction;
@@ -34,24 +41,28 @@ export async function logSecurityEvent({
 }: LogSecurityEventParams): Promise<void> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      console.warn('Cannot log security event: No authenticated user');
-      return;
-    }
 
+    // Enrich metadata with timestamp
+    const enrichedMetadata = {
+      ...metadata,
+      timestamp: new Date().toISOString(),
+      authenticated: !!user,
+    };
+
+    // Log even for unauthenticated events (e.g., failed logins)
     const { error } = await supabase
       .from('security_logs')
       .insert([{
-        user_id: user.id,
+        user_id: user?.id || null,
         action,
         resource_type: resourceType || null,
         resource_id: resourceId || null,
-        metadata: metadata as Json,
+        metadata: enrichedMetadata as Json,
       }]);
 
     if (error) {
-      console.error('Failed to log security event:', error);
+      // Fallback: log to console if DB insert fails (RLS may block unauthenticated inserts)
+      console.warn('Failed to log security event to DB:', error.message, { action, resourceType, enrichedMetadata });
     }
   } catch (error) {
     console.error('Error logging security event:', error);
@@ -150,6 +161,27 @@ export const securityLog = {
       resourceType: piiType,
       resourceId,
       metadata: { pii_type: piiType, masked_value: maskedValue },
+    }),
+
+  loginLockout: (email: string, attempts: number) =>
+    logSecurityEvent({
+      action: 'login_lockout',
+      resourceType: 'auth',
+      metadata: { email, attempts, lockout_duration_min: 15 },
+    }),
+
+  activationAttempt: (code: string, success: boolean) =>
+    logSecurityEvent({
+      action: success ? 'activation_success' : 'activation_attempt',
+      resourceType: 'activation',
+      metadata: { code_prefix: code.substring(0, 3) + '***', success },
+    }),
+
+  suspiciousActivity: (description: string, details?: Record<string, string | number | boolean | null>) =>
+    logSecurityEvent({
+      action: 'suspicious_activity',
+      resourceType: 'security',
+      metadata: { description, ...details },
     }),
 };
 

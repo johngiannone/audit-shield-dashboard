@@ -49,7 +49,7 @@ export function CaseMessages({ caseId, profileId, isAgent = false }: CaseMessage
           filter: `case_id=eq.${caseId}`,
         },
         async (payload) => {
-          const newMsg = payload.new as any;
+          const newMsg = payload.new as Record<string, string>;
           
           // Fetch sender name
           const { data: senderProfile } = await supabase

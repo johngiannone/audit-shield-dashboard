@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { BrandingProvider } from "@/hooks/useBranding";
 import { HelmetProvider } from "react-helmet-async";
 import { useReferralTracking } from "@/hooks/useReferralTracking";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import FreeScan from "./pages/FreeScan";
 import Auth from "./pages/Auth";
@@ -62,40 +63,48 @@ const App = () => (
             <BrowserRouter>
               <ReferralTracker>
                 <Routes>
+                  {/* Public routes - no auth required */}
                   <Route path="/" element={<Index />} />
                   <Route path="/free-scan" element={<FreeScan />} />
                   <Route path="/auth" element={<Auth />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/plans" element={<Plans />} />
-                  <Route path="/report" element={<ReportNotice />} />
-                  <Route path="/queue" element={<CaseQueue />} />
-                  <Route path="/caseload" element={<MyCaseload />} />
-                  <Route path="/agent/cases/:caseId" element={<AgentCaseDetail />} />
-                  <Route path="/my-cases" element={<MyCases />} />
-                  <Route path="/my-cases/:caseId" element={<ClientCaseDetail />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/partners" element={<Partners />} />
-                  <Route path="/affiliates" element={<Affiliates />} />
-                  <Route path="/affiliate-portal" element={<AffiliatePortal />} />
-                  <Route path="/admin/affiliates" element={<AffiliateAdmin />} />
                   <Route path="/partner-program" element={<PartnerProgram />} />
-                  <Route path="/bulk-enroll" element={<BulkEnroll />} />
-                  <Route path="/my-clients" element={<MyClients />} />
-                  <Route path="/referral-network" element={<ReferralNetwork />} />
                   <Route path="/activate" element={<Activate />} />
-                  <Route path="/notifications" element={<Notifications />} />
-                  <Route path="/branding" element={<BrandingSettings />} />
-                  <Route path="/compliance" element={<Compliance />} />
-                  <Route path="/audit-risk" element={<AuditRiskCheck />} />
-                  <Route path="/risk-assessments" element={<RiskAssessments />} />
-                  <Route path="/batch-risk-scan" element={<BatchRiskScan />} />
-                  <Route path="/admin/model-config" element={<ModelConfig />} />
-                  <Route path="/corporate-compliance-review" element={<CorporateComplianceReview />} />
-                  <Route path="/penalty-eraser" element={<PenaltyEraser />} />
-                  <Route path="/transcript-decoder" element={<TranscriptDecoder />} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:slug" element={<BlogPost />} />
-                  <Route path="/agent-settings" element={<AgentSettings />} />
+
+                  {/* Authenticated routes - any logged-in user */}
+                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="/report" element={<ProtectedRoute><ReportNotice /></ProtectedRoute>} />
+                  <Route path="/my-cases" element={<ProtectedRoute><MyCases /></ProtectedRoute>} />
+                  <Route path="/my-cases/:caseId" element={<ProtectedRoute><ClientCaseDetail /></ProtectedRoute>} />
+                  <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                  <Route path="/audit-risk" element={<ProtectedRoute><AuditRiskCheck /></ProtectedRoute>} />
+                  <Route path="/risk-assessments" element={<ProtectedRoute><RiskAssessments /></ProtectedRoute>} />
+                  <Route path="/penalty-eraser" element={<ProtectedRoute><PenaltyEraser /></ProtectedRoute>} />
+                  <Route path="/transcript-decoder" element={<ProtectedRoute><TranscriptDecoder /></ProtectedRoute>} />
+                  <Route path="/compliance" element={<ProtectedRoute><Compliance /></ProtectedRoute>} />
+                  <Route path="/corporate-compliance-review" element={<ProtectedRoute><CorporateComplianceReview /></ProtectedRoute>} />
+                  <Route path="/affiliates" element={<ProtectedRoute><Affiliates /></ProtectedRoute>} />
+                  <Route path="/affiliate-portal" element={<ProtectedRoute><AffiliatePortal /></ProtectedRoute>} />
+                  <Route path="/referral-network" element={<ProtectedRoute><ReferralNetwork /></ProtectedRoute>} />
+                  <Route path="/partners" element={<ProtectedRoute><Partners /></ProtectedRoute>} />
+                  <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+
+                  {/* Agent/Preparer routes - require enrolled_agent or tax_preparer role */}
+                  <Route path="/queue" element={<ProtectedRoute requiredRoles={["enrolled_agent", "tax_preparer"]}><CaseQueue /></ProtectedRoute>} />
+                  <Route path="/caseload" element={<ProtectedRoute requiredRoles={["enrolled_agent", "tax_preparer"]}><MyCaseload /></ProtectedRoute>} />
+                  <Route path="/agent/cases/:caseId" element={<ProtectedRoute requiredRoles={["enrolled_agent", "tax_preparer"]}><AgentCaseDetail /></ProtectedRoute>} />
+                  <Route path="/my-clients" element={<ProtectedRoute requiredRoles={["enrolled_agent", "tax_preparer"]}><MyClients /></ProtectedRoute>} />
+                  <Route path="/bulk-enroll" element={<ProtectedRoute requiredRoles={["enrolled_agent", "tax_preparer"]}><BulkEnroll /></ProtectedRoute>} />
+                  <Route path="/batch-risk-scan" element={<ProtectedRoute requiredRoles={["enrolled_agent", "tax_preparer"]}><BatchRiskScan /></ProtectedRoute>} />
+                  <Route path="/branding" element={<ProtectedRoute requiredRoles={["enrolled_agent", "tax_preparer"]}><BrandingSettings /></ProtectedRoute>} />
+                  <Route path="/agent-settings" element={<ProtectedRoute requiredRoles={["enrolled_agent", "tax_preparer"]}><AgentSettings /></ProtectedRoute>} />
+
+                  {/* Admin routes - require enrolled_agent role (admin) */}
+                  <Route path="/admin/affiliates" element={<ProtectedRoute requiredRoles={["enrolled_agent"]}><AffiliateAdmin /></ProtectedRoute>} />
+                  <Route path="/admin/model-config" element={<ProtectedRoute requiredRoles={["enrolled_agent"]}><ModelConfig /></ProtectedRoute>} />
+
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </ReferralTracker>

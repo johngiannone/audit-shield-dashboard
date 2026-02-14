@@ -30,15 +30,18 @@ serve(async (req) => {
     }
 
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-    let event: Stripe.Event;
+    if (!webhookSecret) {
+      logStep("CRITICAL: STRIPE_WEBHOOK_SECRET is not configured - rejecting webhook");
+      return new Response("Webhook secret not configured", { status: 500 });
+    }
 
-    if (webhookSecret) {
+    let event: Stripe.Event;
+    try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
       logStep("Event verified with webhook secret", { type: event.type });
-    } else {
-      // For development, parse without verification
-      event = JSON.parse(body);
-      logStep("Event parsed (no webhook secret)", { type: event.type });
+    } catch (verifyError) {
+      logStep("Webhook signature verification failed", { error: String(verifyError) });
+      return new Response("Invalid signature", { status: 403 });
     }
 
     if (event.type === "checkout.session.completed") {
@@ -56,6 +59,36 @@ serve(async (req) => {
       if (!userId || !planType) {
         logStep("Missing metadata", { userId, planType });
         return new Response("Missing metadata", { status: 400 });
+      }
+
+      // Validate plan_type against allowed values
+      const allowedPlanTypes = ["individual", "business", "retroactive"];
+      if (!allowedPlanTypes.includes(planType)) {
+        logStep("Invalid plan type in metadata", { planType });
+        return new Response("Invalid plan type", { status: 400 });
+      }
+
+      // Verify subscription price matches the claimed plan type (server-side metadata validation)
+      if (subscriptionId) {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const actualPriceId = subscription.items.data[0]?.price?.id;
+          const EXPECTED_PRICES: Record<string, string> = {
+            individual: "price_1SeN4N06ckHJVNGXYRmCmQtB",
+            business: "price_1SeN4n06ckHJVNGXyYZGe5Wa",
+          };
+          const expectedPrice = EXPECTED_PRICES[planType];
+          if (expectedPrice && actualPriceId !== expectedPrice) {
+            logStep("SECURITY: Price mismatch detected - possible metadata tampering", {
+              claimed: planType,
+              actualPriceId,
+              expectedPrice,
+            });
+            return new Response("Plan type does not match subscription price", { status: 400 });
+          }
+        } catch (subError) {
+          logStep("Warning: Could not verify subscription price", { error: String(subError) });
+        }
       }
 
       const coveredYears = coveredYearsStr ? JSON.parse(coveredYearsStr) : [2024];
@@ -78,17 +111,25 @@ serve(async (req) => {
       // Handle referral attribution
       if (referralCode) {
         logStep("Processing referral attribution", { referralCode });
-        
+
         // Find the affiliate with this referral code
         const { data: affiliate, error: affiliateError } = await supabaseAdmin
           .from("affiliates")
-          .select("id, commission_rate, total_earnings")
+          .select("id, profile_id, commission_rate, total_earnings")
           .eq("referral_code", referralCode)
           .maybeSingle();
 
         if (affiliateError) {
           logStep("Error finding affiliate", { error: affiliateError.message });
         } else if (affiliate) {
+          // Prevent self-referrals: check if affiliate owns this purchase
+          if (affiliate.profile_id === profile.id) {
+            logStep("SECURITY: Self-referral detected and blocked", {
+              affiliateId: affiliate.id,
+              profileId: profile.id,
+              referralCode
+            });
+          } else {
           // Calculate commission (amount is in cents, convert to dollars for storage)
           const commissionRate = affiliate.commission_rate || 0.20;
           const commissionAmount = (amountTotal / 100) * commissionRate;
@@ -128,6 +169,7 @@ serve(async (req) => {
           } else {
             logStep("Marked referral visit as converted");
           }
+          } // end self-referral else block
         } else {
           logStep("No affiliate found for referral code", { referralCode });
         }

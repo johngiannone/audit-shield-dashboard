@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, AppRole } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -274,7 +274,7 @@ export default function Auth() {
       signupForm.email, 
       signupForm.password, 
       signupForm.fullName, 
-      role as any,
+      role as AppRole,
       referralCode,
       isTaxPreparerSignup ? inviteCode : null
     );

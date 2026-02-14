@@ -19,6 +19,7 @@ const FreeScan = () => {
   ]);
   const [result, setResult] = useState<EstimationAnomalyResult | null>(null);
   const [email, setEmail] = useState("");
+  const [emailConsent, setEmailConsent] = useState(false);
   const [submittingEmail, setSubmittingEmail] = useState(false);
   const [emailCaptured, setEmailCaptured] = useState(false);
 
@@ -64,6 +65,11 @@ const FreeScan = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
       toast.error("Please enter a valid email address");
+      return;
+    }
+
+    if (!emailConsent) {
+      toast.error("Please agree to receive communications before submitting");
       return;
     }
 
@@ -243,7 +249,7 @@ const FreeScan = () => {
                             onChange={(e) => setEmail(e.target.value)}
                             className="flex-1"
                           />
-                          <Button onClick={handleEmailSubmit} disabled={submittingEmail}>
+                          <Button onClick={handleEmailSubmit} disabled={submittingEmail || !emailConsent}>
                             {submittingEmail ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
@@ -251,6 +257,18 @@ const FreeScan = () => {
                             )}
                           </Button>
                         </div>
+                        <label className="flex items-start gap-2 max-w-md mx-auto text-left cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={emailConsent}
+                            onChange={(e) => setEmailConsent(e.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-gray-300"
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            I agree to receive email communications about my audit risk consultation.
+                            You can unsubscribe at any time.
+                          </span>
+                        </label>
                       </div>
                     ) : (
                       <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
