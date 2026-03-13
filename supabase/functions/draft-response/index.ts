@@ -9,6 +9,7 @@ import {
   AIRateLimitError,
   AICreditsError,
 } from "../_shared/ai.ts";
+import { enforceRateLimit, getUserIdFromRequest } from "../_shared/rate-limiter.ts";
 
 serve(async (req) => {
   const corsPreflightResponse = handleCorsPreflightIfNeeded(req);
