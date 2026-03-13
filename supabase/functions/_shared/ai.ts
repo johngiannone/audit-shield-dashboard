@@ -135,6 +135,7 @@ export async function callAI(options: AICallOptions): Promise<AIResponse> {
   if (options.temperature !== undefined) body.temperature = options.temperature;
   if (options.tools) body.tools = options.tools;
   if (options.tool_choice) body.tool_choice = options.tool_choice;
+  if (options.response_format) body.response_format = options.response_format;
 
   const response = await fetchWithTimeout(
     "https://ai.gateway.lovable.dev/v1/chat/completions",
