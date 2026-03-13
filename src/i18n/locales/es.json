@@ -38,7 +38,8 @@
     "batchRiskScan": "Escaneo de Riesgo en Lote",
     "branding": "Marca",
     "compliance": "Cumplimiento",
-    "aiModels": "Modelos de IA"
+    "aiModels": "Modelos de IA",
+    "expenseCalculator": "Calculadora de Gastos"
   },
   "auth": {
     "signIn": "Iniciar Sesión",

@@ -38,7 +38,8 @@
     "batchRiskScan": "Batch Risk Scan",
     "branding": "Branding",
     "compliance": "Compliance",
-    "aiModels": "AI Models"
+    "aiModels": "AI Models",
+    "expenseCalculator": "Expense Calculator"
   },
   "auth": {
     "signIn": "Sign In",
