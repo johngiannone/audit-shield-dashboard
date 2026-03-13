@@ -1,0 +1,54 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { DollarSign, TrendingDown, TrendingUp, Receipt } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { ExpenseTransaction } from "@/hooks/useExpenseTransactions";
+
+interface Props {
+  transactions: ExpenseTransaction[];
+  isLoading: boolean;
+}
+
+export function ExpenseSummary({ transactions, isLoading }: Props) {
+  const totalExpenses = transactions.reduce((s, t) => s + Number(t.amount), 0);
+  const deductible = transactions.filter((t) => t.is_deductible).reduce((s, t) => s + Number(t.amount), 0);
+  const nonDeductible = totalExpenses - deductible;
+
+  const cards = [
+    { label: "Total Expenses", value: totalExpenses, icon: Receipt, color: "text-foreground" },
+    { label: "Deductible", value: deductible, icon: TrendingDown, color: "text-green-600" },
+    { label: "Non-Deductible", value: nonDeductible, icon: TrendingUp, color: "text-destructive" },
+    { label: "Transactions", value: transactions.length, icon: DollarSign, color: "text-primary", isCurrency: false },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}><CardContent className="p-6"><Skeleton className="h-16 w-full" /></CardContent></Card>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {cards.map((c) => (
+        <Card key={c.label}>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 rounded-full bg-muted">
+              <c.icon className={`h-5 w-5 ${c.color}`} />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">{c.label}</p>
+              <p className={`text-2xl font-bold ${c.color}`}>
+                {c.isCurrency === false
+                  ? c.value
+                  : `$${c.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
