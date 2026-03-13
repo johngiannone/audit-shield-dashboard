@@ -291,14 +291,14 @@ export function parseJSONFromAIResponse(content: string): unknown {
   try {
     return JSON.parse(cleaned);
   } catch {
-    // Try to extract JSON array (greedy)
-    const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
-    if (arrayMatch) {
+    // Extract balanced JSON structure starting from first [ or {
+    const extracted = extractBalancedJSON(cleaned);
+    if (extracted) {
       try {
-        return JSON.parse(arrayMatch[0]);
+        return JSON.parse(extracted);
       } catch {
-        // Try fixing trailing commas before ] or }
-        const fixed = arrayMatch[0]
+        // Try fixing trailing commas
+        const fixed = extracted
           .replace(/,\s*\]/g, "]")
           .replace(/,\s*\}/g, "}");
         try {
@@ -307,14 +307,35 @@ export function parseJSONFromAIResponse(content: string): unknown {
       }
     }
 
-    // Try to extract JSON object
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[0]);
-      } catch { /* fall through */ }
-    }
-
     throw new Error("Failed to parse AI response as JSON");
   }
+}
+
+/**
+ * Extract a balanced JSON structure (array or object) from a string
+ * by counting bracket depth, avoiding greedy regex issues.
+ */
+function extractBalancedJSON(text: string): string | null {
+  const startIdx = text.search(/[\[{]/);
+  if (startIdx === -1) return null;
+
+  const open = text[startIdx];
+  const close = open === "[" ? "]" : "}";
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = startIdx; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) { escape = false; continue; }
+    if (ch === "\\") { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === open) depth++;
+    else if (ch === close) {
+      depth--;
+      if (depth === 0) return text.substring(startIdx, i + 1);
+    }
+  }
+  return null;
 }
