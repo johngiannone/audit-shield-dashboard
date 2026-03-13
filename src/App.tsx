@@ -50,6 +50,7 @@ const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const AgentSettings = lazy(() => import("./pages/AgentSettings"));
 const AuditVault = lazy(() => import("./pages/AuditVault"));
+const ExpenseCalculator = lazy(() => import("./pages/ExpenseCalculator"));
 
 const queryClient = new QueryClient();
 
