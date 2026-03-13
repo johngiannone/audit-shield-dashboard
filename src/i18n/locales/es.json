@@ -39,7 +39,8 @@
     "branding": "Marca",
     "compliance": "Cumplimiento",
     "aiModels": "Modelos de IA",
-    "expenseCalculator": "Calculadora de Gastos"
+    "expenseCalculator": "Calculadora de Gastos",
+    "deductionFinder": "Buscador de Deducciones IA"
   },
   "auth": {
     "signIn": "Iniciar Sesión",

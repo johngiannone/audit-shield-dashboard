@@ -39,7 +39,8 @@
     "branding": "Branding",
     "compliance": "Compliance",
     "aiModels": "AI Models",
-    "expenseCalculator": "Expense Calculator"
+    "expenseCalculator": "Expense Calculator",
+    "deductionFinder": "AI Deduction Finder"
   },
   "auth": {
     "signIn": "Sign In",
