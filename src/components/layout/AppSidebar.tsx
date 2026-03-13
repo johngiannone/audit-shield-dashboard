@@ -30,6 +30,7 @@ const clientNavItems = [
   { titleKey: 'nav.transcriptDecoder', url: '/transcript-decoder', icon: FileSearch },
   { titleKey: 'nav.auditVault', url: '/audit-vault', icon: Archive },
   { titleKey: 'nav.expenseCalculator', url: '/expense-calculator', icon: Calculator },
+  { titleKey: 'nav.deductionFinder', url: '/deduction-finder', icon: FileSearch },
 ];
 
 const enrolledAgentNavItems = [

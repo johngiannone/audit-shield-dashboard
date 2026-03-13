@@ -95,6 +95,7 @@ const App = () => (
                     <Route path="/transcript-decoder" element={<ProtectedRoute><TranscriptDecoder /></ProtectedRoute>} />
                     <Route path="/audit-vault" element={<ProtectedRoute><AuditVault /></ProtectedRoute>} />
                     <Route path="/expense-calculator" element={<ProtectedRoute><ExpenseCalculator /></ProtectedRoute>} />
+                    <Route path="/deduction-finder" element={<ProtectedRoute><DeductionFinder /></ProtectedRoute>} />
                     <Route path="/compliance" element={<ProtectedRoute><Compliance /></ProtectedRoute>} />
                     <Route path="/corporate-compliance-review" element={<ProtectedRoute><CorporateComplianceReview /></ProtectedRoute>} />
                     <Route path="/affiliates" element={<ProtectedRoute><Affiliates /></ProtectedRoute>} />
