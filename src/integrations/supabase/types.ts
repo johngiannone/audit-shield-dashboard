@@ -1025,6 +1025,27 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          key: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          key: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          key?: string
+        }
+        Relationships: []
+      }
       referral_visits: {
         Row: {
           converted: boolean
