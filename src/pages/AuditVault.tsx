@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Archive, Upload, FileText, Image, Trash2, ShieldCheck, Loader2, FolderOpen } from 'lucide-react';
+import { Archive, Upload, FileText, Image, Trash2, ShieldCheck, Loader2, FolderOpen, Eye, Download } from 'lucide-react';
 
 const EXPENSE_CATEGORIES = [
   'W-2 / Wages',
