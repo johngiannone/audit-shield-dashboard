@@ -112,13 +112,8 @@ describe("TranscriptWizard", () => {
     expect(container.querySelector("[role='dialog']")).not.toBeInTheDocument();
   });
 
-  it("displays progress dots matching the number of steps", () => {
-    const { container } = render(
-      <TranscriptWizard open={true} onOpenChange={vi.fn()} />
-    );
-    // 4 step dots + image sub-dots for step 1 (3 images)
-    const allDots = container.querySelectorAll("button.rounded-full");
-    // At minimum 4 step dots exist
-    expect(allDots.length).toBeGreaterThanOrEqual(4);
+  it("shows step counter text", () => {
+    setup();
+    expect(screen.getByText("1 / 4")).toBeInTheDocument();
   });
 });
