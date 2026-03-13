@@ -17,7 +17,7 @@ export interface RateLimitResult {
  * @param windowMs      - Sliding window duration in ms (default 60 000 = 1 min)
  */
 export async function enforceRateLimit(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: SupabaseClient,
   userId: string,
   endpoint: string,
   maxRequests = 5,
