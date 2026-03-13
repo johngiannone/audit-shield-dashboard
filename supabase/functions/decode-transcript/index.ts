@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, handleCorsPreflightIfNeeded } from "../_shared/cors.ts";
 import { createAdminClient } from "../_shared/supabase.ts";
 import { callAI } from "../_shared/ai.ts";
+import { enforceRateLimit, getUserIdFromRequest } from "../_shared/rate-limiter.ts";
 
 interface TransactionCode {
   code: string;
@@ -179,6 +180,25 @@ serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
+    const supabase = createAdminClient();
+
+    // ── Rate Limiting ────────────────────────────────────────
+    const userId = await getUserIdFromRequest(req, supabase);
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const rateLimit = await enforceRateLimit(supabase, userId, "decode-transcript");
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please wait a moment before trying again." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
+      );
+    }
+
     const { pdfBase64, fileName } = await req.json();
 
     if (!pdfBase64) {
@@ -189,8 +209,6 @@ serve(async (req) => {
     }
 
     console.log("Processing transcript:", fileName);
-
-    const supabase = createAdminClient();
 
     // Extract text from PDF
     console.log("Extracting text from PDF...");

@@ -2,8 +2,8 @@ import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders, handleCorsPreflightIfNeeded } from "../_shared/cors.ts";
-
-// CORS headers are now dynamic - see getCorsHeaders()
+import { createAdminClient } from "../_shared/supabase.ts";
+import { enforceRateLimit, getUserIdFromRequest } from "../_shared/rate-limiter.ts";
 
 serve(async (req) => {
   const corsPreflightResponse = handleCorsPreflightIfNeeded(req);
@@ -11,15 +11,30 @@ serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
+    const supabase = createAdminClient();
+
+    // ── Rate Limiting ────────────────────────────────────────
+    const userId = await getUserIdFromRequest(req, supabase);
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const rateLimit = await enforceRateLimit(supabase, userId, "analyze-penalty-notice");
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please wait a moment before trying again." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
+      );
+    }
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       console.error('LOVABLE_API_KEY is not configured');
       throw new Error('LOVABLE_API_KEY is not configured');
     }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const formData = await req.formData();
     const file = formData.get('file') as File;
