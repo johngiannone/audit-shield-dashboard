@@ -84,12 +84,79 @@ export async function getModelConfig(
 }
 
 // ============================================================
+// BUILT-IN TOOL DEFINITIONS & EXECUTORS
+// ============================================================
+
+/** Tool definition for calculate_math — give the LLM a calculator. */
+export const CALCULATE_MATH_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "calculate_math",
+    description:
+      "Perform exact arithmetic on an array of numbers. Use this whenever you need to add, subtract, multiply, or divide numbers instead of doing the math yourself.",
+    parameters: {
+      type: "object",
+      properties: {
+        numbers: {
+          type: "array",
+          items: { type: "number" },
+          description: "The numbers to operate on, in order.",
+        },
+        operation: {
+          type: "string",
+          enum: ["add", "subtract", "multiply", "divide"],
+          description: "The arithmetic operation to apply sequentially.",
+        },
+      },
+      required: ["numbers", "operation"],
+      additionalProperties: false,
+    },
+  },
+};
+
+/** Execute the calculate_math tool natively in TypeScript. */
+function executeCalculateMath(args: {
+  numbers: number[];
+  operation: "add" | "subtract" | "multiply" | "divide";
+}): number {
+  const { numbers, operation } = args;
+  if (!numbers.length) return 0;
+
+  return numbers.slice(1).reduce((acc, n) => {
+    switch (operation) {
+      case "add":
+        return acc + n;
+      case "subtract":
+        return acc - n;
+      case "multiply":
+        return acc * n;
+      case "divide":
+        return n !== 0 ? acc / n : acc;
+    }
+  }, numbers[0]);
+}
+
+/** Registry of built-in tool executors. */
+const BUILTIN_TOOL_EXECUTORS: Record<
+  string,
+  (args: Record<string, unknown>) => unknown
+> = {
+  // deno-lint-ignore no-explicit-any
+  calculate_math: (args: any) => executeCalculateMath(args),
+};
+
+// ============================================================
 // AI API CALL
 // ============================================================
 
 export interface AIMessage {
-  role: "system" | "user" | "assistant";
-  content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+  role: "system" | "user" | "assistant" | "tool";
+  content:
+    | string
+    | null
+    | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+  tool_calls?: unknown[];
+  tool_call_id?: string;
 }
 
 export interface AICallOptions {
@@ -100,6 +167,8 @@ export interface AICallOptions {
   tools?: unknown[];
   tool_choice?: unknown;
   response_format?: unknown;
+  /** Max tool-call round-trips before forcing a text reply (default 5). */
+  maxToolRounds?: number;
   timeoutMs?: number;
 }
 
@@ -115,7 +184,8 @@ export interface AIResponse {
 
 /**
  * Call the Lovable AI gateway with standardized error handling.
- * Returns parsed response with token usage and cost.
+ * Automatically executes built-in tool calls (like calculate_math)
+ * and re-invokes the model with the results until a text reply is produced.
  */
 export async function callAI(options: AICallOptions): Promise<AIResponse> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -125,66 +195,138 @@ export async function callAI(options: AICallOptions): Promise<AIResponse> {
 
   const model = options.model || DEFAULT_MODEL;
   const timeoutMs = options.timeoutMs || 30000;
+  const maxRounds = options.maxToolRounds ?? 5;
 
-  const body: Record<string, unknown> = {
-    model,
-    messages: options.messages,
-  };
+  // Build a mutable messages array so we can append tool results
+  const messages: AIMessage[] = [...options.messages];
 
-  if (options.maxTokens) body.max_tokens = options.maxTokens;
-  if (options.temperature !== undefined) body.temperature = options.temperature;
-  if (options.tools) body.tools = options.tools;
-  if (options.tool_choice) body.tool_choice = options.tool_choice;
-  if (options.response_format) body.response_format = options.response_format;
+  // Accumulate token usage across rounds
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let lastRawResponse: unknown = null;
 
-  const response = await fetchWithTimeout(
-    "https://ai.gateway.lovable.dev/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+  for (let round = 0; round < maxRounds; round++) {
+    const body: Record<string, unknown> = { model, messages };
+
+    if (options.maxTokens) body.max_tokens = options.maxTokens;
+    if (options.temperature !== undefined) body.temperature = options.temperature;
+    if (options.tools) body.tools = options.tools;
+    if (options.tool_choice) body.tool_choice = options.tool_choice;
+    if (options.response_format) body.response_format = options.response_format;
+
+    const response = await fetchWithTimeout(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
       },
-      body: JSON.stringify(body),
-    },
-    timeoutMs
-  );
+      timeoutMs
+    );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`AI API error: ${response.status} - ${errorText}`);
-
-    if (response.status === 429) {
-      throw new AIRateLimitError("Rate limit exceeded. Please try again in a moment.");
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`AI API error: ${response.status} - ${errorText}`);
+      if (response.status === 429) {
+        throw new AIRateLimitError("Rate limit exceeded. Please try again in a moment.");
+      }
+      if (response.status === 402) {
+        throw new AICreditsError("AI usage limit reached. Please add credits to continue.");
+      }
+      throw new Error(`AI API error: ${response.status}`);
     }
-    if (response.status === 402) {
-      throw new AICreditsError("AI usage limit reached. Please add credits to continue.");
+
+    const data = await response.json();
+    lastRawResponse = data;
+
+    const roundInput = data.usage?.prompt_tokens || 0;
+    const roundOutput = data.usage?.completion_tokens || 0;
+    totalInputTokens += roundInput;
+    totalOutputTokens += roundOutput;
+
+    const choice = data.choices?.[0];
+    const assistantMessage = choice?.message;
+
+    // If the model produced tool calls, execute them and loop
+    const toolCalls = assistantMessage?.tool_calls as
+      | Array<{
+          id: string;
+          type: string;
+          function: { name: string; arguments: string };
+        }>
+      | undefined;
+
+    if (toolCalls && toolCalls.length > 0) {
+      // Append the assistant message (with tool_calls) to history
+      messages.push({
+        role: "assistant",
+        content: assistantMessage.content || null,
+        tool_calls: toolCalls,
+      });
+
+      let anyExecuted = false;
+
+      for (const tc of toolCalls) {
+        const executor = BUILTIN_TOOL_EXECUTORS[tc.function.name];
+        if (executor) {
+          const args = JSON.parse(tc.function.arguments);
+          const result = executor(args);
+          console.log(`Tool ${tc.function.name}(${tc.function.arguments}) => ${JSON.stringify(result)}`);
+
+          messages.push({
+            role: "tool",
+            tool_call_id: tc.id,
+            content: JSON.stringify(result),
+          });
+          anyExecuted = true;
+        }
+      }
+
+      // If we executed at least one built-in tool, loop to get final answer
+      if (anyExecuted) continue;
+
+      // Tool calls for unknown tools — return as-is for caller to handle
+      return buildResponse(
+        assistantMessage.content,
+        toolCalls,
+        totalInputTokens,
+        totalOutputTokens,
+        model,
+        lastRawResponse
+      );
     }
 
-    throw new Error(`AI API error: ${response.status}`);
+    // No tool calls — return the text content
+    return buildResponse(
+      assistantMessage?.content || null,
+      null,
+      totalInputTokens,
+      totalOutputTokens,
+      model,
+      lastRawResponse
+    );
   }
 
-  const data = await response.json();
-  const choice = data.choices?.[0];
-  const content = choice?.message?.content || null;
-  const toolCalls = choice?.message?.tool_calls || null;
+  // Safety: exceeded max rounds
+  console.warn("callAI: exceeded max tool-call rounds");
+  return buildResponse(null, null, totalInputTokens, totalOutputTokens, model, lastRawResponse);
+}
 
-  const inputTokens = data.usage?.prompt_tokens || 0;
-  const outputTokens = data.usage?.completion_tokens || 0;
-  const totalTokens = data.usage?.total_tokens || inputTokens + outputTokens;
+function buildResponse(
+  content: string | null,
+  toolCalls: unknown[] | null,
+  inputTokens: number,
+  outputTokens: number,
+  model: string,
+  rawResponse: unknown
+): AIResponse {
+  const totalTokens = inputTokens + outputTokens;
   const estimatedCost = calculateCost(model, inputTokens, outputTokens);
-
   console.log(`Token usage - input: ${inputTokens}, output: ${outputTokens}, cost: $${estimatedCost.toFixed(6)}`);
-
-  return {
-    content,
-    toolCalls,
-    inputTokens,
-    outputTokens,
-    totalTokens,
-    estimatedCost,
-    rawResponse: data,
-  };
+  return { content, toolCalls, inputTokens, outputTokens, totalTokens, estimatedCost, rawResponse };
 }
 
 // ============================================================
