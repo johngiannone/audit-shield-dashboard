@@ -283,20 +283,36 @@ export async function logAIResponseUsage(
  * Extract JSON from an AI response that may contain markdown or extra text.
  */
 export function parseJSONFromAIResponse(content: string): unknown {
+  // Strip markdown code fences if present
+  let cleaned = content.trim();
+  cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+
   // Try direct parse first
   try {
-    return JSON.parse(content);
+    return JSON.parse(cleaned);
   } catch {
-    // Try to extract JSON object from the response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+    // Try to extract JSON array (greedy)
+    const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+    if (arrayMatch) {
+      try {
+        return JSON.parse(arrayMatch[0]);
+      } catch {
+        // Try fixing trailing commas before ] or }
+        const fixed = arrayMatch[0]
+          .replace(/,\s*\]/g, "]")
+          .replace(/,\s*\}/g, "}");
+        try {
+          return JSON.parse(fixed);
+        } catch { /* fall through */ }
+      }
     }
 
-    // Try to extract JSON array
-    const arrayMatch = content.match(/\[[\s\S]*\]/);
-    if (arrayMatch) {
-      return JSON.parse(arrayMatch[0]);
+    // Try to extract JSON object
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch { /* fall through */ }
     }
 
     throw new Error("Failed to parse AI response as JSON");
