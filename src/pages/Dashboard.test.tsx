@@ -4,7 +4,9 @@ import { render, screen } from "@testing-library/react";
 // Mock all heavy dependencies before importing the component
 vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: "/dashboard" }),
   Link: ({ children, to }: any) => <a href={to}>{children}</a>,
+  NavLink: ({ children, to }: any) => <a href={to}>{typeof children === 'function' ? children({ isActive: false }) : children}</a>,
 }));
 
 vi.mock("react-i18next", () => ({
