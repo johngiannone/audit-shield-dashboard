@@ -27,7 +27,7 @@ export async function enforceRateLimit(
   const windowStart = new Date(now.getTime() - windowMs);
 
   try {
-    const { count, error } = await supabaseAdmin
+    const { count, error } = await (supabaseAdmin as any)
       .from("rate_limits")
       .select("*", { count: "exact", head: true })
       .eq("key", userId)
