@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { RealtimeChannel } from '@supabase/supabase-js';
+import { useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Case {
@@ -19,117 +19,60 @@ export interface Case {
   [key: string]: any;
 }
 
-interface UseRealtimeCasesReturn {
-  cases: Case[];
-  loading: boolean;
-  error: Error | null;
+const CASES_QUERY_KEY = 'realtime-cases';
+
+async function fetchCases(profileId: string): Promise<Case[]> {
+  const { data, error } = await supabase
+    .from('cases')
+    .select('*')
+    .or(`assigned_agent_id.eq.${profileId},client_id.eq.${profileId}`);
+
+  if (error) throw error;
+  return (data as Case[]) ?? [];
 }
 
-export const useRealtimeCases = (profileId: string): UseRealtimeCasesReturn => {
-  const [cases, setCases] = useState<Case[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  let channel: RealtimeChannel | null = null;
+export const useRealtimeCases = (profileId: string) => {
+  const queryClient = useQueryClient();
+  const queryKey = [CASES_QUERY_KEY, profileId];
+
+  const { data: cases = [], isLoading: loading, error } = useQuery({
+    queryKey,
+    queryFn: () => fetchCases(profileId),
+    enabled: !!profileId,
+    staleTime: 30_000,        // 30s before background refetch
+    refetchOnWindowFocus: true,
+  });
+
+  // Realtime subscription that invalidates the query cache on changes
+  const handleRealtimeChange = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey[1]]);
 
   useEffect(() => {
-    if (!profileId) {
-      setLoading(false);
-      return;
-    }
+    if (!profileId) return;
 
-    const initializeSubscription = async () => {
-      try {
-        setError(null);
+    const channel = supabase
+      .channel(`cases-${profileId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cases',
+          filter: `assigned_agent_id=eq.${profileId}`,
+        },
+        handleRealtimeChange
+      )
+      .subscribe();
 
-        // Fetch initial cases data
-        const { data, error: fetchError } = await supabase
-          .from('cases')
-          .select('*')
-          .or(
-            `assigned_agent_id.eq.${profileId},client_id.eq.${profileId}`
-          );
-
-        if (fetchError) {
-          throw fetchError;
-        }
-
-        setCases(data as Case[]);
-        setLoading(false);
-
-        // Subscribe to realtime changes
-        channel = supabase
-          .channel(`cases-${profileId}`)
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'cases',
-              filter: `assigned_agent_id=eq.${profileId}`,
-            },
-            (payload) => {
-              const newCase = payload.new as Case;
-              setCases((prev) => {
-                const exists = prev.some((c) => c.id === newCase.id);
-                return exists ? prev : [...prev, newCase];
-              });
-            }
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'cases',
-              filter: `assigned_agent_id=eq.${profileId}`,
-            },
-            (payload) => {
-              const updatedCase = payload.new as Case;
-              setCases((prev) =>
-                prev.map((c) => (c.id === updatedCase.id ? updatedCase : c))
-              );
-            }
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: 'DELETE',
-              schema: 'public',
-              table: 'cases',
-              filter: `assigned_agent_id=eq.${profileId}`,
-            },
-            (payload) => {
-              const deletedId = (payload.old as Case).id;
-              setCases((prev) => prev.filter((c) => c.id !== deletedId));
-            }
-          )
-          .subscribe((status) => {
-            if (status === 'CLOSED') {
-              setError(
-                new Error('Realtime connection closed unexpectedly')
-              );
-            }
-          });
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setError(error);
-        setLoading(false);
-      }
-    };
-
-    initializeSubscription();
-
-    // Cleanup on unmount
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      supabase.removeChannel(channel);
     };
-  }, [profileId]);
+  }, [profileId, handleRealtimeChange]);
 
   return {
     cases,
     loading,
-    error,
+    error: error as Error | null,
   };
 };
