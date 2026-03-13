@@ -100,6 +100,34 @@ export default function AuditVault() {
     onError: () => toast.error('Failed to delete document'),
   });
 
+  const getSignedUrl = async (filePath: string) => {
+    const { data, error } = await supabase.storage
+      .from('audit-vault')
+      .createSignedUrl(filePath, 3600);
+    if (error || !data?.signedUrl) {
+      toast.error('Failed to generate file URL');
+      return null;
+    }
+    return data.signedUrl;
+  };
+
+  const handlePreview = async (doc: VaultDocument) => {
+    const url = await getSignedUrl(doc.file_path);
+    if (url) window.open(url, '_blank');
+  };
+
+  const handleDownload = async (doc: VaultDocument) => {
+    const url = await getSignedUrl(doc.file_path);
+    if (url) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
   const uploadFiles = useCallback(async (files: FileList | File[]) => {
     if (!profile?.id || !user?.id) return;
     if (!selectedCategory) {
