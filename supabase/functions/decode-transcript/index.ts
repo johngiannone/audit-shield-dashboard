@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getCorsHeaders, handleCorsPreflightIfNeeded } from "../_shared/cors.ts";
 import { createAdminClient } from "../_shared/supabase.ts";
 import { callAI } from "../_shared/ai.ts";
+import { enforceRateLimit, getUserIdFromRequest } from "../_shared/rate-limiter.ts";
 
 interface TransactionCode {
   code: string;
