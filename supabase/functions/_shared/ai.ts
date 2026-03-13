@@ -99,6 +99,7 @@ export interface AICallOptions {
   temperature?: number;
   tools?: unknown[];
   tool_choice?: unknown;
+  response_format?: unknown;
   timeoutMs?: number;
 }
 
