@@ -201,6 +201,15 @@ serve(async (req) => {
 
     const { pdfBase64, fileName } = await req.json();
 
+    if (!pdfBase64) {
+      return new Response(
+        JSON.stringify({ error: "No PDF data provided" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Processing transcript:", fileName);
+
     // Extract text from PDF
     console.log("Extracting text from PDF...");
     const extractedText = await extractTextFromPDF(pdfBase64);
