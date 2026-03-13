@@ -35,13 +35,13 @@ const TRANSACTION_SCHEMA = {
   },
 };
 
-const SYSTEM_PROMPT = `You are an expert CPA specializing in US small-business tax returns.
+const SYSTEM_PROMPT = `You are a Master CPA specializing in IRS Schedule C deductions for US small-business owners and self-employed individuals.
 
 You will receive raw transaction text extracted from a bank or credit-card statement (CSV rows or extracted PDF text).
 
 Your task:
 1. Parse every transaction into a structured object.
-2. Categorize each into one of these IRS Schedule C categories or special labels:
+2. Categorize each into EXACTLY one of these IRS Schedule C categories or special labels:
    - Advertising
    - Car & Truck Expenses
    - Commissions & Fees
@@ -66,7 +66,28 @@ Your task:
 
 3. Set is_deductible = true for legitimate business expenses, false for Income and Personal items.
 4. For the "date" field, use ISO format YYYY-MM-DD. If only month/year is available, use the first of the month.
-5. For the "amount" field, always return a positive number (absolute value).`;
+5. For the "amount" field, always return a positive number (absolute value).
+
+## Few-Shot Examples
+
+Below are tricky real-world transactions and their correct classifications. Use these as guidance:
+
+Example 1 — Food delivery (business meal):
+  Input:  "01/15/2025  UBER EATS  $34.50"
+  Output: { "date": "2025-01-15", "description": "UBER EATS", "amount": 34.50, "category": "Meals", "is_deductible": true }
+  Reasoning: Food delivery services are meal expenses, potentially deductible at 50% when business-related.
+
+Example 2 — Rideshare for business travel:
+  Input:  "01/18/2025  UBER TRIP  $22.00"
+  Output: { "date": "2025-01-18", "description": "UBER TRIP", "amount": 22.00, "category": "Travel", "is_deductible": true }
+  Reasoning: Rideshare trips are transportation/travel, not meals. Deductible when used for business purposes.
+
+Example 3 — Personal entertainment subscription:
+  Input:  "01/20/2025  NETFLIX.COM  $15.99"
+  Output: { "date": "2025-01-20", "description": "NETFLIX.COM", "amount": 15.99, "category": "Personal", "is_deductible": false }
+  Reasoning: Streaming entertainment is personal spending with no business purpose.
+
+Apply this same careful reasoning to every transaction. When in doubt between two categories, choose the one most favorable to the taxpayer while remaining defensible under IRS guidelines.`;
 
 serve(async (req: Request) => {
   const preflightResponse = handleCorsPreflightIfNeeded(req);
