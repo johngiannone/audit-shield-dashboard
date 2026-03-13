@@ -12,6 +12,7 @@ import {
   AIRateLimitError,
   AICreditsError,
 } from "../_shared/ai.ts";
+import { enforceRateLimit, getUserIdFromRequest } from "../_shared/rate-limiter.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -21,6 +22,23 @@ serve(async (req) => {
 
   try {
     const supabase = createAdminClient();
+
+    // ── Rate Limiting ────────────────────────────────────────
+    const userId = await getUserIdFromRequest(req, supabase);
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const rateLimit = await enforceRateLimit(supabase, userId, "analyze-notice");
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please wait a moment before trying again." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
+      );
+    }
 
     // Fetch AI model configuration for ocr_extraction task
     const { modelId } = await getModelConfig(supabase, "ocr_extraction");
