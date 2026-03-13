@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Archive, Upload, FileText, Image, Trash2, ShieldCheck, Loader2, FolderOpen } from 'lucide-react';
+import { Archive, Upload, FileText, Image, Trash2, ShieldCheck, Loader2, FolderOpen, Eye, Download } from 'lucide-react';
 
 const EXPENSE_CATEGORIES = [
   'W-2 / Wages',
@@ -99,6 +99,34 @@ export default function AuditVault() {
     },
     onError: () => toast.error('Failed to delete document'),
   });
+
+  const getSignedUrl = async (filePath: string) => {
+    const { data, error } = await supabase.storage
+      .from('audit-vault')
+      .createSignedUrl(filePath, 3600);
+    if (error || !data?.signedUrl) {
+      toast.error('Failed to generate file URL');
+      return null;
+    }
+    return data.signedUrl;
+  };
+
+  const handlePreview = async (doc: VaultDocument) => {
+    const url = await getSignedUrl(doc.file_path);
+    if (url) window.open(url, '_blank');
+  };
+
+  const handleDownload = async (doc: VaultDocument) => {
+    const url = await getSignedUrl(doc.file_path);
+    if (url) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = doc.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
 
   const uploadFiles = useCallback(async (files: FileList | File[]) => {
     if (!profile?.id || !user?.id) return;
@@ -319,14 +347,35 @@ export default function AuditVault() {
                           <span className="text-xs text-muted-foreground">
                             {new Date(doc.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                            onClick={() => deleteMutation.mutate(doc)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="Preview"
+                              onClick={() => handlePreview(doc)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="Download"
+                              onClick={() => handleDownload(doc)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              title="Delete"
+                              onClick={() => deleteMutation.mutate(doc)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
