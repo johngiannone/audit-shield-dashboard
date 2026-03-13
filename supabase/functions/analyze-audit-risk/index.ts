@@ -67,8 +67,6 @@ serve(async (req) => {
     console.log(`Analyzing ${returnType} return...`);
     console.log("File path:", filePath, "Type:", input.fileType);
 
-    const supabase = createAdminClient();
-
     // ── Step A: Extract ──────────────────────────────────────
     console.log("Step A: Downloading and extracting data from PDF...");
     const pdfBase64 = await downloadAndConvert(supabase, filePath);
