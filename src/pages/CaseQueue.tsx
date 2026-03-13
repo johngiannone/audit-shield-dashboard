@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,91 +26,68 @@ interface Case {
   client_name: string | null;
 }
 
+async function fetchProfileId(userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+async function fetchQueueCases(): Promise<Case[]> {
+  const { data, error } = await supabase
+    .from('cases')
+    .select('*')
+    .is('assigned_agent_id', null)
+    .eq('status', 'triage')
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+
+  const clientIds = [...new Set((data || []).map(c => c.client_id))];
+  if (clientIds.length === 0) return (data || []).map(c => ({ ...c, client_name: null }));
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .in('id', clientIds);
+
+  const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+  return (data || []).map(c => ({ ...c, client_name: profileMap.get(c.client_id) || null }));
+}
+
 export default function CaseQueue() {
   const navigate = useNavigate();
-  const { user, role, loading } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  
-  const [cases, setCases] = useState<Case[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [profileId, setProfileId] = useState<string | null>(null);
-  
+  const queryClient = useQueryClient();
+
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
-    if (!loading && role === 'client') {
-      navigate('/dashboard');
-    }
-  }, [user, loading, role, navigate]);
+  if (!authLoading && !user) navigate('/auth');
+  if (!authLoading && role === 'client') navigate('/dashboard');
 
-  useEffect(() => {
-    if (user && role === 'enrolled_agent') {
-      fetchProfileAndCases();
-    }
-  }, [user, role]);
+  const { data: profileId } = useQuery({
+    queryKey: ['my-profile-id', user?.id],
+    queryFn: () => fetchProfileId(user!.id),
+    enabled: !!user && role === 'enrolled_agent',
+  });
 
-  const fetchProfileAndCases = async () => {
-    setDataLoading(true);
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (profile) {
-        setProfileId(profile.id);
-      }
-
-      // Fetch unassigned cases
-      const { data: casesData, error } = await supabase
-        .from('cases')
-        .select('*')
-        .is('assigned_agent_id', null)
-        .eq('status', 'triage')
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      // Fetch client names for each case
-      const clientIds = [...new Set((casesData || []).map(c => c.client_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', clientIds);
-
-      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
-      
-      const casesWithClientNames = (casesData || []).map(c => ({
-        ...c,
-        client_name: profileMap.get(c.client_id) || null,
-      }));
-      
-      setCases(casesWithClientNames);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load case queue',
-        variant: 'destructive',
-      });
-    } finally {
-      setDataLoading(false);
-    }
-  };
+  const { data: cases = [], isLoading: dataLoading } = useQuery({
+    queryKey: ['case-queue'],
+    queryFn: fetchQueueCases,
+    enabled: !!user && role === 'enrolled_agent',
+    staleTime: 15_000,
+    refetchOnWindowFocus: true,
+  });
 
   const openCaseDetail = async (caseItem: Case) => {
     setSelectedCase(caseItem);
-    
     if (caseItem.file_path) {
-      const { data } = await supabase.storage
-        .from('notices')
-        .createSignedUrl(caseItem.file_path, 3600);
-      
+      const { data } = await supabase.storage.from('notices').createSignedUrl(caseItem.file_path, 3600);
       setSelectedFileUrl(data?.signedUrl || null);
     } else {
       setSelectedFileUrl(null);
@@ -123,54 +101,36 @@ export default function CaseQueue() {
 
   const assignCase = async () => {
     if (!profileId || !selectedCase) return;
-
     setIsAssigning(true);
     try {
       const { error } = await supabase
         .from('cases')
-        .update({
-          assigned_agent_id: profileId,
-          status: 'agent_action',
-        })
+        .update({ assigned_agent_id: profileId, status: 'agent_action' })
         .eq('id', selectedCase.id);
-
       if (error) throw error;
 
-      // Send intro email to client
       try {
-        const { error: emailError } = await supabase.functions.invoke('send-intro-email', {
-          body: {
-            case_id: selectedCase.id,
-            agent_profile_id: profileId,
-          },
+        await supabase.functions.invoke('send-intro-email', {
+          body: { case_id: selectedCase.id, agent_profile_id: profileId },
         });
-
-        if (emailError) {
-          console.error('Failed to send intro email:', emailError);
-        }
       } catch (emailErr) {
         console.error('Email function error:', emailErr);
       }
 
-      toast({
-        title: 'Case Assigned',
-        description: 'The case has been assigned to you and the client has been notified.',
-      });
+      toast({ title: 'Case Assigned', description: 'The case has been assigned to you and the client has been notified.' });
 
-      setCases(cases.filter(c => c.id !== selectedCase.id));
+      // Invalidate both queue and caseload caches
+      queryClient.invalidateQueries({ queryKey: ['case-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['my-caseload'] });
       closeCaseDetail();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to assign case',
-        variant: 'destructive',
-      });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to assign case', variant: 'destructive' });
     } finally {
       setIsAssigning(false);
     }
   };
 
-  if (loading || !user) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -183,9 +143,7 @@ export default function CaseQueue() {
       <div className="space-y-8 animate-fade-in">
         <div>
           <h1 className="font-display text-3xl font-bold text-foreground">Case Queue</h1>
-          <p className="text-muted-foreground mt-1">
-            Unassigned cases waiting for an agent
-          </p>
+          <p className="text-muted-foreground mt-1">Unassigned cases waiting for an agent</p>
         </div>
 
         <Card className="border-0 shadow-md">
@@ -196,9 +154,7 @@ export default function CaseQueue() {
               </div>
               <div>
                 <CardTitle>New Cases</CardTitle>
-                <CardDescription>
-                  {cases.length} case{cases.length !== 1 ? 's' : ''} waiting for assignment
-                </CardDescription>
+                <CardDescription>{cases.length} case{cases.length !== 1 ? 's' : ''} waiting for assignment</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -229,27 +185,16 @@ export default function CaseQueue() {
                   <TableBody>
                     {cases.map((caseItem) => (
                       <TableRow key={caseItem.id} className="cursor-pointer hover:bg-muted/50">
-                        <TableCell className="font-medium">
-                          {caseItem.client_name || 'Unknown'}
-                        </TableCell>
+                        <TableCell className="font-medium">{caseItem.client_name || 'Unknown'}</TableCell>
                         <TableCell>{caseItem.notice_type}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{caseItem.notice_agency}</Badge>
-                        </TableCell>
+                        <TableCell><Badge variant="outline">{caseItem.notice_agency}</Badge></TableCell>
                         <TableCell>{caseItem.tax_year}</TableCell>
                         <TableCell className="max-w-xs">
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {caseItem.summary || 'No summary'}
-                          </p>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{caseItem.summary || 'No summary'}</p>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openCaseDetail(caseItem)}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
+                          <Button size="sm" variant="outline" onClick={() => openCaseDetail(caseItem)}>
+                            <Eye className="h-4 w-4 mr-2" />View
                           </Button>
                         </TableCell>
                       </TableRow>

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,10 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { Briefcase, Loader2, AlertTriangle, CheckCircle, Clock, Eye, Zap, Hourglass, Archive, Bell } from 'lucide-react';
+import { Briefcase, Loader2, CheckCircle, Clock, Eye, Zap, Hourglass, Archive, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { differenceInDays } from 'date-fns';
-
 import { DeadlineBadge } from '@/components/cases/DeadlineBadge';
 
 interface Case {
@@ -28,81 +28,65 @@ interface Case {
   response_due_date?: string | null;
 }
 
+async function fetchProfileId(userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+async function fetchMyCaseload(profileId: string): Promise<Case[]> {
+  const { data, error } = await supabase
+    .from('cases')
+    .select('*')
+    .eq('assigned_agent_id', profileId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  const clientIds = [...new Set((data || []).map(c => c.client_id))];
+  if (clientIds.length === 0) return (data || []).map(c => ({ ...c, client_name: null }));
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .in('id', clientIds);
+
+  const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
+  return (data || []).map(c => ({ ...c, client_name: profileMap.get(c.client_id) || null }));
+}
+
 export default function MyCaseload() {
   const navigate = useNavigate();
-  const { user, role, loading } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  
-  const [cases, setCases] = useState<Case[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
+  const queryClient = useQueryClient();
+
   const [updating, setUpdating] = useState<string | null>(null);
-  const [profileId, setProfileId] = useState<string | null>(null);
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
-    if (!loading && role === 'client') {
-      navigate('/dashboard');
-    }
-  }, [user, loading, role, navigate]);
+  // Redirect logic
+  if (!authLoading && !user) navigate('/auth');
+  if (!authLoading && role === 'client') navigate('/dashboard');
 
-  useEffect(() => {
-    if (user && role === 'enrolled_agent') {
-      fetchMyCases();
-    }
-  }, [user, role]);
+  const { data: profileId } = useQuery({
+    queryKey: ['my-profile-id', user?.id],
+    queryFn: () => fetchProfileId(user!.id),
+    enabled: !!user && role === 'enrolled_agent',
+  });
 
-  const fetchMyCases = async () => {
-    setDataLoading(true);
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      if (!profile) {
-        setCases([]);
-        return;
-      }
-
-      setProfileId(profile.id);
-
-      const { data, error } = await supabase
-        .from('cases')
-        .select('*')
-        .eq('assigned_agent_id', profile.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Fetch client names
-      const clientIds = [...new Set((data || []).map(c => c.client_id))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', clientIds);
-
-      const profileMap = new Map(profiles?.map(p => [p.id, p.full_name]) || []);
-      
-      const casesWithNames = (data || []).map(c => ({
-        ...c,
-        client_name: profileMap.get(c.client_id) || null,
-      }));
-
-      setCases(casesWithNames);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to load your cases',
-        variant: 'destructive',
-      });
-    } finally {
-      setDataLoading(false);
-    }
-  };
+  const {
+    data: cases = [],
+    isLoading: dataLoading,
+  } = useQuery({
+    queryKey: ['my-caseload', profileId],
+    queryFn: () => fetchMyCaseload(profileId!),
+    enabled: !!profileId,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+  });
 
   const updateStatus = async (caseId: string, newStatus: string) => {
     setUpdating(caseId);
@@ -114,48 +98,24 @@ export default function MyCaseload() {
         .from('cases')
         .update({ status: newStatus })
         .eq('id', caseId);
-
       if (error) throw error;
 
       await supabase
         .from('case_status_history')
-        .insert({
-          case_id: caseId,
-          old_status: oldStatus,
-          new_status: newStatus,
-          changed_by: profileId,
-        });
+        .insert({ case_id: caseId, old_status: oldStatus, new_status: newStatus, changed_by: profileId });
 
       try {
-        const { error: emailError } = await supabase.functions.invoke('send-status-update', {
-          body: {
-            case_id: caseId,
-            new_status: newStatus,
-            agent_profile_id: profileId,
-          },
+        await supabase.functions.invoke('send-status-update', {
+          body: { case_id: caseId, new_status: newStatus, agent_profile_id: profileId },
         });
-
-        if (emailError) {
-          console.error('Failed to send status update email:', emailError);
-        }
       } catch (emailErr) {
         console.error('Email function error:', emailErr);
       }
 
-      toast({
-        title: 'Status Updated',
-        description: `Case status changed to ${newStatus.replace('_', ' ')}.`,
-      });
-
-      setCases(cases.map(c => 
-        c.id === caseId ? { ...c, status: newStatus } : c
-      ));
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update case status',
-        variant: 'destructive',
-      });
+      toast({ title: 'Status Updated', description: `Case status changed to ${newStatus.replace('_', ' ')}.` });
+      queryClient.invalidateQueries({ queryKey: ['my-caseload', profileId] });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update case status', variant: 'destructive' });
     } finally {
       setUpdating(null);
     }
@@ -171,11 +131,10 @@ export default function MyCaseload() {
     return styles[status] || styles.triage;
   };
 
-  // Filter cases by status
   const actionRequiredCases = cases.filter(c => c.status === 'agent_action');
   const waitingOnClientCases = cases
     .filter(c => c.status === 'client_action')
-    .sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()); // Oldest first by when status changed
+    .sort((a, b) => new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
   const resolvedCases = cases.filter(c => c.status === 'resolved');
 
   const getDaysWaiting = (updatedAt: string) => {
@@ -189,34 +148,19 @@ export default function MyCaseload() {
     setSendingReminder(caseItem.id);
     try {
       const daysWaiting = differenceInDays(new Date(), new Date(caseItem.updated_at));
-      
       const { error } = await supabase.functions.invoke('send-client-reminder', {
-        body: {
-          case_id: caseItem.id,
-          agent_profile_id: profileId,
-          days_waiting: daysWaiting,
-        },
+        body: { case_id: caseItem.id, agent_profile_id: profileId, days_waiting: daysWaiting },
       });
-
       if (error) throw error;
-
-      toast({
-        title: 'Reminder Sent',
-        description: `Reminder email sent to ${caseItem.client_name || 'client'}.`,
-      });
-    } catch (error) {
-      console.error('Failed to send reminder:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to send reminder email',
-        variant: 'destructive',
-      });
+      toast({ title: 'Reminder Sent', description: `Reminder email sent to ${caseItem.client_name || 'client'}.` });
+    } catch {
+      toast({ title: 'Error', description: 'Failed to send reminder email', variant: 'destructive' });
     } finally {
       setSendingReminder(null);
     }
   };
 
-  if (loading || !user) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -229,31 +173,14 @@ export default function MyCaseload() {
     const showReminderButton = showWaitingTime && daysWaiting >= 3;
 
     return (
-      <div 
-        className={`p-4 rounded-lg border transition-all ${
-          isInactive 
-            ? 'bg-muted/30 border-border/50 opacity-70' 
-            : 'bg-card border-border hover:shadow-md hover:border-primary/20'
-        }`}
-      >
+      <div className={`p-4 rounded-lg border transition-all ${isInactive ? 'bg-muted/30 border-border/50 opacity-70' : 'bg-card border-border hover:shadow-md hover:border-primary/20'}`}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <Badge variant="outline" className="font-medium text-xs">
-                {caseItem.notice_agency}
-              </Badge>
-              <span className="text-sm font-medium text-foreground truncate">
-                {caseItem.notice_type}
-              </span>
+              <Badge variant="outline" className="font-medium text-xs">{caseItem.notice_agency}</Badge>
+              <span className="text-sm font-medium text-foreground truncate">{caseItem.notice_type}</span>
               {showWaitingTime && (
-                <Badge 
-                  variant="outline" 
-                  className={`text-xs ${
-                    daysWaiting >= 3 
-                      ? 'bg-destructive/10 text-destructive border-destructive/20' 
-                      : 'bg-muted text-muted-foreground'
-                  }`}
-                >
+                <Badge variant="outline" className={`text-xs ${daysWaiting >= 3 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-muted text-muted-foreground'}`}>
                   <Clock className="h-3 w-3 mr-1" />
                   {getDaysWaiting(caseItem.updated_at)} waiting
                 </Badge>
@@ -270,50 +197,20 @@ export default function MyCaseload() {
                 </>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Assigned {new Date(caseItem.created_at).toLocaleDateString()}
-            </p>
+            <p className="text-xs text-muted-foreground mt-2">Assigned {new Date(caseItem.created_at).toLocaleDateString()}</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {showReminderButton && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => sendReminder(caseItem)}
-                disabled={sendingReminder === caseItem.id}
-                className="text-warning border-warning/30 hover:bg-warning/10"
-              >
-                {sendingReminder === caseItem.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <Bell className="h-4 w-4 mr-1" />
-                    Remind
-                  </>
-                )}
+              <Button variant="outline" size="sm" onClick={() => sendReminder(caseItem)} disabled={sendingReminder === caseItem.id} className="text-warning border-warning/30 hover:bg-warning/10">
+                {sendingReminder === caseItem.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Bell className="h-4 w-4 mr-1" />Remind</>}
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/agent/cases/${caseItem.id}`)}
-            >
-              <Eye className="h-4 w-4 mr-1" />
-              View
+            <Button variant="outline" size="sm" onClick={() => navigate(`/agent/cases/${caseItem.id}`)}>
+              <Eye className="h-4 w-4 mr-1" />View
             </Button>
-            <Select
-              value={caseItem.status}
-              onValueChange={(value) => updateStatus(caseItem.id, value)}
-              disabled={updating === caseItem.id}
-            >
+            <Select value={caseItem.status} onValueChange={(value) => updateStatus(caseItem.id, value)} disabled={updating === caseItem.id}>
               <SelectTrigger className="w-[130px]">
-                {updating === caseItem.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Badge variant="outline" className={`${getStatusBadge(caseItem.status)} text-xs`}>
-                    {caseItem.status.replace('_', ' ')}
-                  </Badge>
-                )}
+                {updating === caseItem.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Badge variant="outline" className={`${getStatusBadge(caseItem.status)} text-xs`}>{caseItem.status.replace('_', ' ')}</Badge>}
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="triage">Triage</SelectItem>
@@ -342,13 +239,9 @@ export default function MyCaseload() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">My Caseload</h1>
-            <p className="text-muted-foreground mt-1">
-              {cases.length} total case{cases.length !== 1 ? 's' : ''} assigned to you
-            </p>
+            <p className="text-muted-foreground mt-1">{cases.length} total case{cases.length !== 1 ? 's' : ''} assigned to you</p>
           </div>
-          <Button variant="outline" onClick={() => navigate('/queue')}>
-            View Case Queue
-          </Button>
+          <Button variant="outline" onClick={() => navigate('/queue')}>View Case Queue</Button>
         </div>
 
         {dataLoading ? (
@@ -358,15 +251,9 @@ export default function MyCaseload() {
         ) : cases.length === 0 ? (
           <Card className="border-0 shadow-md">
             <CardContent className="py-16">
-              <EmptyState
-                icon={Briefcase}
-                title="No Assigned Cases"
-                description="You don't have any cases assigned yet. Visit the Case Queue to claim new cases."
-              />
+              <EmptyState icon={Briefcase} title="No Assigned Cases" description="You don't have any cases assigned yet. Visit the Case Queue to claim new cases." />
               <div className="flex justify-center mt-4">
-                <Button onClick={() => navigate('/queue')}>
-                  View Case Queue
-                </Button>
+                <Button onClick={() => navigate('/queue')}>View Case Queue</Button>
               </div>
             </CardContent>
           </Card>
@@ -374,31 +261,16 @@ export default function MyCaseload() {
           <Tabs defaultValue="action-required" className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="action-required" className="flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                Action Required
-                {actionRequiredCases.length > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
-                    {actionRequiredCases.length}
-                  </Badge>
-                )}
+                <Zap className="h-4 w-4" />Action Required
+                {actionRequiredCases.length > 0 && <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1.5 text-xs">{actionRequiredCases.length}</Badge>}
               </TabsTrigger>
               <TabsTrigger value="waiting-client" className="flex items-center gap-2">
-                <Hourglass className="h-4 w-4" />
-                Waiting on Client
-                {waitingOnClientCases.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
-                    {waitingOnClientCases.length}
-                  </Badge>
-                )}
+                <Hourglass className="h-4 w-4" />Waiting on Client
+                {waitingOnClientCases.length > 0 && <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5 text-xs">{waitingOnClientCases.length}</Badge>}
               </TabsTrigger>
               <TabsTrigger value="resolved" className="flex items-center gap-2">
-                <Archive className="h-4 w-4" />
-                Resolved
-                {resolvedCases.length > 0 && (
-                  <Badge variant="outline" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
-                    {resolvedCases.length}
-                  </Badge>
-                )}
+                <Archive className="h-4 w-4" />Resolved
+                {resolvedCases.length > 0 && <Badge variant="outline" className="ml-1 h-5 min-w-5 px-1.5 text-xs">{resolvedCases.length}</Badge>}
               </TabsTrigger>
             </TabsList>
 
@@ -406,19 +278,11 @@ export default function MyCaseload() {
               <Card className="border-0 shadow-md">
                 <CardContent className="p-6">
                   {actionRequiredCases.length === 0 ? (
-                    <EmptyState
-                      icon={CheckCircle}
-                      title="All Caught Up!"
-                      description="You have no cases requiring your immediate action. Great work!"
-                    />
+                    <EmptyState icon={CheckCircle} title="All Caught Up!" description="You have no cases requiring your immediate action. Great work!" />
                   ) : (
                     <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        These cases require your attention. Work to clear this queue.
-                      </p>
-                      {actionRequiredCases.map((caseItem) => (
-                        <CaseCard key={caseItem.id} caseItem={caseItem} />
-                      ))}
+                      <p className="text-sm text-muted-foreground mb-4">These cases require your attention. Work to clear this queue.</p>
+                      {actionRequiredCases.map((caseItem) => <CaseCard key={caseItem.id} caseItem={caseItem} />)}
                     </div>
                   )}
                 </CardContent>
@@ -429,19 +293,11 @@ export default function MyCaseload() {
               <Card className="border-0 shadow-md">
                 <CardContent className="p-6">
                   {waitingOnClientCases.length === 0 ? (
-                    <EmptyState
-                      icon={Hourglass}
-                      title="No Pending Client Actions"
-                      description="No cases are currently waiting on client response."
-                    />
+                    <EmptyState icon={Hourglass} title="No Pending Client Actions" description="No cases are currently waiting on client response." />
                   ) : (
                     <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        These cases are waiting on client action. Sorted by oldest first.
-                      </p>
-                      {waitingOnClientCases.map((caseItem) => (
-                        <CaseCard key={caseItem.id} caseItem={caseItem} isInactive showWaitingTime />
-                      ))}
+                      <p className="text-sm text-muted-foreground mb-4">These cases are waiting on client action. Sorted by oldest first.</p>
+                      {waitingOnClientCases.map((caseItem) => <CaseCard key={caseItem.id} caseItem={caseItem} isInactive showWaitingTime />)}
                     </div>
                   )}
                 </CardContent>
@@ -452,19 +308,11 @@ export default function MyCaseload() {
               <Card className="border-0 shadow-md">
                 <CardContent className="p-6">
                   {resolvedCases.length === 0 ? (
-                    <EmptyState
-                      icon={Archive}
-                      title="No Resolved Cases"
-                      description="Completed cases will appear here."
-                    />
+                    <EmptyState icon={Archive} title="No Resolved Cases" description="Completed cases will appear here." />
                   ) : (
                     <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Archive of completed cases.
-                      </p>
-                      {resolvedCases.map((caseItem) => (
-                        <CaseCard key={caseItem.id} caseItem={caseItem} isInactive />
-                      ))}
+                      <p className="text-sm text-muted-foreground mb-4">Archive of completed cases.</p>
+                      {resolvedCases.map((caseItem) => <CaseCard key={caseItem.id} caseItem={caseItem} isInactive />)}
                     </div>
                   )}
                 </CardContent>
