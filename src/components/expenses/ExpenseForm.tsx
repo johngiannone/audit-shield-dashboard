@@ -76,8 +76,11 @@ export function ExpenseForm({ onSubmit, onUpdate, editingId, transactions, onCan
 
   const handleSubmit = async (values: FormValues) => {
     const payload: ExpenseInsert = {
-      ...values,
       date: format(values.date, "yyyy-MM-dd"),
+      description: values.description,
+      amount: values.amount,
+      category: values.category,
+      is_deductible: values.is_deductible,
     };
 
     if (isEditing) {

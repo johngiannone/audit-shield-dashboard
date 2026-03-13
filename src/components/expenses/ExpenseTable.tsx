@@ -65,7 +65,7 @@ export function ExpenseTable({ transactions, isLoading, onEdit, onDelete }: Prop
                     </TableCell>
                     <TableCell>
                       {tx.is_deductible ? (
-                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Yes</Badge>
+                        <Badge variant="default">Yes</Badge>
                       ) : (
                         <Badge variant="outline" className="text-muted-foreground">No</Badge>
                       )}
