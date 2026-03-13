@@ -22,15 +22,15 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "";
   const allAllowed = [...ALLOWED_ORIGINS, ...DEV_ORIGINS];
 
-  const isAllowed = allAllowed.some(
-    (allowed) => origin === allowed || origin.endsWith(".lovable.app")
-  );
+  const isAllowed = allAllowed.some((allowed) => origin === allowed)
+    || origin.endsWith(".lovable.app")
+    || origin.endsWith(".lovableproject.com");
 
   return {
     "Access-Control-Allow-Origin": isAllowed ? origin : ALLOWED_ORIGINS[0],
     "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Access-Control-Max-Age": "86400",
   };
 }
