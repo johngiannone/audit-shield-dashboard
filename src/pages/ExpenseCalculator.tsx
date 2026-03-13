@@ -3,12 +3,23 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ExpenseForm } from "@/components/expenses/ExpenseForm";
 import { ExpenseTable } from "@/components/expenses/ExpenseTable";
 import { ExpenseSummary } from "@/components/expenses/ExpenseSummary";
+import { StatementUpload } from "@/components/expenses/StatementUpload";
 import { useExpenseTransactions } from "@/hooks/useExpenseTransactions";
+import { supabase } from "@/integrations/supabase/client";
 import { Calculator } from "lucide-react";
+import type { ExpenseInsert } from "@/hooks/useExpenseTransactions";
+import { useQueryClient } from "@tanstack/react-query";
 
 const ExpenseCalculator = () => {
   const { transactions, isLoading, addTransaction, updateTransaction, deleteTransaction } = useExpenseTransactions();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const qc = useQueryClient();
+
+  const handleBulkSave = async (txs: ExpenseInsert[]) => {
+    const { error } = await supabase.from("expense_transactions").insert(txs);
+    if (error) throw error;
+    qc.invalidateQueries({ queryKey: ["expense_transactions"] });
+  };
 
   return (
     <DashboardLayout>
@@ -27,6 +38,9 @@ const ExpenseCalculator = () => {
             Track your expenses and see which ones qualify as tax deductions.
           </p>
         </div>
+
+        {/* AI Statement Upload */}
+        <StatementUpload onSaveTransactions={handleBulkSave} />
 
         {/* Summary Cards */}
         <ExpenseSummary transactions={transactions} isLoading={isLoading} />
