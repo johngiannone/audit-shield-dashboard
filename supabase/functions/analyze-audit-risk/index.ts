@@ -15,6 +15,7 @@ import { getCorsHeaders, handleCorsPreflightIfNeeded } from "../_shared/cors.ts"
 import { validateFilePath } from "../_shared/security.ts";
 import { createAdminClient } from "../_shared/supabase.ts";
 import { AIRateLimitError, AICreditsError } from "../_shared/ai.ts";
+import { enforceRateLimit, getUserIdFromRequest } from "../_shared/rate-limiter.ts";
 
 import type { AnalysisInput, RiskAssessment } from "./types.ts";
 import { downloadAndConvert, extractDataFromPDF, cleanupTempFile } from "./extract.ts";
@@ -27,6 +28,25 @@ serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
+    const supabase = createAdminClient();
+
+    // ── Rate Limiting ────────────────────────────────────────
+    const userId = await getUserIdFromRequest(req, supabase);
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Authentication required" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const rateLimit = await enforceRateLimit(supabase, userId, "analyze-audit-risk");
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please wait a moment before trying again." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
+      );
+    }
+
     const input: AnalysisInput = await req.json();
     const { filePath } = input;
 
