@@ -25,20 +25,21 @@ vi.mock("@/hooks/useAuth", () => ({
   }),
 }));
 
+// Create a chainable mock that supports arbitrary .method() chaining
+const createChainable = (terminal = { data: [], error: null }) => {
+  const handler: ProxyHandler<any> = {
+    get: (_target, prop) => {
+      if (prop === 'then') return undefined; // not a promise
+      if (['data', 'error'].includes(prop as string)) return terminal[prop as keyof typeof terminal];
+      return (..._args: any[]) => new Proxy({}, handler);
+    },
+  };
+  return new Proxy({}, handler);
+};
+
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          order: () => ({ data: [], error: null }),
-          data: [],
-          error: null,
-        }),
-        order: () => ({ data: [], error: null }),
-        data: [],
-        error: null,
-      }),
-    }),
+    from: () => createChainable(),
     auth: {
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: vi.fn() } } }),
     },
