@@ -1,37 +1,36 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "npm:zod@3.23.8";
+import { zodToJsonSchema } from "npm:zod-to-json-schema@3.23.5";
 import { getCorsHeaders, handleCorsPreflightIfNeeded } from "../_shared/cors.ts";
 import { createAdminClient, authenticateUser } from "../_shared/supabase.ts";
 import { enforceRateLimit } from "../_shared/rate-limiter.ts";
 import { callAI, getModelConfig, logAIResponseUsage, AIRateLimitError, AICreditsError } from "../_shared/ai.ts";
 
-// ── JSON Schema for structured output ──────────────────
+// ── Zod schema for structured output ──────────────────
+const TransactionItemSchema = z.object({
+  date: z.string().describe("ISO date YYYY-MM-DD"),
+  description: z.string().describe("Transaction description from the statement"),
+  amount: z.number().describe("Positive absolute value of the transaction"),
+  category: z.string().describe("IRS Schedule C category"),
+  is_deductible: z.boolean().describe("Whether this expense is tax-deductible"),
+});
+
+const TransactionsResponseSchema = z.object({
+  transactions: z.array(TransactionItemSchema),
+});
+
+// Convert Zod → JSON Schema and wrap for OpenAI Structured Outputs
+const rawJsonSchema = zodToJsonSchema(TransactionsResponseSchema, {
+  target: "openAi",
+  $refStrategy: "none",
+});
+
 const TRANSACTION_SCHEMA = {
   type: "json_schema" as const,
   json_schema: {
     name: "transactions",
     strict: true,
-    schema: {
-      type: "object",
-      properties: {
-        transactions: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              date: { type: "string", description: "ISO date YYYY-MM-DD" },
-              description: { type: "string" },
-              amount: { type: "number", description: "Positive absolute value" },
-              category: { type: "string", description: "IRS Schedule C category" },
-              is_deductible: { type: "boolean" },
-            },
-            required: ["date", "description", "amount", "category", "is_deductible"],
-            additionalProperties: false,
-          },
-        },
-      },
-      required: ["transactions"],
-      additionalProperties: false,
-    },
+    schema: rawJsonSchema,
   },
 };
 
