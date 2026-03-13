@@ -17,7 +17,8 @@ export interface RateLimitResult {
  * @param windowMs      - Sliding window duration in ms (default 60 000 = 1 min)
  */
 export async function enforceRateLimit(
-  supabaseAdmin: SupabaseClient,
+  // deno-lint-ignore no-explicit-any
+  supabaseAdmin: any,
   userId: string,
   endpoint: string,
   maxRequests = 5,
@@ -27,7 +28,7 @@ export async function enforceRateLimit(
   const windowStart = new Date(now.getTime() - windowMs);
 
   try {
-    const { count, error } = await (supabaseAdmin as any)
+    const { count, error } = await supabaseAdmin
       .from("rate_limits")
       .select("*", { count: "exact", head: true })
       .eq("key", userId)
@@ -72,7 +73,8 @@ export async function enforceRateLimit(
  */
 export async function getUserIdFromRequest(
   req: Request,
-  supabaseAdmin: ReturnType<typeof createClient>
+  // deno-lint-ignore no-explicit-any
+  supabaseAdmin: any,
 ): Promise<string | null> {
   const authHeader = req.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
