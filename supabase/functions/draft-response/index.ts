@@ -17,9 +17,26 @@ serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
-    const { noticeType, taxYear, clientName, summary, agency, caseId, profileId } = await req.json();
-
     const supabase = createAdminClient();
+
+    // ── Rate Limiting ────────────────────────────────────────
+    const userId = await getUserIdFromRequest(req, supabase);
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const rateLimit = await enforceRateLimit(supabase, userId, "draft-response");
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please wait a moment before trying again." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
+      );
+    }
+
+    const { noticeType, taxYear, clientName, summary, agency, caseId, profileId } = await req.json();
 
     // Fetch AI model configuration for response_drafting task
     const { modelId, maxTokens } = await getModelConfig(supabase, "response_drafting");

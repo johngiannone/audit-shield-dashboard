@@ -180,18 +180,26 @@ serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
-    const { pdfBase64, fileName } = await req.json();
+    const supabase = createAdminClient();
 
-    if (!pdfBase64) {
+    // ── Rate Limiting ────────────────────────────────────────
+    const userId = await getUserIdFromRequest(req, supabase);
+    if (!userId) {
       return new Response(
-        JSON.stringify({ error: "No PDF data provided" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Processing transcript:", fileName);
+    const rateLimit = await enforceRateLimit(supabase, userId, "decode-transcript");
+    if (!rateLimit.allowed) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Please wait a moment before trying again." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "60" } }
+      );
+    }
 
-    const supabase = createAdminClient();
+    const { pdfBase64, fileName } = await req.json();
 
     // Extract text from PDF
     console.log("Extracting text from PDF...");
