@@ -1,6 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { DollarSign, TrendingDown, TrendingUp, Receipt } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DollarSign, TrendingDown, TrendingUp, Receipt, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { generateExpenseReportPDF } from "./ExpenseReportPDF";
 import type { ExpenseTransaction } from "@/hooks/useExpenseTransactions";
 
 interface Props {
