@@ -1,6 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { DollarSign, TrendingDown, TrendingUp, Receipt } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DollarSign, TrendingDown, TrendingUp, Receipt, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { generateExpenseReportPDF } from "./ExpenseReportPDF";
 import type { ExpenseTransaction } from "@/hooks/useExpenseTransactions";
 
 interface Props {
@@ -30,25 +32,56 @@ export function ExpenseSummary({ transactions, isLoading }: Props) {
     );
   }
 
+  const handleDownload = () => {
+    const income = transactions.filter((t) => t.category === "Income").reduce((s, t) => s + Math.abs(Number(t.amount)), 0);
+    generateExpenseReportPDF({
+      transactions: transactions.map((t) => ({
+        date: t.date,
+        description: t.description,
+        amount: Number(t.amount),
+        category: t.category,
+        is_deductible: t.is_deductible,
+      })),
+      totalIncome: income,
+      totalExpenses: totalExpenses,
+      totalDeductions: deductible,
+    });
+  };
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((c) => (
-        <Card key={c.label}>
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 rounded-full bg-muted">
-              <c.icon className={`h-5 w-5 ${c.color}`} />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{c.label}</p>
-              <p className={`text-2xl font-bold ${c.color}`}>
-                {c.isCurrency === false
-                  ? c.value
-                  : `$${c.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-foreground">Summary</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDownload}
+          disabled={transactions.length === 0}
+          className="gap-2"
+        >
+          <Download className="h-4 w-4" />
+          Download Report
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {cards.map((c) => (
+          <Card key={c.label}>
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 rounded-full bg-muted">
+                <c.icon className={`h-5 w-5 ${c.color}`} />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">{c.label}</p>
+                <p className={`text-2xl font-bold ${c.color}`}>
+                  {c.isCurrency === false
+                    ? c.value
+                    : `$${c.value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
