@@ -130,6 +130,9 @@ export default function Index() {
         </script>
       </Helmet>
       
+      {/* Breaking News Ticker */}
+      <BreakingNewsTicker />
+
       {/* Tax Season 2025 Promotional Banner */}
       <TaxSeasonBanner />
       
