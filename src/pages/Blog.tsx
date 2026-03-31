@@ -7,6 +7,85 @@ import { Badge } from '@/components/ui/badge';
 
 export const blogPosts = [
   {
+    slug: 'irs-palantir-snap-audit-tool-2025',
+    category: 'IRS Updates',
+    title: 'The IRS Is Using Palantir to Pick Its Next Audit Targets',
+    excerpt: 'Leaked documents reveal a $1.8M AI-powered "Selection and Analytic Platform" designed to surface the highest-value fraud cases—including clean energy credit claims and gift tax returns.',
+    icon: AlertTriangle,
+    readTime: '6 min read',
+    publishedAt: '2025-06-27',
+    author: 'Return Shield Team',
+    ogImage: '/images/og-irs-palantir-snap.jpg',
+    content: `
+## The IRS Has a New AI Weapon—and It's Built by Palantir
+
+According to documents obtained by WIRED through a public records request, the Internal Revenue Service paid Palantir $1.8 million last year to upgrade a custom case-selection tool called the **Selection and Analytic Platform (SNAP)**. The platform is designed to help the IRS identify the "highest-value" cases for audits, tax collection, and potential criminal investigation.
+
+This is a significant shift. For decades, the IRS relied on more than 100 fragmented business systems and 700 different methods to flag returns for review. SNAP is designed to consolidate that patchwork into a single, AI-assisted decision engine—one that can surface patterns human reviewers might miss.
+
+## What SNAP Actually Does
+
+SNAP is not a replacement for human auditors. Instead, it sits on top of the IRS's sprawling internal databases and helps analysts identify red flags more efficiently. According to the contract documents, the platform is designed to extract "key information about contracts, vehicles and vendors" from "unstructured data from supporting documents."
+
+In plain terms: SNAP reads through the messy, non-standardized attachments and supporting forms that accompany tax filings—the kind of documents that are easy for a human reviewer to skim past—and flags inconsistencies or high-risk indicators.
+
+## Three Areas the IRS Is Targeting First
+
+The contract asked Palantir to build three specific "case selection methods" tied to parts of the existing tax code:
+
+### 1. Disaster Zone Claims
+Tax relief for natural disaster victims is a legitimate and important provision—but it's also one that's historically been exploited. SNAP is being configured to identify potentially fraudulent claims in this area.
+
+### 2. Residential Clean Energy Credits
+The Residential Clean Energy Credit program, which offsets the cost of installing solar panels, wind turbines, and similar improvements, has seen explosive growth. With that growth comes increased scrutiny. SNAP will help the IRS identify claims that don't match expected patterns.
+
+### 3. Gift Tax Returns (Form 709)
+When high-value assets like artwork, private business interests, or stock portfolios are transferred between individuals, the IRS requires detailed disclosure of how those assets were valued. SNAP is being trained to analyze the supporting documentation—appraisals, balance sheets, earnings statements—to flag cases where valuations may be understated.
+
+## What Data Is SNAP Using?
+
+An important detail from the documents: the IRS has specified that SNAP should only use "existing data in SNAP today." This means the platform is not currently pulling in external data sources like social media or third-party transaction platforms.
+
+However, tax policy experts have noted that publicly available data—such as public Venmo transaction logs or Etsy storefronts—could theoretically be of interest to the IRS in the future. For now, SNAP is focused on the IRS's own internal records and the documents taxpayers submit.
+
+## The Bigger Picture: A $200M+ Relationship
+
+Palantir has been working with the IRS since at least 2014, and total contract awards have exceeded $200 million. The SNAP platform is currently in pilot mode, but the contract documents suggest the IRS is interested in deepening and expanding the relationship.
+
+This aligns with the broader trend of IRS modernization. With billions in new funding from the Inflation Reduction Act, the agency is investing heavily in technology to close the estimated $600 billion annual tax gap—the difference between what Americans owe and what they actually pay.
+
+## What This Means for Taxpayers
+
+### If You Claimed Clean Energy Credits
+Expect heightened scrutiny on Residential Clean Energy Credit claims. Make sure you have complete documentation: contractor invoices, equipment specifications, proof of installation, and certification that components meet efficiency standards.
+
+### If You Filed a Gift Tax Return
+Ensure that all property valuations are supported by qualified, independent appraisals. The IRS will be looking closely at the relationship between the stated value and supporting documentation.
+
+### If You Claimed Disaster Relief
+Retain proof of residency in the affected area, documentation of losses, and any FEMA correspondence. Claims that don't match geographic and timeline data are likely to be flagged.
+
+### For Everyone Else
+AI-assisted case selection means the IRS can now process and evaluate far more returns than before. The days of "safety in numbers"—assuming your return won't be reviewed because the IRS lacks bandwidth—are ending.
+
+## How to Protect Yourself
+
+The fundamentals haven't changed, but the stakes are higher:
+
+- **Document everything.** If you can't prove a deduction, don't claim it.
+- **Be precise.** Round numbers and estimated figures are exactly the kind of pattern AI tools are designed to catch.
+- **File accurately the first time.** Amended returns draw additional attention.
+- **Get professional help.** A qualified tax professional can identify potential red flags before you file.
+- **Secure audit defense coverage.** If the IRS does come knocking, you want professional representation from day one—not after you've already made mistakes in your response.
+
+## The Bottom Line
+
+The IRS is no longer constrained by manual, fragmented review processes. With tools like SNAP, the agency can surface high-value audit targets faster and more accurately than ever before. For taxpayers, this means that thorough documentation and professional preparation aren't just good practice—they're essential.
+
+*This article is based on reporting by WIRED, which obtained contract documents through a public records request. Neither Palantir nor the IRS responded to requests for comment.*
+    `,
+  },
+  {
     slug: 'irs-audit-red-flags-2025',
     category: 'Audit Prevention',
     title: 'Seven Red Flags That Trigger IRS Audits in 2025',
