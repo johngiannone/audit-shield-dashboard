@@ -9,6 +9,7 @@ import { Helmet } from 'react-helmet-async';
 import { PricingCard } from '@/components/landing/PricingCard';
 import { TaxSeasonBanner } from '@/components/landing/TaxSeasonBanner';
 import { TaxTipsSection } from '@/components/landing/TaxTipsSection';
+import { BreakingNewsTicker } from '@/components/landing/BreakingNewsTicker';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -129,6 +130,9 @@ export default function Index() {
         </script>
       </Helmet>
       
+      {/* Breaking News Ticker */}
+      <BreakingNewsTicker />
+
       {/* Tax Season 2025 Promotional Banner */}
       <TaxSeasonBanner />
       
